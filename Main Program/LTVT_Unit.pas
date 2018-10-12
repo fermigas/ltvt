@@ -44,10 +44,10 @@ type
 type
   TLTVT_Form = class(TForm)
     SubObs_Lon_LabeledNumericEdit: TLabeledNumericEdit;
-    Label1: TLabel;
+    SubObsPtHeading_Label: TLabel;
     SubObs_Lat_LabeledNumericEdit: TLabeledNumericEdit;
     SubSol_Lon_LabeledNumericEdit: TLabeledNumericEdit;
-    Label2: TLabel;
+    SubSolPtHeading_Label: TLabel;
     SubSol_Lat_LabeledNumericEdit: TLabeledNumericEdit;
     DrawDots_Button: TButton;
     OpenDialog1: TOpenDialog;
@@ -72,9 +72,9 @@ type
     MT_Label: TLabel;
     CraterName_Label: TLabel;
     OverlayDots_Button: TButton;
-    LoResUSGS_RadioButton: TRadioButton;
-    HiResUSGS_RadioButton: TRadioButton;
-    Clementine_RadioButton: TRadioButton;
+    Texture1_RadioButton: TRadioButton;
+    Texture2_RadioButton: TRadioButton;
+    Texture3_RadioButton: TRadioButton;
     Now_Button: TButton;
     GeometryType_Label: TLabel;
     MainMenu1: TMainMenu;
@@ -232,11 +232,11 @@ type
       Shift: TShiftState);
     procedure LabelDots_ButtonKeyDown(Sender: TObject; var Key: Word;
       Shift: TShiftState);
-    procedure LoResUSGS_RadioButtonKeyDown(Sender: TObject; var Key: Word;
+    procedure Texture1_RadioButtonKeyDown(Sender: TObject; var Key: Word;
       Shift: TShiftState);
-    procedure HiResUSGS_RadioButtonKeyDown(Sender: TObject; var Key: Word;
+    procedure Texture2_RadioButtonKeyDown(Sender: TObject; var Key: Word;
       Shift: TShiftState);
-    procedure Clementine_RadioButtonKeyDown(Sender: TObject; var Key: Word;
+    procedure Texture3_RadioButtonKeyDown(Sender: TObject; var Key: Word;
       Shift: TShiftState);
     procedure UserPhoto_RadioButtonKeyDown(Sender: TObject; var Key: Word;
       Shift: TShiftState);
@@ -313,12 +313,16 @@ type
     SurfaceData : array of array of TSurfaceReadout;  // used for mouse readout when DrawingMode=DEM_3D
     SurfaceData_NoDataValue : Single;
 
+// variables set with External File Associations form
     EarthTextureFilename, {DEM_Filename,}
-    CraterFilename, JPL_Filename, JPL_FilePath, LoResFilename,
-    HiResFilename, ClementineFilename, NormalPhotoSessionsFilename,
+    CraterFilename, JPL_Filename, JPL_FilePath, Texture1Filename,
+    Texture2Filename, Texture3Filename, NormalPhotoSessionsFilename,
     CalibratedPhotosFilename, ObservatoryListFilename,
     Tex3MinLonText, Tex3MaxLonText, Tex3MinLatText, Tex3MaxLatText,
     ObservatoryComboBoxDefaultText, ObservatoryNoFileText  : string;
+
+    Texture1Planetographic, Texture2Planetographic, Texture3Planetographic,
+    LinuxCompatibilityMode : Boolean;
 
     ObserverLongitudeText, ObserverLatitudeText, ObserverElevationText : string; // altered via SelectObserverLocation_Form
 
@@ -326,11 +330,13 @@ type
     MinLon, MaxLon, MinLat, MaxLat,  {of TextureMap}
     XPixPerRad, YPixPerRad : Extended;  {of TextureMap}
     LastImageWidth, LastImageHeight : Integer;
+  // set when Texture button is clicked:
+    TexturePlanetographic : Boolean;
+    SqrAoverB : Extended;  // flattening factor
 
     LastMouseClickPosition : TPoint;
 
 // variables set with Cartographic Options form
-    LinuxCompatibilityMode : Boolean;
     StartWithCurrentUT : Boolean;
     OrientationMode : (LineOfCusps, Cartographic, Equatorial, AltAz);
     IncludeLibrationCircle : boolean;
@@ -384,18 +390,18 @@ type
 
     JPL_Data : TextFile;  {optional source of ephermis info: set by SelectFile; used by RetrieveData}
 
-    LoRes_TextureMap : TBitmap; {set to USGS map on form CREATE -- so always available}
-    LoRes_Texture_Loaded : boolean;
+    Texture1_Map : TBitmap; {set to USGS map on form CREATE -- so always available}
+    Texture1_Loaded : boolean;
 
-    HiRes_TextureMap : TBitmap; {it takes several seconds for the initial load of the hi-res texture from disk,
+    Texture2_Map : TBitmap; {it takes several seconds for the initial load of the hi-res texture from disk,
       it also produces rather grainy full-moon images.  Therefore, although the on-screen images are drawn in
       about the same time, this file is loaded iff specifically requested}
-    HiRes_Texture_Loaded : boolean;
+    Texture2_Loaded : boolean;
 
-    Clementine_TextureMap : TBitmap; {it takes several seconds for the initial load of the hi-res texture from disk,
+    Texture3_Map : TBitmap; {it takes several seconds for the initial load of the hi-res texture from disk,
       it also produces rather grainy full-moon images.  Therefore, although the on-screen images are drawn in
       about the same time, this file is loaded iff specifically requested}
-    Clementine_Texture_Loaded : boolean;
+    Texture3_Loaded : boolean;
 
     Earth_TextureMap : TBitmap;
     Earth_Texture_Loaded : boolean;
@@ -710,7 +716,7 @@ uses FileCtrl, H_Terminator_About_Unit, H_Terminator_Goto_Unit, H_Terminator_Set
 {$R *.dfm}
 
 const
-  ProgramVersion = '0.21.2x';
+  ProgramVersion = '0.21.2';
 
 // note: the following constants specify (in degrees) that texture files span
 //   the full lunar globe.  They should not be changed.
@@ -753,9 +759,9 @@ begin {TLTVT_Form.FormCreate}
   IniFileName := BasePath+'LTVT.ini'; //Note: if full path is not specified, file is assumed in C:\WINDOWS
 
   StatusLine_Label.Caption := '';
-  LoRes_Texture_Loaded := false;
-  HiRes_Texture_Loaded := false;
-  Clementine_Texture_Loaded := false;
+  Texture1_Loaded := false;
+  Texture2_Loaded := false;
+  Texture3_Loaded := false;
 
 //  ShortDateFormat := 'yyyy/mm/dd';
   LongTimeFormat := 'hh:nn:ss';
@@ -822,6 +828,10 @@ begin {TLTVT_Form.FormCreate}
   ShadowProfileFilename := BasePath+'ShadowProfile.txt';
   SurfaceData_NoDataValue := -99.99;
 
+// default value if not otherwise set (should not be necessary)
+  TexturePlanetographic := False;
+  SqrAoverB := 1;
+
   CreatingForm := False;
 end;  {TLTVT_Form.FormCreate}
 
@@ -849,9 +859,9 @@ begin
         end;
     end;
 
-  if LoRes_Texture_Loaded then LoRes_TextureMap.Free;
-  if HiRes_Texture_Loaded then  HiRes_TextureMap.Free;
-  if Clementine_Texture_Loaded then Clementine_TextureMap.Free;
+  if Texture1_Loaded then Texture1_Map.Free;
+  if Texture2_Loaded then  Texture2_Map.Free;
+  if Texture3_Loaded then Texture3_Map.Free;
   if UserPhotoLoaded then UserPhoto.Free;
   LTO_Image.Free;
 
@@ -1489,7 +1499,7 @@ if PolarAngle_CheckBox.Checked then
       Val(Tex3MinLat_DefaultText,MinLat,ErrorCode);
       Val(Tex3MaxLat_DefaultText,MaxLat,ErrorCode);
 
-      if Clementine_RadioButton.Checked then
+      if Texture3_RadioButton.Checked then
         begin
           Val(Tex3MinLonText,TempVal,ErrorCode);
           if ErrorCode=0 then
@@ -2381,6 +2391,7 @@ end;
 function TLTVT_Form.LookUpPixelData(const Lon, Lat : Extended; var RawXPix, RawYPix : Integer; var PixelData : TPixelValue) : Boolean;
 var
   RawRow  :  pRGBArray;
+  LookupLat : Extended;
 begin
   Result := False;
 
@@ -2396,12 +2407,16 @@ begin
        (RawXPix>=0) and (RawXPix<MapPtr^.Width) and (RawYPix>=0) and (RawYPix<MapPtr^.Height) then
           Result := True;
     end
-  else if MapPtr=@Clementine_TextureMap then // Texture Map 3
+  else if MapPtr=@Texture3_Map then // Texture Map 3
     begin
+      if Texture3Planetographic then
+        LookupLat := Arctan(SqrAoverB*Tan(Lat))
+      else
+        LookupLat := Lat;
     // Note: MaxLon may exceed Pi if texture spans farside seam
-      if (Lat>=MinLat) and (Lat<=MaxLat) then
+      if (LookupLat>=MinLat) and (LookupLat<=MaxLat) then
         begin
-          RawYPix := Trunc((MaxLat - Lat)*YPixPerRad);
+          RawYPix := Trunc((MaxLat - LookupLat)*YPixPerRad);
           if (RawYPix>=0) and (RawYPix<MapPtr^.Height) then
             begin
               RawXPix := -999;  // invalid value by default
@@ -2419,8 +2434,13 @@ begin
     end
   else // other Texture Maps cover entire globe, so can dispense with limit checks
     begin
+      if TexturePlanetographic then
+        LookupLat := Arctan(SqrAoverB*Tan(Lat))
+      else
+        LookupLat := Lat;
+
       RawXPix := Trunc((Lon - MinLon)*XPixPerRad);
-      RawYPix := Trunc((MaxLat - Lat)*YPixPerRad);
+      RawYPix := Trunc((MaxLat - LookupLat)*YPixPerRad);
 
    // wrap around if necessary
       while RawXPix<0 do RawXPix := RawXPix + MapPtr^.Width;
@@ -2466,20 +2486,20 @@ begin {TLTVT_Form.DrawTexture_ButtonClick}
   SkyPixel := ColorToRGBTriple(SkyColor);
   NoDataPixel := ColorToRGBTriple(NoDataColor);
 
-  if LoResUSGS_RadioButton.Checked and not LoRes_Texture_Loaded then
+  if Texture1_RadioButton.Checked and not Texture1_Loaded then
     begin
-      OldFilename := LoResFilename;
-      LoRes_TextureMap := TBitmap.Create;
-//      HiRes_TextureMap.PixelFormat := pf24bit; // doesn't help
+      OldFilename := Texture1Filename;
+      Texture1_Map := TBitmap.Create;
+//      Texture2_Map.PixelFormat := pf24bit; // doesn't help
 
-      if (not FileExists(LoResFilename)) and (MessageDlg('LTVT cannot find the low resolution USGS texture map'+CR
+      if (not FileExists(Texture1Filename)) and (MessageDlg('LTVT cannot find  a map for Texture 1'+CR
                         +'   Do you want help with this?',
           mtWarning,[mbYes,mbNo],0)=mrYes) then
             begin
               HtmlHelp(0,PChar(Application.HelpFile+'::/Help Topics/TextureFilesStepByStep.htm'),HH_DISPLAY_TOPIC, 0);
             end;
 
-      if FileExists(LoResFilename) or PictureFileFound('USGS Low Resolution Texture File','lores.jpg',LoResFilename) then
+      if FileExists(Texture1Filename) or PictureFileFound('Texture 1 File','lores.jpg',Texture1Filename) then
         begin
           Screen.Cursor := crHourGlass;
           ThreeD_CheckBox.Hide;
@@ -2490,24 +2510,24 @@ begin {TLTVT_Form.DrawTexture_ButtonClick}
 //          TempPicture.Bitmap.PixelFormat := pf24bit; // doesn't help
           TRY
             TRY
-              TempPicture.LoadFromFile(LoResFilename);
+              TempPicture.LoadFromFile(Texture1Filename);
               if LinuxCompatibilityMode then
                 begin
-                  LoRes_TextureMap.Width  := TempPicture.Graphic.Width;
-                  LoRes_TextureMap.Height := TempPicture.Graphic.Height;
-                  LoRes_TextureMap.PixelFormat := pf24bit;
-                  LoRes_TextureMap.Canvas.Draw(0,0, TempPicture.Graphic);
+                  Texture1_Map.Width  := TempPicture.Graphic.Width;
+                  Texture1_Map.Height := TempPicture.Graphic.Height;
+                  Texture1_Map.PixelFormat := pf24bit;
+                  Texture1_Map.Canvas.Draw(0,0, TempPicture.Graphic);
                 end
               else
                 begin
-                  LoRes_TextureMap.Assign(TempPicture.Graphic);
-                  LoRes_TextureMap.PixelFormat := pf24bit;  // Note: this seems essential and needs to be done AFTER loading the graphic
+                  Texture1_Map.Assign(TempPicture.Graphic);
+                  Texture1_Map.PixelFormat := pf24bit;  // Note: this seems essential and needs to be done AFTER loading the graphic
                     // but it significantly slows down the loading of the image, particularly if it is already in BMP format.
                 end;
-              LoRes_Texture_Loaded := true;
-              LoResUSGS_RadioButton.Font.Color := clBlack;
+              Texture1_Loaded := true;
+              Texture1_RadioButton.Font.Color := clBlack;
             EXCEPT
-              ShowMessage('Unable to load "'+LoResFilename+'"');
+              ShowMessage('Unable to load "'+Texture1Filename+'"');
             END;
 
           FINALLY
@@ -2519,23 +2539,23 @@ begin {TLTVT_Form.DrawTexture_ButtonClick}
           END;
         end;
 
-      if LoResFilename<>OldFilename then FileSettingsChanged := True;
+      if Texture1Filename<>OldFilename then FileSettingsChanged := True;
     end;
 
-  if HiResUSGS_RadioButton.Checked and not HiRes_Texture_Loaded then
+  if Texture2_RadioButton.Checked and not Texture2_Loaded then
     begin
-      OldFilename := HiResFilename;
-      HiRes_TextureMap := TBitmap.Create;
-//      HiRes_TextureMap.PixelFormat := pf24bit; // doesn't help
+      OldFilename := Texture2Filename;
+      Texture2_Map := TBitmap.Create;
+//      Texture2_Map.PixelFormat := pf24bit; // doesn't help
 
-      if (not FileExists(HiResFilename)) and (MessageDlg('LTVT needs to find a High Resolution USGS texture map'+CR
+      if (not FileExists(Texture2Filename)) and (MessageDlg('LTVT needs to find a map for Texture 2'+CR
                         +'   Do you want help with this procedure?',
           mtWarning,[mbYes,mbNo],0)=mrYes) then
             begin
               HtmlHelp(0,PChar(Application.HelpFile+'::/Help Topics/TextureFilesStepByStep.htm'),HH_DISPLAY_TOPIC, 0);
             end;
 
-      if FileExists(HiResFilename) or PictureFileFound('USGS High Resolution Texture File','hires.jpg',HiResFilename) then
+      if FileExists(Texture2Filename) or PictureFileFound('Texture 2 File','hires.jpg',Texture2Filename) then
         begin
           Screen.Cursor := crHourGlass;
           ThreeD_CheckBox.Hide;
@@ -2546,24 +2566,24 @@ begin {TLTVT_Form.DrawTexture_ButtonClick}
 //          TempPicture.Bitmap.PixelFormat := pf24bit; // doesn't help
           TRY
             TRY
-              TempPicture.LoadFromFile(HiResFilename);
+              TempPicture.LoadFromFile(Texture2Filename);
               if LinuxCompatibilityMode then
                 begin
 // alternative way of copying to bitmap
-                  HiRes_TextureMap.Width  := TempPicture.Graphic.Width;
-                  HiRes_TextureMap.Height := TempPicture.Graphic.Height;
-                  HiRes_TextureMap.PixelFormat := pf24bit;
-                  HiRes_TextureMap.Canvas.Draw(0,0, TempPicture.Graphic);
+                  Texture2_Map.Width  := TempPicture.Graphic.Width;
+                  Texture2_Map.Height := TempPicture.Graphic.Height;
+                  Texture2_Map.PixelFormat := pf24bit;
+                  Texture2_Map.Canvas.Draw(0,0, TempPicture.Graphic);
                 end
               else
                 begin
-                  HiRes_TextureMap.Assign(TempPicture.Graphic);
-                  HiRes_TextureMap.PixelFormat := pf24bit;  // Note: this seems essential and needs to be done AFTER loading the graphic
+                  Texture2_Map.Assign(TempPicture.Graphic);
+                  Texture2_Map.PixelFormat := pf24bit;  // Note: this seems essential and needs to be done AFTER loading the graphic
                 end;
-              HiRes_Texture_Loaded := true;
-              HiResUSGS_RadioButton.Font.Color := clBlack;
+              Texture2_Loaded := true;
+              Texture2_RadioButton.Font.Color := clBlack;
             EXCEPT
-              ShowMessage('Unable to load "'+HiResFilename+'"');
+              ShowMessage('Unable to load "'+Texture2Filename+'"');
             END;
 
           FINALLY
@@ -2575,23 +2595,23 @@ begin {TLTVT_Form.DrawTexture_ButtonClick}
           END;
         end;
 
-      if HiResFilename<>OldFilename then FileSettingsChanged := True;
+      if Texture2Filename<>OldFilename then FileSettingsChanged := True;
     end;
 
-  if Clementine_RadioButton.Checked and not Clementine_Texture_Loaded then
+  if Texture3_RadioButton.Checked and not Texture3_Loaded then
     begin
-      OldFilename := ClementineFilename;
-      Clementine_TextureMap := TBitmap.Create;
-//      Clementine_TextureMap.PixelFormat := pf24bit; // doesn't help
+      OldFilename := Texture3Filename;
+      Texture3_Map := TBitmap.Create;
+//      Texture3_Map.PixelFormat := pf24bit; // doesn't help
 
-      if (not FileExists(ClementineFilename)) and (MessageDlg('LTVT needs to find a Clementine texture map'+CR
+      if (not FileExists(Texture3Filename)) and (MessageDlg('LTVT needs to find a map for Texture 3'+CR
                         +'   Do you want help with this procedure?',
           mtWarning,[mbYes,mbNo],0)=mrYes) then
             begin
               HtmlHelp(0,PChar(Application.HelpFile+'::/Help Topics/TextureFilesStepByStep.htm'),HH_DISPLAY_TOPIC, 0);
             end;
 
-      if FileExists(ClementineFilename) or PictureFileFound('Clementine Texture File','hires_clem.jpg',ClementineFilename) then
+      if FileExists(Texture3Filename) or PictureFileFound('Texture 3 File','hires_clem.jpg',Texture3Filename) then
         begin
           Screen.Cursor := crHourGlass;
           ThreeD_CheckBox.Hide;
@@ -2601,25 +2621,25 @@ begin {TLTVT_Form.DrawTexture_ButtonClick}
 //          TempPicture.Bitmap.PixelFormat := pf24bit; // doesn't help
           TRY
             TRY
-              TempPicture.LoadFromFile(ClementineFilename);
+              TempPicture.LoadFromFile(Texture3Filename);
               if LinuxCompatibilityMode then
                 begin
 // alternative way of copying to bitmap
-                  Clementine_TextureMap.Width  := TempPicture.Graphic.Width;
-                  Clementine_TextureMap.Height := TempPicture.Graphic.Height;
-                  Clementine_TextureMap.PixelFormat := pf24bit;
-                  Clementine_TextureMap.Canvas.Draw(0,0, TempPicture.Graphic);
+                  Texture3_Map.Width  := TempPicture.Graphic.Width;
+                  Texture3_Map.Height := TempPicture.Graphic.Height;
+                  Texture3_Map.PixelFormat := pf24bit;
+                  Texture3_Map.Canvas.Draw(0,0, TempPicture.Graphic);
                 end
               else
                 begin
-                  Clementine_TextureMap.Assign(TempPicture.Graphic);
-                  Clementine_TextureMap.PixelFormat := pf24bit;  // Note: this seems essential and needs to be done AFTER loading the graphic
+                  Texture3_Map.Assign(TempPicture.Graphic);
+                  Texture3_Map.PixelFormat := pf24bit;  // Note: this seems essential and needs to be done AFTER loading the graphic
                     // but it significantly slows down the loading of the image, particularly if it is already in BMP format.
                 end;
-              Clementine_Texture_Loaded := true;
-              Clementine_RadioButton.Font.Color := clBlack;
+              Texture3_Loaded := true;
+              Texture3_RadioButton.Font.Color := clBlack;
             EXCEPT
-              ShowMessage('Unable to load "'+ClementineFilename+'"');
+              ShowMessage('Unable to load "'+Texture3Filename+'"');
             END;
 
           FINALLY
@@ -2631,7 +2651,7 @@ begin {TLTVT_Form.DrawTexture_ButtonClick}
           END;
         end;
 
-      if ClementineFilename<>OldFilename then FileSettingsChanged := True;
+      if Texture3Filename<>OldFilename then FileSettingsChanged := True;
     end;
 
   if UserPhoto_RadioButton.Checked and not UserPhotoLoaded then
@@ -2678,30 +2698,36 @@ begin {TLTVT_Form.DrawTexture_ButtonClick}
 
     end;
 
+  TexturePlanetographic := False;
+  SqrAoverB := Sqr(Radius_a/Radius_b);
+
   if LTO_RadioButton.Checked then
     begin
       MapPtr := @LTO_Image;
       TextureFilename := LTO_Filename;
     end
-  else if Clementine_RadioButton.Checked and Clementine_Texture_Loaded then
+  else if Texture3_RadioButton.Checked and Texture3_Loaded then
     begin
-      MapPtr := @Clementine_TextureMap;
-      TextureFilename := ClementineFilename;
+      MapPtr := @Texture3_Map;
+      TextureFilename := Texture3Filename;
+      TexturePlanetographic := Texture3Planetographic;
     end
-  else if HiResUSGS_RadioButton.Checked and HiRes_Texture_Loaded then
+  else if Texture2_RadioButton.Checked and Texture2_Loaded then
     begin
-      MapPtr := @HiRes_TextureMap;
-      TextureFilename := HiResFilename;
+      MapPtr := @Texture2_Map;
+      TextureFilename := Texture2Filename;
+      TexturePlanetographic := Texture2Planetographic;
     end
   else if UserPhoto_RadioButton.Checked and UserPhotoLoaded then
     begin
       MapPtr := @UserPhoto;
       TextureFilename := UserPhotoData.PhotoFilename;
     end
-  else if LoRes_Texture_Loaded then
+  else if Texture1_Loaded then
     begin
-      MapPtr := @LoRes_TextureMap;
-      TextureFilename := LoResFilename;
+      MapPtr := @Texture1_Map;
+      TextureFilename := Texture1Filename;
+      TexturePlanetographic := Texture1Planetographic;
     end
   else
     begin
@@ -2718,15 +2744,15 @@ begin {TLTVT_Form.DrawTexture_ButtonClick}
     end
   else
     begin
-      if Clementine_RadioButton.Checked and not Clementine_Texture_Loaded then
+      if Texture3_RadioButton.Checked and not Texture3_Loaded then
         begin
           UserPhoto_RadioButton.Checked := True;
-          ShowMessage(Clementine_RadioButton.Caption+' not loaded -- using '+LoResUSGS_RadioButton.Caption);
+          ShowMessage(Texture3_RadioButton.Caption+' not loaded -- using '+Texture1_RadioButton.Caption);
         end;
-      if HiResUSGS_RadioButton.Checked and not HiRes_Texture_Loaded then
+      if Texture2_RadioButton.Checked and not Texture2_Loaded then
         begin
           UserPhoto_RadioButton.Checked := True;
-          ShowMessage(HiResUSGS_RadioButton.Caption+' not loaded -- using '+LoResUSGS_RadioButton.Caption);
+          ShowMessage(Texture2_RadioButton.Caption+' not loaded -- using '+Texture1_RadioButton.Caption);
         end;
 
       DrawingMap_Label.Caption := 'Drawing texture map...';
@@ -2875,10 +2901,10 @@ begin {EstimateData_ButtonClick}
 
   SetEstimatedGeometryLabels;
 
-  SubObs_Lon_LabeledNumericEdit.NumericEdit.Text := Format('%0.3f',[PosNegDegrees(RadToDeg(SubEarthPoint.Longitude),LTVT_Form.PlanetaryLongitudeConvention)]);
+  SubObs_Lon_LabeledNumericEdit.NumericEdit.Text := Format('%0.3f',[PosNegDegrees(RadToDeg(SubEarthPoint.Longitude),PlanetaryLongitudeConvention)]);
   SubObs_Lat_LabeledNumericEdit.NumericEdit.Text := Format('%0.3f',[RadToDeg(SubEarthPoint.Latitude)]);
 
-  SubSol_Lon_LabeledNumericEdit.NumericEdit.Text := Format('%0.3f',[PosNegDegrees(RadToDeg(SubSolarPoint.Longitude),LTVT_Form.PlanetaryLongitudeConvention)]);
+  SubSol_Lon_LabeledNumericEdit.NumericEdit.Text := Format('%0.3f',[PosNegDegrees(RadToDeg(SubSolarPoint.Longitude),PlanetaryLongitudeConvention)]);
   SubSol_Lat_LabeledNumericEdit.NumericEdit.Text := Format('%0.3f',[RadToDeg(SubSolarPoint.Latitude)]);
 
   SunRad := Rsun/(OneAU*MoonToSunAU);
@@ -3673,10 +3699,10 @@ begin {TLTVT_Form.GoTo_MainMenuItemClick}
         end
       else
         begin
-          SetToLon_LabeledNumericEdit.Hint := 'Selenographic longitude in decimal degrees (E=+  W=-)';
-          SetToLat_LabeledNumericEdit.Hint := 'Selenographic Latitude in decimal degrees (N=+  S=-)';
-          CenterX_LabeledNumericEdit.Hint := 'Enter desired horizontal screen position on scale where full Moon ranges from -1.0 (left) to +1.0 (right)';
-          CenterY_LabeledNumericEdit.Hint := 'Enter desired vertical screen position on scale where full Moon ranges from +1.0 (top) to -1.0 (bottom)';
+          SetToLon_LabeledNumericEdit.Hint := 'Longitude in decimal degrees (E=+  W=-)';
+          SetToLat_LabeledNumericEdit.Hint := 'Latitude in decimal degrees (N=+  S=-)';
+          CenterX_LabeledNumericEdit.Hint := 'Enter desired horizontal screen position on scale where full planetary image ranges from -1.0 (left) to +1.0 (right)';
+          CenterY_LabeledNumericEdit.Hint := 'Enter desired vertical screen position on scale where full planetary image ranges from +1.0 (top) to -1.0 (bottom)';
           ShowLunarControls(True);
         end;
 
@@ -3776,7 +3802,7 @@ begin
           end
         else
           begin
-            SubObs_Lon_LabeledNumericEdit.NumericEdit.Text := Format('%0.3f',[PosNegDegrees(RadToDeg(DesiredLon),LTVT_Form.PlanetaryLongitudeConvention)]);
+            SubObs_Lon_LabeledNumericEdit.NumericEdit.Text := Format('%0.3f',[PosNegDegrees(RadToDeg(DesiredLon),PlanetaryLongitudeConvention)]);
             SubObs_Lat_LabeledNumericEdit.NumericEdit.Text := Format('%0.3f',[RadToDeg(DesiredLat)]);
             SetManualGeometryLabels;
             if not CalculateGeometry then Exit;
@@ -3799,7 +3825,7 @@ var
 begin
   with H_Terminator_Goto_Form do if GoToState=AerialView then
     begin
-        SubObs_Lon_LabeledNumericEdit.NumericEdit.Text := Format('%0.3f',[PosNegDegrees(Long_Deg,LTVT_Form.PlanetaryLongitudeConvention)]);
+        SubObs_Lon_LabeledNumericEdit.NumericEdit.Text := Format('%0.3f',[PosNegDegrees(Long_Deg,PlanetaryLongitudeConvention)]);
         SubObs_Lat_LabeledNumericEdit.NumericEdit.Text := Format('%0.3f',[Lat_Deg]);
 //      SubObs_Lon_LabeledNumericEdit.NumericEdit.Text := SetToLon_LabeledNumericEdit.NumericEdit.Text;
 //      SubObs_Lat_LabeledNumericEdit.NumericEdit.Text := SetToLat_LabeledNumericEdit.NumericEdit.Text;
@@ -4737,7 +4763,7 @@ begin
           if HeightDev_km<>SurfaceData_NoDataValue then
             begin
               LonLat_RadioButton.Checked := True;
-              SetToLon_LabeledNumericEdit.NumericEdit.Text := Format('%0.3f',[RadToDeg(Lon_rad)]);
+              SetToLon_LabeledNumericEdit.NumericEdit.Text := Format('%0.3f',[PosNegDegrees(RadToDeg(Lon_rad),PlanetaryLongitudeConvention)]);
               SetToLat_LabeledNumericEdit.NumericEdit.Text := Format('%0.3f',[RadToDeg(Lat_rad)]);
               SetToRadius_TLabeledNumericEdit.NumericEdit.Text := Format('%0.3f',[MoonRadius+HeightDev_km]);
             end;
@@ -4746,7 +4772,7 @@ begin
         if ConvertXYtoLonLat(MouseOrthoX,MouseOrthoY,MouseLon,MouseLat) then
           begin
             LonLat_RadioButton.Checked := True;
-            SetToLon_LabeledNumericEdit.NumericEdit.Text := Format('%0.3f',[RadToDeg(MouseLon)]);
+            SetToLon_LabeledNumericEdit.NumericEdit.Text := Format('%0.3f',[PosNegDegrees(RadToDeg(MouseLon),PlanetaryLongitudeConvention)]);
             SetToLat_LabeledNumericEdit.NumericEdit.Text := Format('%0.3f',[RadToDeg(MouseLat)]);
           end;
       CenterX_LabeledNumericEdit.NumericEdit.Text := format('%0.4f',[MouseOrthoX]);
@@ -4781,7 +4807,7 @@ begin
     begin
       if ConvertXYtoLonLat(MouseOrthoX,MouseOrthoY,MouseLon,MouseLat) then
         begin
-          LonDeg_LabeledNumericEdit.NumericEdit.Text := Format('%0.3f',[RadToDeg(MouseLon)]);
+          LonDeg_LabeledNumericEdit.NumericEdit.Text := Format('%0.3f',[PosNegDegrees(RadToDeg(MouseLon),PlanetaryLongitudeConvention)]);
           LatDeg_LabeledNumericEdit.NumericEdit.Text := Format('%0.3f',[RadToDeg(MouseLat)]);
         end;
     end;
@@ -5227,7 +5253,7 @@ begin
         if CurrentTargetPlanet=Moon then
           Colongitude_LabeledNumericEdit.NumericEdit.Text := Colongitude_Label.Caption
         else
-          Colongitude_LabeledNumericEdit.NumericEdit.Text := Format('%0.3f',[PosNegDegrees(SubObs_Lon_LabeledNumericEdit.NumericEdit.ExtendedValue,LTVT_Form.PlanetaryLongitudeConvention)]);
+          Colongitude_LabeledNumericEdit.NumericEdit.Text := Format('%0.3f',[PosNegDegrees(SubObs_Lon_LabeledNumericEdit.NumericEdit.ExtendedValue,PlanetaryLongitudeConvention)]);
         SolarLatitude_LabeledNumericEdit.NumericEdit.Text := SubSol_Lat_LabeledNumericEdit.NumericEdit.Text;
 
         if ConvertXYtoLonLat(ImageCenterX,ImageCenterY,ImageCenterLon,ImageCenterLat) then
@@ -6088,14 +6114,17 @@ begin  {TLTVT_Form.SaveFileOptions}
   IniFile.WriteString('LTVT Defaults','Observatory_List_File',BriefName(ObservatoryListFilename));
   IniFile.WriteString('LTVT Defaults','JPL_Ephemeris_File',BriefName(JPL_Filename));
 
-  IniFile.WriteString('LTVT Defaults','Texture1_Caption',LoResUSGS_RadioButton.Caption);
-  IniFile.WriteString('LTVT Defaults','Texture1_File',BriefName(LoResFilename));
+  IniFile.WriteString('LTVT Defaults','Texture1_Caption',Texture1_RadioButton.Caption);
+  IniFile.WriteString('LTVT Defaults','Texture1_File',BriefName(Texture1Filename));
+  IniFile.WriteString('LTVT Defaults','Texture1_Planetographic',BooleanToYesNo(Texture1Planetographic));
 
-  IniFile.WriteString('LTVT Defaults','Texture2_Caption',HiResUSGS_RadioButton.Caption);
-  IniFile.WriteString('LTVT Defaults','Texture2_File',BriefName(HiResFilename));
+  IniFile.WriteString('LTVT Defaults','Texture2_Caption',Texture2_RadioButton.Caption);
+  IniFile.WriteString('LTVT Defaults','Texture2_File',BriefName(Texture2Filename));
+  IniFile.WriteString('LTVT Defaults','Texture2_Planetographic',BooleanToYesNo(Texture2Planetographic));
 
-  IniFile.WriteString('LTVT Defaults','Texture3_Caption',Clementine_RadioButton.Caption);
-  IniFile.WriteString('LTVT Defaults','Texture3_File',BriefName(ClementineFilename));
+  IniFile.WriteString('LTVT Defaults','Texture3_Caption',Texture3_RadioButton.Caption);
+  IniFile.WriteString('LTVT Defaults','Texture3_File',BriefName(Texture3Filename));
+  IniFile.WriteString('LTVT Defaults','Texture3_Planetographic',BooleanToYesNo(Texture3Planetographic));
 
   IniFile.WriteString('LTVT Defaults','Texture3_MinLon_deg',Tex3MinLonText);
   IniFile.WriteString('LTVT Defaults','Texture3_MaxLon_deg',Tex3MaxLonText);
@@ -6149,56 +6178,59 @@ begin  {TLTVT_Form.RestoreFileOptions}
 
   CraterFilename := FullFilename(IniFile.ReadString('LTVT Defaults','Crater_File','Named_Lunar_Features.csv'));
 
-  TempTexture1Name := LoResFilename;
-  LoResUSGS_RadioButton.Caption  := Substring(IniFile.ReadString('LTVT Defaults','Texture1_Caption',Texture1_DefaultText),1,40);
-  if Trim(LoResUSGS_RadioButton.Caption)='' then LoResUSGS_RadioButton.Caption := Texture1_DefaultText;
-  LoResFilename  := IniFile.ReadString('LTVT Defaults','Low_Resolution_USGS_Relief_Map','');
-  if LoResFilename<>'' then
+  TempTexture1Name := Texture1Filename;
+  Texture1_RadioButton.Caption  := Substring(IniFile.ReadString('LTVT Defaults','Texture1_Caption',Texture1_DefaultText),1,40);
+  if Trim(Texture1_RadioButton.Caption)='' then Texture1_RadioButton.Caption := Texture1_DefaultText;
+  Texture1Filename  := IniFile.ReadString('LTVT Defaults','Low_Resolution_USGS_Relief_Map','');
+  if Texture1Filename<>'' then
     begin
-      IniFile.WriteString('LTVT Defaults','Texture1_File',LoResFilename);
+      IniFile.WriteString('LTVT Defaults','Texture1_File',Texture1Filename);
       IniFile.DeleteKey('LTVT Defaults','Low_Resolution_USGS_Relief_Map');
     end;
-  LoResFilename  := FullFilename(IniFile.ReadString('LTVT Defaults','Texture1_File','lores.jpg'));
-  if TempTexture1Name<>LoResFilename then
+  Texture1Filename  := FullFilename(IniFile.ReadString('LTVT Defaults','Texture1_File','lores.jpg'));
+  if TempTexture1Name<>Texture1Filename then
     begin
-      if LoRes_Texture_Loaded then LoRes_TextureMap.Free;
-      LoRes_Texture_Loaded := False;
-      LoResUSGS_RadioButton.Font.Color := clGray;
+      if Texture1_Loaded then Texture1_Map.Free;
+      Texture1_Loaded := False;
+      Texture1_RadioButton.Font.Color := clGray;
     end;
+  Texture1Planetographic := YesNoToBoolean(IniFile.ReadString('LTVT Defaults','Texture1_Planetographic','no'));
 
-  TempTexture2Name := HiResFilename;
-  HiResUSGS_RadioButton.Caption  := Substring(IniFile.ReadString('LTVT Defaults','Texture2_Caption',Texture2_DefaultText),1,40);
-  if Trim(HiResUSGS_RadioButton.Caption)='' then HiResUSGS_RadioButton.Caption := Texture2_DefaultText;
-  HiResFilename  := IniFile.ReadString('LTVT Defaults','High_Resolution_USGS_Relief_Map','');
-  if HiResFilename<>'' then
+  TempTexture2Name := Texture2Filename;
+  Texture2_RadioButton.Caption  := Substring(IniFile.ReadString('LTVT Defaults','Texture2_Caption',Texture2_DefaultText),1,40);
+  if Trim(Texture2_RadioButton.Caption)='' then Texture2_RadioButton.Caption := Texture2_DefaultText;
+  Texture2Filename  := IniFile.ReadString('LTVT Defaults','High_Resolution_USGS_Relief_Map','');
+  if Texture2Filename<>'' then
     begin
-      IniFile.WriteString('LTVT Defaults','Texture2_File',HiResFilename);
+      IniFile.WriteString('LTVT Defaults','Texture2_File',Texture2Filename);
       IniFile.DeleteKey('LTVT Defaults','High_Resolution_USGS_Relief_Map');
     end;
-  HiResFilename  := FullFilename(IniFile.ReadString('LTVT Defaults','Texture2_File','hires.jpg'));
-  if TempTexture2Name<>HiResFilename then
+  Texture2Filename  := FullFilename(IniFile.ReadString('LTVT Defaults','Texture2_File','hires.jpg'));
+  if TempTexture2Name<>Texture2Filename then
     begin
-      if HiRes_Texture_Loaded then HiRes_TextureMap.Free;
-      HiRes_Texture_Loaded := False;
-      HiResUSGS_RadioButton.Font.Color := clGray;
+      if Texture2_Loaded then Texture2_Map.Free;
+      Texture2_Loaded := False;
+      Texture2_RadioButton.Font.Color := clGray;
     end;
+  Texture2Planetographic := YesNoToBoolean(IniFile.ReadString('LTVT Defaults','Texture2_Planetographic','no'));
 
-  TempTexture3Name := ClementineFilename;
-  Clementine_RadioButton.Caption  := Substring(IniFile.ReadString('LTVT Defaults','Texture3_Caption',Texture3_DefaultText),1,40);
-  if Trim(Clementine_RadioButton.Caption)='' then Clementine_RadioButton.Caption := Texture3_DefaultText;
-  ClementineFilename := IniFile.ReadString('LTVT Defaults','Clementine_Texture_Map','');
-  if ClementineFilename<>'' then
+  TempTexture3Name := Texture3Filename;
+  Texture3_RadioButton.Caption  := Substring(IniFile.ReadString('LTVT Defaults','Texture3_Caption',Texture3_DefaultText),1,40);
+  if Trim(Texture3_RadioButton.Caption)='' then Texture3_RadioButton.Caption := Texture3_DefaultText;
+  Texture3Filename := IniFile.ReadString('LTVT Defaults','Clementine_Texture_Map','');
+  if Texture3Filename<>'' then
     begin
-      IniFile.WriteString('LTVT Defaults','Texture3_File',ClementineFilename);
+      IniFile.WriteString('LTVT Defaults','Texture3_File',Texture3Filename);
       IniFile.DeleteKey('LTVT Defaults','Clementine_Texture_Map');
     end;
-  ClementineFilename := FullFilename(IniFile.ReadString('LTVT Defaults','Texture3_File','hires_clem.jpg'));
-  if TempTexture3Name<>ClementineFilename then
+  Texture3Filename := FullFilename(IniFile.ReadString('LTVT Defaults','Texture3_File','hires_clem.jpg'));
+  if TempTexture3Name<>Texture3Filename then
     begin
-      if Clementine_Texture_Loaded then Clementine_TextureMap.Free;
-      Clementine_Texture_Loaded := False;
-      Clementine_RadioButton.Font.Color := clGray;
+      if Texture3_Loaded then Texture3_Map.Free;
+      Texture3_Loaded := False;
+      Texture3_RadioButton.Font.Color := clGray;
     end;
+  Texture3Planetographic := YesNoToBoolean(IniFile.ReadString('LTVT Defaults','Texture3_Planetographic','no'));
 
   Tex3MinLonText := IniFile.ReadString('LTVT Defaults','Texture3_MinLon_deg',Tex3MinLon_DefaultText);
   Tex3MaxLonText := IniFile.ReadString('LTVT Defaults','Texture3_MaxLon_deg',Tex3MaxLon_DefaultText);
@@ -6223,16 +6255,22 @@ begin
     begin
       WineCompatibility_CheckBox.Checked := LinuxCompatibilityMode;
 
-      Texture1Description_Edit.Text := LoResUSGS_RadioButton.Caption;
-      TempTexture1Name := LoResFilename;
-      Texture2Description_Edit.Text := HiResUSGS_RadioButton.Caption;
-      TempTexture2Name := HiResFilename;
-      Texture3Description_Edit.Text := Clementine_RadioButton.Caption;
-      TempTexture3Name := ClementineFilename;
+      Texture1Description_Edit.Text := Texture1_RadioButton.Caption;
+      TempTexture1Name := Texture1Filename;
+      Texture1Planetographic_CheckBox.Checked := Texture1Planetographic;
+
+      Texture2Description_Edit.Text := Texture2_RadioButton.Caption;
+      TempTexture2Name := Texture2Filename;
+      Texture2Planetographic_CheckBox.Checked := Texture2Planetographic;
+
+      Texture3Description_Edit.Text := Texture3_RadioButton.Caption;
+      TempTexture3Name := Texture3Filename;
+      Texture3Planetographic_CheckBox.Checked := Texture3Planetographic;
       Tex3MinLon_LabeledNumericEdit.NumericEdit.Text := Tex3MinLonText;
       Tex3MaxLon_LabeledNumericEdit.NumericEdit.Text := Tex3MaxLonText;
       Tex3MinLat_LabeledNumericEdit.NumericEdit.Text := Tex3MinLatText;
       Tex3MaxLat_LabeledNumericEdit.NumericEdit.Text := Tex3MaxLatText;
+
       TempEarthTextureName := EarthTextureFilename;
 
       TempDotFilename := CraterFilename;
@@ -6265,33 +6303,48 @@ begin
           FileSettingsChanged := True;
         end;
 
-      LoResUSGS_RadioButton.Caption := Texture1Description_Edit.Text;
-      if TempTexture1Name<>LoResFilename then
+      Texture1_RadioButton.Caption := Texture1Description_Edit.Text;
+      if TempTexture1Name<>Texture1Filename then
         begin
-          if LoRes_Texture_Loaded then LoRes_TextureMap.Free;
-          LoRes_Texture_Loaded := False;
-          LoResUSGS_RadioButton.Font.Color := clGray;
-          LoResFilename := TempTexture1Name;
+          if Texture1_Loaded then Texture1_Map.Free;
+          Texture1_Loaded := False;
+          Texture1_RadioButton.Font.Color := clGray;
+          Texture1Filename := TempTexture1Name;
+          FileSettingsChanged := True;
+        end;
+      if Texture1Planetographic_CheckBox.Checked<>Texture1Planetographic then
+        begin
+          Texture1Planetographic := Texture1Planetographic_CheckBox.Checked;
           FileSettingsChanged := True;
         end;
 
-      HiResUSGS_RadioButton.Caption := Texture2Description_Edit.Text;
-      if TempTexture2Name<>HiResFilename then
+      Texture2_RadioButton.Caption := Texture2Description_Edit.Text;
+      if TempTexture2Name<>Texture2Filename then
         begin
-          if HiRes_Texture_Loaded then HiRes_TextureMap.Free;
-          HiRes_Texture_Loaded := False;
-          HiResUSGS_RadioButton.Font.Color := clGray;
-          HiResFilename := TempTexture2Name;
+          if Texture2_Loaded then Texture2_Map.Free;
+          Texture2_Loaded := False;
+          Texture2_RadioButton.Font.Color := clGray;
+          Texture2Filename := TempTexture2Name;
+          FileSettingsChanged := True;
+        end;
+      if Texture2Planetographic_CheckBox.Checked<>Texture2Planetographic then
+        begin
+          Texture2Planetographic := Texture2Planetographic_CheckBox.Checked;
           FileSettingsChanged := True;
         end;
 
-      Clementine_RadioButton.Caption := Texture3Description_Edit.Text;
-      if TempTexture3Name<>ClementineFilename then
+      Texture3_RadioButton.Caption := Texture3Description_Edit.Text;
+      if TempTexture3Name<>Texture3Filename then
         begin
-          if Clementine_Texture_Loaded then Clementine_TextureMap.Free;
-          Clementine_Texture_Loaded := False;
-          Clementine_RadioButton.Font.Color := clGray;
-          ClementineFilename := TempTexture3Name;
+          if Texture3_Loaded then Texture3_Map.Free;
+          Texture3_Loaded := False;
+          Texture3_RadioButton.Font.Color := clGray;
+          Texture3Filename := TempTexture3Name;
+          FileSettingsChanged := True;
+        end;
+      if Texture3Planetographic_CheckBox.Checked<>Texture3Planetographic then
+        begin
+          Texture3Planetographic := Texture3Planetographic_CheckBox.Checked;
           FileSettingsChanged := True;
         end;
 
@@ -6652,7 +6705,7 @@ begin  {TLTVT_Form.LoadCalibratedPhoto_MainMenuItemClick}
               SubObsLonDeg := RadToDeg(ArcTan2(-UserPhoto_ZPrime_Unit_Vector[x],-UserPhoto_ZPrime_Unit_Vector[z]));
 
               SubObsLat := Format('%0.3f',[SubObsLatDeg]);
-              SubObsLon := Format('%0.3f',[PosNegDegrees(SubObsLonDeg,LTVT_Form.PlanetaryLongitudeConvention)]);
+              SubObsLon := Format('%0.3f',[PosNegDegrees(SubObsLonDeg,PlanetaryLongitudeConvention)]);
 //                  ShowMessage('Sub-obs lon = '+SubObsLon);
             end;
 
@@ -6707,7 +6760,7 @@ begin  {TLTVT_Form.LoadCalibratedPhoto_MainMenuItemClick}
             begin
               ShowMessage('An error occurred reading the calibration data -- please load a different photo');
               UserPhoto_RadioButton.Hide;
-              LoResUSGS_RadioButton.Checked := True;
+              Texture1_RadioButton.Checked := True;
               Exit;
             end;
 
@@ -6938,7 +6991,7 @@ begin
 
   with CircleDrawing_Form do
     begin
-      LonDeg_LabeledNumericEdit.NumericEdit.Text := Format('%0.3f',[RadToDeg(SubObsPoint.Longitude)]);
+      LonDeg_LabeledNumericEdit.NumericEdit.Text := Format('%0.3f',[PosNegDegrees(RadToDeg(SubObsPoint.Longitude),PlanetaryLongitudeConvention)]);
       LatDeg_LabeledNumericEdit.NumericEdit.Text := Format('%0.3f',[RadToDeg(SubObsPoint.Latitude)]);
       Diam_LabeledNumericEdit.NumericEdit.Text := Format('%0.1f',[2*Theta*MoonRadius]);
       DrawCircle_Button.Click;
@@ -7106,27 +7159,41 @@ end;   {TLTVT_Form.EphemerisDataAvailable}
 
 function TLTVT_Form.ChangeLTVT_TargetPlanet(const DesiredPlanet : Planet) : Boolean;
 var
-  PossessiveS : String;
+  PossessiveS, PossessiveForm : String;
 begin
   Result := ChangeTargetPlanet(DesiredPlanet);
   if Result then
     begin
-      MoonDiameter_Label.Hint :=
-        Format('Angular size of an idealized %0.1f km radius %s as seen from the observation site at the requested time ',[MoonRadius,CurrentPlanetName]);
-      MoonElev_Label.Hint := 'Altitude (above horizontal) and azimuth (CW from north) of '+CurrentPlanetName+' and Sun from observation site at requested time';
-      ShowEarth_MainMenuItem.Caption := 'Show &Earth viewed from '+CurrentPlanetName;
       if CurrentPlanetName[Length(CurrentPlanetName)]='s' then
         PossessiveS := ''
       else
         PossessiveS := 's';
-      DrawLinesToPoleAndSun_RightClickMenuItem.Caption := 'Draw lines towards sub-solar point  (red) and '+CurrentPlanetName+''''+PossessiveS+' north pole (blue)';
+
+      PossessiveForm := CurrentPlanetName+''''+PossessiveS;
+
+      MoonDiameter_Label.Hint :=
+        Format('Angular size of an idealized %0.1f km radius %s as seen from the observation site at the requested time ',[MoonRadius,CurrentPlanetName]);
+      MoonElev_Label.Hint := 'Altitude (above horizontal) and azimuth (CW from north) of '+CurrentPlanetName+' and Sun from observation site at requested time';
+      ShowEarth_MainMenuItem.Caption := 'Show &Earth viewed from '+CurrentPlanetName;
+      DrawLinesToPoleAndSun_RightClickMenuItem.Caption := 'Draw lines towards sub-solar point  (red) and '+PossessiveForm+' north pole (blue)';
+      SubObsPtHeading_Label.Hint := 'Lon/lat of point on '+CurrentPlanetName+' directly beneath observer -- data may be input manually or retrieved from JPL file by "Compute Geometry"';
+      SubSolPtHeading_Label.Hint := 'Lon/lat of point on '+CurrentPlanetName+' directly beneath Sun -- data may be input manually or retrieved from JPL file by "Compute Geometry"';
+
+// Would like to consolidate all Hint Text changes here but
+// get access violation for attemping to change Hint Text before form has been created?
+//      H_Terminator_Goto_Form.SetToRadius_TLabeledNumericEdit.Hint := 'Distance of point from '+PossessiveForm+' center (applies only when display is a three-dimensional DEM-based simulation)';
+
       if CurrentTargetPlanet=Moon then
         begin
+          SubObs_Lat_LabeledNumericEdit.Hint := 'Selenographic latitude of sub-observer point in decimal degrees (N=+  S=-)';
+          SubSol_Lat_LabeledNumericEdit.Hint := 'Selenographic latitude of sub-solar point in decimal degrees (N=+  S=-)';
           Colongitude_Label.Hint := '90° - Selenographic longitude of Subsolar Point';
           MousePosition_GroupBox.Hint := 'Information related to current mouse position; in top caption, "Map" is IAU format LTO zone number; "Rnn" is Rükl sheet number';
         end
       else
         begin
+          SubObs_Lat_LabeledNumericEdit.Hint := 'Planetocentric latitude of sub-observer point in decimal degrees (N=+  S=-)';
+          SubSol_Lat_LabeledNumericEdit.Hint := 'Planetocentric latitude of sub-solar point in decimal degrees (N=+  S=-)';
           Colongitude_Label.Hint := 'Longitude of Central Meridian';
           MousePosition_GroupBox.Hint := 'Information related to current mouse position';
         end;
@@ -7285,17 +7352,17 @@ begin
   DisplayF1Help(Key,Shift,'MainForm.htm#Label');
 end;
 
-procedure TLTVT_Form.LoResUSGS_RadioButtonKeyDown(Sender: TObject;  var Key: Word; Shift: TShiftState);
+procedure TLTVT_Form.Texture1_RadioButtonKeyDown(Sender: TObject;  var Key: Word; Shift: TShiftState);
 begin
   DisplayF1Help(Key,Shift,'MainForm.htm#ReferenceMapSelectors');
 end;
 
-procedure TLTVT_Form.HiResUSGS_RadioButtonKeyDown(Sender: TObject;  var Key: Word; Shift: TShiftState);
+procedure TLTVT_Form.Texture2_RadioButtonKeyDown(Sender: TObject;  var Key: Word; Shift: TShiftState);
 begin
   DisplayF1Help(Key,Shift,'MainForm.htm#ReferenceMapSelectors');
 end;
 
-procedure TLTVT_Form.Clementine_RadioButtonKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
+procedure TLTVT_Form.Texture3_RadioButtonKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
   DisplayF1Help(Key,Shift,'MainForm.htm#ReferenceMapSelectors');
 end;

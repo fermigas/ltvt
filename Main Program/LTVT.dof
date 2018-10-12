@@ -62,7 +62,7 @@ AutoIncBuild=0
 MajorVer=0
 MinorVer=21
 Release=2
-Build=1
+Build=0
 Debug=0
 PreRelease=0
 Special=0
@@ -73,13 +73,13 @@ CodePage=1252
 [Version Info Keys]
 CompanyName=
 FileDescription=Lunar Terminator Visualization  Tool - Windows executable
-FileVersion=0.21.2.1
-InternalName=LTVT_v0_21_2x (development version)
+FileVersion=0.21.2.0
+InternalName=LTVT_v0_21_2
 LegalCopyright=Jim Mosher & Henrik Bondo
 LegalTrademarks=
 OriginalFilename=
 ProductName=Lunar Terminator Visualization Tool
-ProductVersion=LTVT 0.21.2x executable
+ProductVersion=LTVT 0.21.2 executable
 Comments=For further info go to  ltvt.wikispaces.com
 [Excluded Packages]
 c:\program files\borland\delphi6\Projects\Bpl\GLScene6.bpl=GLScene - OpenGL 3D library

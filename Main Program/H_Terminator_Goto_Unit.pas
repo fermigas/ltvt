@@ -133,7 +133,7 @@ var
 
 implementation
 
-uses MoonPosition {MoonRadius}, LTVT_Unit, MPVectors, Math, Win_Ops, JimsGraph, MapFns_Unit;
+uses MP_Defs {Moon}, MoonPosition {MoonRadius, CurrentTargetPlanet}, LTVT_Unit, MPVectors, Math, Win_Ops, JimsGraph, MapFns_Unit;
 
 {$R *.dfm}
 
@@ -160,6 +160,10 @@ end;
 procedure TH_Terminator_Goto_Form.FormShow(Sender: TObject);
 begin
   GoToState := Cancel;
+
+  LAC_Label.Visible := CurrentTargetPlanet=Moon;
+  LTOZone_Label.Visible := CurrentTargetPlanet=Moon;
+  RuklZone_Label.Visible := CurrentTargetPlanet=Moon;
 
   LonLat_GroupBox.Visible := LonLat_RadioButton.Checked;
   XY_GroupBox.Visible := XY_RadioButton.Checked;

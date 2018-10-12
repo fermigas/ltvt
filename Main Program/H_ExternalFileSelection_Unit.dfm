@@ -12,6 +12,7 @@ object ExternalFileSelection_Form: TExternalFileSelection_Form
   Font.Style = []
   OldCreateOrder = False
   ShowHint = True
+  OnKeyDown = FormKeyDown
   OnShow = FormShow
   PixelsPerInch = 96
   TextHeight = 13
@@ -24,7 +25,7 @@ object ExternalFileSelection_Form: TExternalFileSelection_Form
     Caption = 'OK'
     TabOrder = 4
     OnClick = OK_ButtonClick
-    OnKeyDown = OK_ButtonKeyDown
+    OnKeyDown = FormKeyDown
   end
   object Cancel_Button: TButton
     Left = 656
@@ -35,7 +36,7 @@ object ExternalFileSelection_Form: TExternalFileSelection_Form
     Caption = 'Cancel'
     TabOrder = 5
     OnClick = Cancel_ButtonClick
-    OnKeyDown = Cancel_ButtonKeyDown
+    OnKeyDown = FormKeyDown
   end
   object Textures_GroupBox: TGroupBox
     Left = 8
@@ -203,7 +204,7 @@ object ExternalFileSelection_Form: TExternalFileSelection_Form
       Hint = 'Enter text you want to appear next to radio button on main form'
       TabOrder = 3
       Text = 'Texture1Description_Edit'
-      OnKeyDown = Texture1Description_EditKeyDown
+      OnKeyDown = FormKeyDown
     end
     object Texture2Description_Edit: TEdit
       Left = 168
@@ -211,9 +212,9 @@ object ExternalFileSelection_Form: TExternalFileSelection_Form
       Width = 225
       Height = 19
       Hint = 'Enter text you want to appear next to radio button on main form'
-      TabOrder = 5
+      TabOrder = 6
       Text = 'Texture2Description_Edit'
-      OnKeyDown = Texture2Description_EditKeyDown
+      OnKeyDown = FormKeyDown
     end
     object Texture3Description_Edit: TEdit
       Left = 168
@@ -221,9 +222,9 @@ object ExternalFileSelection_Form: TExternalFileSelection_Form
       Width = 225
       Height = 19
       Hint = 'Enter text you want to appear next to radio button on main form'
-      TabOrder = 7
+      TabOrder = 9
       Text = 'Texture3Description_Edit'
-      OnKeyDown = Texture3Description_EditKeyDown
+      OnKeyDown = FormKeyDown
     end
     object ChangeTexture3_Button: TButton
       Left = 24
@@ -234,9 +235,9 @@ object ExternalFileSelection_Form: TExternalFileSelection_Form
         'Associate a new reference map with the third simulation texture ' +
         'radio button'
       Caption = 'Change'
-      TabOrder = 6
+      TabOrder = 8
       OnClick = ChangeTexture3_ButtonClick
-      OnKeyDown = ChangeTexture3_ButtonKeyDown
+      OnKeyDown = FormKeyDown
     end
     object ChangeTexture2_Button: TButton
       Left = 24
@@ -247,9 +248,9 @@ object ExternalFileSelection_Form: TExternalFileSelection_Form
         'Associate a new reference map with the second simulation texture' +
         ' radio button'
       Caption = 'Change'
-      TabOrder = 4
+      TabOrder = 5
       OnClick = ChangeTexture2_ButtonClick
-      OnKeyDown = ChangeTexture2_ButtonKeyDown
+      OnKeyDown = FormKeyDown
     end
     object ChangeTexture1_Button: TButton
       Left = 24
@@ -262,7 +263,7 @@ object ExternalFileSelection_Form: TExternalFileSelection_Form
       Caption = 'Change'
       TabOrder = 2
       OnClick = ChangeTexture1_ButtonClick
-      OnKeyDown = ChangeTexture1_ButtonKeyDown
+      OnKeyDown = FormKeyDown
     end
     object GraphicalBrowser_CheckBox: TCheckBox
       Left = 24
@@ -274,7 +275,7 @@ object ExternalFileSelection_Form: TExternalFileSelection_Form
         'low for large files!'
       Caption = 'Use graphic file browser'
       TabOrder = 0
-      OnKeyDown = GraphicalBrowser_CheckBoxKeyDown
+      OnKeyDown = FormKeyDown
     end
     object WineCompatibility_CheckBox: TCheckBox
       Left = 200
@@ -286,7 +287,7 @@ object ExternalFileSelection_Form: TExternalFileSelection_Form
         'Load textures using Windows-emulator compatible rendering method' +
         's'
       TabOrder = 1
-      OnKeyDown = WineCompatibility_CheckBoxKeyDown
+      OnKeyDown = FormKeyDown
     end
     inline Tex3MinLon_LabeledNumericEdit: TLabeledNumericEdit
       Left = 32
@@ -295,7 +296,7 @@ object ExternalFileSelection_Form: TExternalFileSelection_Form
       Height = 19
       Hint = 'Enter longitude along left margin of Texture 3 map'
       AutoSize = True
-      TabOrder = 8
+      TabOrder = 11
       inherited Item_Label: TLabel
         Width = 48
         Caption = 'Left. Lon.:'
@@ -307,7 +308,7 @@ object ExternalFileSelection_Form: TExternalFileSelection_Form
       inherited NumericEdit: TNumericEdit
         Height = 19
         Text = '-180'
-        OnKeyDown = Tex3MinLon_LabeledNumericEditNumericEditKeyDown
+        OnKeyDown = FormKeyDown
       end
     end
     inline Tex3MaxLon_LabeledNumericEdit: TLabeledNumericEdit
@@ -317,7 +318,7 @@ object ExternalFileSelection_Form: TExternalFileSelection_Form
       Height = 19
       Hint = 'Enter longitude along right margin of Texture 3 map'
       AutoSize = True
-      TabOrder = 9
+      TabOrder = 12
       inherited Item_Label: TLabel
         Width = 55
         Caption = 'Right. Lon.:'
@@ -331,7 +332,7 @@ object ExternalFileSelection_Form: TExternalFileSelection_Form
         Left = 64
         Height = 19
         Text = '180'
-        OnKeyDown = Tex3MaxLon_LabeledNumericEditNumericEditKeyDown
+        OnKeyDown = FormKeyDown
       end
     end
     inline Tex3MinLat_LabeledNumericEdit: TLabeledNumericEdit
@@ -341,7 +342,7 @@ object ExternalFileSelection_Form: TExternalFileSelection_Form
       Height = 19
       Hint = 'Enter latitude along bottom margin of Texture 3 map'
       AutoSize = True
-      TabOrder = 11
+      TabOrder = 14
       inherited Item_Label: TLabel
         Width = 57
         Caption = 'Bottom Lat.:'
@@ -355,7 +356,7 @@ object ExternalFileSelection_Form: TExternalFileSelection_Form
         Left = 64
         Height = 19
         Text = '-90'
-        OnKeyDown = Tex3MinLat_LabeledNumericEditNumericEditKeyDown
+        OnKeyDown = FormKeyDown
       end
     end
     inline Tex3MaxLat_LabeledNumericEdit: TLabeledNumericEdit
@@ -365,7 +366,7 @@ object ExternalFileSelection_Form: TExternalFileSelection_Form
       Height = 19
       Hint = 'Enter latitude along top margin of Texture 3 map'
       AutoSize = True
-      TabOrder = 10
+      TabOrder = 13
       inherited Item_Label: TLabel
         Width = 43
         Caption = 'Top Lat.:'
@@ -377,7 +378,7 @@ object ExternalFileSelection_Form: TExternalFileSelection_Form
       inherited NumericEdit: TNumericEdit
         Height = 19
         Text = '90'
-        OnKeyDown = Tex3MaxLat_LabeledNumericEditNumericEditKeyDown
+        OnKeyDown = FormKeyDown
       end
     end
     object ChangeEarthTexture_Button: TButton
@@ -389,9 +390,45 @@ object ExternalFileSelection_Form: TExternalFileSelection_Form
         'Choose a new texture map for drawing the Earth as viewed from th' +
         'e Moon'
       Caption = 'Change'
-      TabOrder = 12
+      TabOrder = 15
       OnClick = ChangeEarthTexture_ButtonClick
-      OnKeyDown = ChangeEarthTexture_ButtonKeyDown
+      OnKeyDown = FormKeyDown
+    end
+    object Texture1Planetographic_CheckBox: TCheckBox
+      Left = 496
+      Top = 48
+      Width = 169
+      Height = 17
+      Hint = 
+        'Check if longitudes are refer to flattened ellispsoid (rather th' +
+        'an sphere)'
+      Caption = 'Planetographic longitudes'
+      TabOrder = 4
+      OnKeyDown = FormKeyDown
+    end
+    object Texture2Planetographic_CheckBox: TCheckBox
+      Left = 496
+      Top = 112
+      Width = 169
+      Height = 17
+      Hint = 
+        'Check if longitudes are refer to flattened ellispsoid (rather th' +
+        'an sphere)'
+      Caption = 'Planetographic longitudes'
+      TabOrder = 7
+      OnKeyDown = FormKeyDown
+    end
+    object Texture3Planetographic_CheckBox: TCheckBox
+      Left = 496
+      Top = 176
+      Width = 169
+      Height = 17
+      Hint = 
+        'Check if longitudes are refer to flattened ellispsoid (rather th' +
+        'an sphere)'
+      Caption = 'Planetographic longitudes'
+      TabOrder = 10
+      OnKeyDown = FormKeyDown
     end
   end
   object Others_GroupBox: TGroupBox
@@ -469,7 +506,7 @@ object ExternalFileSelection_Form: TExternalFileSelection_Form
       Caption = 'JPL Ephemeris'
       TabOrder = 4
       OnClick = ChangeEphemerisFile_ButtonClick
-      OnKeyDown = ChangeEphemerisFile_ButtonKeyDown
+      OnKeyDown = FormKeyDown
     end
     object ChangeDotFile_Button: TButton
       Left = 24
@@ -483,7 +520,7 @@ object ExternalFileSelection_Form: TExternalFileSelection_Form
       Caption = 'Dots/Names'
       TabOrder = 0
       OnClick = ChangeDotFile_ButtonClick
-      OnKeyDown = ChangeDotFile_ButtonKeyDown
+      OnKeyDown = FormKeyDown
     end
     object ChangeTAIFile_Button: TButton
       Left = 24
@@ -497,7 +534,7 @@ object ExternalFileSelection_Form: TExternalFileSelection_Form
       Caption = 'TAI Offsets'
       TabOrder = 5
       OnClick = ChangeTAIFile_ButtonClick
-      OnKeyDown = ChangeTAIFile_ButtonKeyDown
+      OnKeyDown = FormKeyDown
     end
     object PhotoSessionsFile_Button: TButton
       Left = 24
@@ -510,7 +547,7 @@ object ExternalFileSelection_Form: TExternalFileSelection_Form
       Caption = 'Photo Search'
       TabOrder = 1
       OnClick = PhotoSessionsFile_ButtonClick
-      OnKeyDown = PhotoSessionsFile_ButtonKeyDown
+      OnKeyDown = FormKeyDown
     end
     object CalibratedPhotos_Button: TButton
       Left = 24
@@ -523,7 +560,7 @@ object ExternalFileSelection_Form: TExternalFileSelection_Form
       Caption = 'Calibrated Photos'
       TabOrder = 2
       OnClick = CalibratedPhotos_ButtonClick
-      OnKeyDown = CalibratedPhotos_ButtonKeyDown
+      OnKeyDown = FormKeyDown
     end
     object ObservatoryList_Button: TButton
       Left = 24
@@ -537,7 +574,7 @@ object ExternalFileSelection_Form: TExternalFileSelection_Form
       Caption = 'Obs. Locations'
       TabOrder = 3
       OnClick = ObservatoryList_ButtonClick
-      OnKeyDown = ObservatoryList_ButtonKeyDown
+      OnKeyDown = FormKeyDown
     end
   end
   object Save_Button: TButton
@@ -549,7 +586,7 @@ object ExternalFileSelection_Form: TExternalFileSelection_Form
     Caption = 'Save as Default'
     TabOrder = 2
     OnClick = Save_ButtonClick
-    OnKeyDown = Save_ButtonKeyDown
+    OnKeyDown = FormKeyDown
   end
   object Restore_Button: TButton
     Left = 120
@@ -560,7 +597,7 @@ object ExternalFileSelection_Form: TExternalFileSelection_Form
     Caption = 'Restore Defaults'
     TabOrder = 3
     OnClick = Restore_ButtonClick
-    OnKeyDown = Restore_ButtonKeyDown
+    OnKeyDown = FormKeyDown
   end
   object OpenDialog1: TOpenDialog
     Left = 632

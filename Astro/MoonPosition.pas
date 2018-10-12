@@ -61,7 +61,7 @@ used to ComputeMeanEarthSystemOffsetMatrix used to AdjustToMeanEarthSystem}
 var
   CurrentTargetPlanet : Planet;
   CurrentPlanetName : String;
-  MoonRadius : Extended;
+  MoonRadius, Radius_a {equatorial}, Radius_b {polar} : Extended;
 
   SelenographicCoordinateSystem : TCoordinateSystem;  {set by SetSelenographicSystem;
     used by SelenographicCoordinates}
@@ -124,17 +124,71 @@ function ChangeTargetPlanet(const DesiredPlanet : Planet) : Boolean;
     Result := True;
     CurrentTargetPlanet := DesiredPlanet;
     CurrentPlanetName := PlanetName[CurrentTargetPlanet];
-    MoonRadius := PlanetRadius[CurrentTargetPlanet]/OneKm;
+// Radii from Seidelmann 2007
     case DesiredPlanet of
-       Moon :  JPL_TargetBody :=  JPL_Moon;
-       Mercury : JPL_TargetBody :=  JPL_Mercury;
-       Venus : JPL_TargetBody :=  JPL_Venus;
-       Mars : JPL_TargetBody :=  JPL_Mars;
-       Jupiter : JPL_TargetBody :=  JPL_Jupiter;
-       Saturn : JPL_TargetBody :=  JPL_Saturn;
-       Uranus : JPL_TargetBody :=  JPL_Uranus;
-       Neptune : JPL_TargetBody :=  JPL_Neptune;
-       Pluto : JPL_TargetBody :=  JPL_Pluto;
+       Moon :
+         begin
+           JPL_TargetBody := JPL_Moon;
+           MoonRadius := 1737.4;  {[km]}
+           Radius_a := MoonRadius;
+           Radius_b := MoonRadius;
+         end;
+       Mercury :
+         begin
+           JPL_TargetBody := JPL_Mercury;
+           MoonRadius := 2439.7;
+           Radius_a := MoonRadius;
+           Radius_b := MoonRadius;
+         end;
+       Venus :
+         begin
+           JPL_TargetBody := JPL_Venus;
+           MoonRadius := 6051.8;
+           Radius_a := MoonRadius;
+           Radius_b := MoonRadius;
+         end;
+       Mars :
+         begin
+           JPL_TargetBody := JPL_Mars;
+           MoonRadius := 3389.50;
+           Radius_a := 3396.19;
+           Radius_b := 3376.20;
+         end;
+       Jupiter :
+         begin
+           JPL_TargetBody := JPL_Jupiter;
+           MoonRadius := 69911;
+           Radius_a := 71492;
+           Radius_b := 66854;
+         end;
+       Saturn :
+         begin
+           JPL_TargetBody := JPL_Saturn;
+           MoonRadius := 58232;
+           Radius_a := 60268;
+           Radius_b := 54364;
+         end;
+       Uranus :
+         begin
+           JPL_TargetBody := JPL_Uranus;
+           MoonRadius := 25362;
+           Radius_a := 25559;
+           Radius_b := 24973;
+         end;
+       Neptune :
+         begin
+           JPL_TargetBody := JPL_Neptune;
+           MoonRadius := 24622;
+           Radius_a := 24764;
+           Radius_b := 24341;
+         end;
+       Pluto :
+         begin
+           JPL_TargetBody := JPL_Pluto;
+           MoonRadius := 1195;
+           Radius_a := MoonRadius;
+           Radius_b := MoonRadius;
+         end;
        else
          ShowMessage('Unable to initialize coordinate system for '+PlanetName[DesiredPlanet]);
          Result := False;

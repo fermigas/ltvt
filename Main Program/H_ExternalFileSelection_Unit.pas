@@ -56,6 +56,9 @@ type
     Label10: TLabel;
     EarthTextureFilename_Label: TLabel;
     ChangeEarthTexture_Button: TButton;
+    Texture1Planetographic_CheckBox: TCheckBox;
+    Texture2Planetographic_CheckBox: TCheckBox;
+    Texture3Planetographic_CheckBox: TCheckBox;
     procedure FormShow(Sender: TObject);
     procedure OK_ButtonClick(Sender: TObject);
     procedure Cancel_ButtonClick(Sender: TObject);
@@ -70,53 +73,9 @@ type
     procedure Restore_ButtonClick(Sender: TObject);
     procedure CalibratedPhotos_ButtonClick(Sender: TObject);
     procedure ObservatoryList_ButtonClick(Sender: TObject);
-    procedure GraphicalBrowser_CheckBoxKeyDown(Sender: TObject;
-      var Key: Word; Shift: TShiftState);
-    procedure Texture1Description_EditKeyDown(Sender: TObject;
-      var Key: Word; Shift: TShiftState);
-    procedure ChangeTexture1_ButtonKeyDown(Sender: TObject; var Key: Word;
-      Shift: TShiftState);
-    procedure Texture2Description_EditKeyDown(Sender: TObject;
-      var Key: Word; Shift: TShiftState);
-    procedure ChangeTexture2_ButtonKeyDown(Sender: TObject; var Key: Word;
-      Shift: TShiftState);
-    procedure Texture3Description_EditKeyDown(Sender: TObject;
-      var Key: Word; Shift: TShiftState);
-    procedure ChangeTexture3_ButtonKeyDown(Sender: TObject; var Key: Word;
-      Shift: TShiftState);
-    procedure ChangeDotFile_ButtonKeyDown(Sender: TObject; var Key: Word;
-      Shift: TShiftState);
-    procedure PhotoSessionsFile_ButtonKeyDown(Sender: TObject;
-      var Key: Word; Shift: TShiftState);
-    procedure CalibratedPhotos_ButtonKeyDown(Sender: TObject;
-      var Key: Word; Shift: TShiftState);
-    procedure ObservatoryList_ButtonKeyDown(Sender: TObject; var Key: Word;
-      Shift: TShiftState);
-    procedure ChangeEphemerisFile_ButtonKeyDown(Sender: TObject;
-      var Key: Word; Shift: TShiftState);
-    procedure ChangeTAIFile_ButtonKeyDown(Sender: TObject; var Key: Word;
-      Shift: TShiftState);
-    procedure Save_ButtonKeyDown(Sender: TObject; var Key: Word;
-      Shift: TShiftState);
-    procedure Restore_ButtonKeyDown(Sender: TObject; var Key: Word;
-      Shift: TShiftState);
-    procedure OK_ButtonKeyDown(Sender: TObject; var Key: Word;
-      Shift: TShiftState);
-    procedure Cancel_ButtonKeyDown(Sender: TObject; var Key: Word;
-      Shift: TShiftState);
-    procedure WineCompatibility_CheckBoxKeyDown(Sender: TObject;
-      var Key: Word; Shift: TShiftState);
-    procedure Tex3MinLon_LabeledNumericEditNumericEditKeyDown(
-      Sender: TObject; var Key: Word; Shift: TShiftState);
-    procedure Tex3MaxLon_LabeledNumericEditNumericEditKeyDown(
-      Sender: TObject; var Key: Word; Shift: TShiftState);
-    procedure Tex3MaxLat_LabeledNumericEditNumericEditKeyDown(
-      Sender: TObject; var Key: Word; Shift: TShiftState);
-    procedure Tex3MinLat_LabeledNumericEditNumericEditKeyDown(
-      Sender: TObject; var Key: Word; Shift: TShiftState);
-    procedure ChangeEarthTexture_ButtonKeyDown(Sender: TObject;
-      var Key: Word; Shift: TShiftState);
     procedure ChangeEarthTexture_ButtonClick(Sender: TObject);
+    procedure FormKeyDown(Sender: TObject; var Key: Word;
+      Shift: TShiftState);
   private
     { Private declarations }
   public
@@ -139,7 +98,7 @@ var
 
 implementation
 
-uses LTVT_Unit;
+uses MoonPosition {Radius_a, Radius_b}, LTVT_Unit;
 
 {$R *.dfm}
 
@@ -149,6 +108,18 @@ begin
   Texture2Filename_Label.Caption := MinimizeName(TempTexture2Name,Texture2Filename_Label.Canvas,Texture2Filename_Label.Width);
   Texture3Filename_Label.Caption := MinimizeName(TempTexture3Name,Texture3Filename_Label.Canvas,Texture3Filename_Label.Width);
   EarthTextureFilename_Label.Caption := MinimizeName(TempEarthTextureName,EarthTextureFilename_Label.Canvas,EarthTextureFilename_Label.Width);
+  if Radius_a=Radius_b then
+    begin // no flattening
+      Texture1Planetographic_CheckBox.Visible := False;
+      Texture2Planetographic_CheckBox.Visible := False;
+      Texture3Planetographic_CheckBox.Visible := False;
+    end
+  else
+    begin
+      Texture1Planetographic_CheckBox.Visible := True;
+      Texture2Planetographic_CheckBox.Visible := True;
+      Texture3Planetographic_CheckBox.Visible := True;
+    end;
 
   DotFilename_Label.Caption := MinimizeName(TempDotFilename,DotFilename_Label.Canvas,DotFilename_Label.Width);
   PhotoSessionsFilename_Label.Caption := MinimizeName(TempNormalPhotoSessionsFilename,PhotoSessionsFilename_Label.Canvas,PhotoSessionsFilename_Label.Width);
@@ -391,143 +362,9 @@ begin
   RefreshLabels;
 end;
 
-procedure TExternalFileSelection_Form.GraphicalBrowser_CheckBoxKeyDown(
-  Sender: TObject; var Key: Word; Shift: TShiftState);
+procedure TExternalFileSelection_Form.FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
   LTVT_Form.DisplayF1Help(Key,Shift,'ChangingFilenames.htm');
 end;
-
-procedure TExternalFileSelection_Form.Texture1Description_EditKeyDown(
-  Sender: TObject; var Key: Word; Shift: TShiftState);
-begin
-  LTVT_Form.DisplayF1Help(Key,Shift,'ChangingFilenames.htm');
-end;
-
-procedure TExternalFileSelection_Form.ChangeTexture1_ButtonKeyDown(
-  Sender: TObject; var Key: Word; Shift: TShiftState);
-begin
-  LTVT_Form.DisplayF1Help(Key,Shift,'ChangingFilenames.htm');
-end;
-
-procedure TExternalFileSelection_Form.Texture2Description_EditKeyDown(
-  Sender: TObject; var Key: Word; Shift: TShiftState);
-begin
-  LTVT_Form.DisplayF1Help(Key,Shift,'ChangingFilenames.htm');
-end;
-
-procedure TExternalFileSelection_Form.ChangeTexture2_ButtonKeyDown(
-  Sender: TObject; var Key: Word; Shift: TShiftState);
-begin
-  LTVT_Form.DisplayF1Help(Key,Shift,'ChangingFilenames.htm');
-end;
-
-procedure TExternalFileSelection_Form.Texture3Description_EditKeyDown(
-  Sender: TObject; var Key: Word; Shift: TShiftState);
-begin
-  LTVT_Form.DisplayF1Help(Key,Shift,'ChangingFilenames.htm');
-end;
-
-procedure TExternalFileSelection_Form.ChangeTexture3_ButtonKeyDown(
-  Sender: TObject; var Key: Word; Shift: TShiftState);
-begin
-  LTVT_Form.DisplayF1Help(Key,Shift,'ChangingFilenames.htm');
-end;
-
-procedure TExternalFileSelection_Form.ChangeDotFile_ButtonKeyDown(
-  Sender: TObject; var Key: Word; Shift: TShiftState);
-begin
-  LTVT_Form.DisplayF1Help(Key,Shift,'ChangingFilenames.htm');
-end;
-
-procedure TExternalFileSelection_Form.PhotoSessionsFile_ButtonKeyDown(
-  Sender: TObject; var Key: Word; Shift: TShiftState);
-begin
-  LTVT_Form.DisplayF1Help(Key,Shift,'ChangingFilenames.htm');
-end;
-
-procedure TExternalFileSelection_Form.CalibratedPhotos_ButtonKeyDown(
-  Sender: TObject; var Key: Word; Shift: TShiftState);
-begin
-  LTVT_Form.DisplayF1Help(Key,Shift,'ChangingFilenames.htm');
-end;
-
-procedure TExternalFileSelection_Form.ObservatoryList_ButtonKeyDown(
-  Sender: TObject; var Key: Word; Shift: TShiftState);
-begin
-  LTVT_Form.DisplayF1Help(Key,Shift,'ChangingFilenames.htm');
-end;
-
-procedure TExternalFileSelection_Form.ChangeEphemerisFile_ButtonKeyDown(
-  Sender: TObject; var Key: Word; Shift: TShiftState);
-begin
-  LTVT_Form.DisplayF1Help(Key,Shift,'ChangingFilenames.htm');
-end;
-
-procedure TExternalFileSelection_Form.ChangeTAIFile_ButtonKeyDown(
-  Sender: TObject; var Key: Word; Shift: TShiftState);
-begin
-  LTVT_Form.DisplayF1Help(Key,Shift,'ChangingFilenames.htm');
-end;
-
-procedure TExternalFileSelection_Form.Save_ButtonKeyDown(Sender: TObject;
-  var Key: Word; Shift: TShiftState);
-begin
-  LTVT_Form.DisplayF1Help(Key,Shift,'ChangingFilenames.htm');
-end;
-
-procedure TExternalFileSelection_Form.Restore_ButtonKeyDown(
-  Sender: TObject; var Key: Word; Shift: TShiftState);
-begin
-  LTVT_Form.DisplayF1Help(Key,Shift,'ChangingFilenames.htm');
-end;
-
-procedure TExternalFileSelection_Form.OK_ButtonKeyDown(Sender: TObject;
-  var Key: Word; Shift: TShiftState);
-begin
-  LTVT_Form.DisplayF1Help(Key,Shift,'ChangingFilenames.htm');
-end;
-
-procedure TExternalFileSelection_Form.Cancel_ButtonKeyDown(Sender: TObject;
-  var Key: Word; Shift: TShiftState);
-begin
-  LTVT_Form.DisplayF1Help(Key,Shift,'ChangingFilenames.htm');
-end;
-
-procedure TExternalFileSelection_Form.WineCompatibility_CheckBoxKeyDown(
-  Sender: TObject; var Key: Word; Shift: TShiftState);
-begin
-  LTVT_Form.DisplayF1Help(Key,Shift,'ChangingFilenames.htm');
-end;
-
-procedure TExternalFileSelection_Form.Tex3MinLon_LabeledNumericEditNumericEditKeyDown(
-  Sender: TObject; var Key: Word; Shift: TShiftState);
-begin
-  LTVT_Form.DisplayF1Help(Key,Shift,'ChangingFilenames.htm');
-end;
-
-procedure TExternalFileSelection_Form.Tex3MaxLon_LabeledNumericEditNumericEditKeyDown(
-  Sender: TObject; var Key: Word; Shift: TShiftState);
-begin
-  LTVT_Form.DisplayF1Help(Key,Shift,'ChangingFilenames.htm');
-end;
-
-procedure TExternalFileSelection_Form.Tex3MaxLat_LabeledNumericEditNumericEditKeyDown(
-  Sender: TObject; var Key: Word; Shift: TShiftState);
-begin
-  LTVT_Form.DisplayF1Help(Key,Shift,'ChangingFilenames.htm');
-end;
-
-procedure TExternalFileSelection_Form.Tex3MinLat_LabeledNumericEditNumericEditKeyDown(
-  Sender: TObject; var Key: Word; Shift: TShiftState);
-begin
-  LTVT_Form.DisplayF1Help(Key,Shift,'ChangingFilenames.htm');
-end;
-
-procedure TExternalFileSelection_Form.ChangeEarthTexture_ButtonKeyDown(
-  Sender: TObject; var Key: Word; Shift: TShiftState);
-begin
-  LTVT_Form.DisplayF1Help(Key,Shift,'ChangingFilenames.htm');
-end;
-
 
 end.

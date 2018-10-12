@@ -78,20 +78,25 @@ object LTVT_Form: TLTVT_Form
       Height = 13
       Caption = 'GeometryType_Label'
     end
-    object Label1: TLabel
+    object SubObsPtHeading_Label: TLabel
       Left = 23
       Top = 104
       Width = 90
       Height = 13
-      Hint = 'This data may be input manually or retrieved from JPL file'
+      Hint = 
+        'Lon/lat of point on planet directly beneath observer -- data may' +
+        ' be input manually or retrieved from JPL file by "Compute Geomet' +
+        'ry"'
       Caption = 'Sub-observer Point'
     end
-    object Label2: TLabel
+    object SubSolPtHeading_Label: TLabel
       Left = 178
       Top = 104
       Width = 71
       Height = 13
-      Hint = 'This data may be input manually or retrieved from JPL file'
+      Hint = 
+        'Lon/lat of point on planet directly beneath Sun -- data may be i' +
+        'nput manually or retrieved from JPL file by "Compute Geometry"'
       Caption = 'Sub-solar Point'
     end
     object Colongitude_Label: TLabel
@@ -148,7 +153,7 @@ object LTVT_Form: TLTVT_Form
       Top = 136
       Width = 123
       Height = 19
-      Hint = 'Longitude in decimal degrees (E=+  W=-)'
+      Hint = 'Longitude of sub-solar point in decimal degrees (E=+  W=-)'
       AutoSize = True
       TabOrder = 2
       inherited Item_Label: TLabel
@@ -173,7 +178,9 @@ object LTVT_Form: TLTVT_Form
       Top = 168
       Width = 123
       Height = 19
-      Hint = 'Latitude in decimal degrees (N=+  S=-)'
+      Hint = 
+        'Latitude (on sphere) of sub-solar point in decimal degrees (N=+ ' +
+        ' S=-)'
       AutoSize = True
       TabOrder = 3
       inherited Item_Label: TLabel
@@ -200,7 +207,7 @@ object LTVT_Form: TLTVT_Form
       Top = 136
       Width = 123
       Height = 19
-      Hint = 'Longitude in decimal degrees (E=+  W=-)'
+      Hint = 'Longitude of sub-observer point in decimal degrees (E=+  W=-)'
       AutoSize = True
       TabOrder = 0
       inherited Item_Label: TLabel
@@ -225,7 +232,9 @@ object LTVT_Form: TLTVT_Form
       Top = 168
       Width = 123
       Height = 19
-      Hint = 'Latitude in decimal degrees (N=+  S=-)'
+      Hint = 
+        'Latitude (on sphere) of sub-observer point in decimal degrees (N' +
+        '=+  S=-)'
       AutoSize = True
       TabOrder = 1
       inherited Item_Label: TLabel
@@ -473,7 +482,7 @@ object LTVT_Form: TLTVT_Form
       OnClick = OverlayDots_ButtonClick
       OnKeyDown = OverlayDots_ButtonKeyDown
     end
-    object LoResUSGS_RadioButton: TRadioButton
+    object Texture1_RadioButton: TRadioButton
       Left = 24
       Top = 117
       Width = 257
@@ -489,9 +498,9 @@ object LTVT_Form: TLTVT_Form
       ParentFont = False
       TabOrder = 6
       TabStop = True
-      OnKeyDown = LoResUSGS_RadioButtonKeyDown
+      OnKeyDown = Texture1_RadioButtonKeyDown
     end
-    object HiResUSGS_RadioButton: TRadioButton
+    object Texture2_RadioButton: TRadioButton
       Left = 24
       Top = 137
       Width = 273
@@ -506,9 +515,9 @@ object LTVT_Form: TLTVT_Form
       ParentFont = False
       TabOrder = 7
       TabStop = True
-      OnKeyDown = HiResUSGS_RadioButtonKeyDown
+      OnKeyDown = Texture2_RadioButtonKeyDown
     end
-    object Clementine_RadioButton: TRadioButton
+    object Texture3_RadioButton: TRadioButton
       Left = 24
       Top = 157
       Width = 265
@@ -523,7 +532,7 @@ object LTVT_Form: TLTVT_Form
       ParentFont = False
       TabOrder = 8
       TabStop = True
-      OnKeyDown = Clementine_RadioButtonKeyDown
+      OnKeyDown = Texture3_RadioButtonKeyDown
     end
     inline Zoom_LabeledNumericEdit: TLabeledNumericEdit
       Left = 88

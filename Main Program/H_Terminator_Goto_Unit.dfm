@@ -282,7 +282,7 @@ object H_Terminator_Goto_Form: TH_Terminator_Goto_Form
       Top = 88
       Width = 97
       Height = 32
-      Hint = 'Selenographic Latitude in decimal degrees (N=+  S=-)'
+      Hint = 'Latitude in decimal degrees (N=+  S=-)'
       AutoSize = True
       TabOrder = 3
       inherited Item_Label: TLabel
@@ -312,7 +312,7 @@ object H_Terminator_Goto_Form: TH_Terminator_Goto_Form
       Top = 97
       Width = 105
       Height = 24
-      Hint = 'Selenographic longitude in decimal degrees (E=+  W=-)'
+      Hint = 'Longitude in decimal degrees (E=+  W=-)'
       AutoSize = True
       TabOrder = 2
       inherited Item_Label: TLabel
@@ -371,8 +371,8 @@ object H_Terminator_Goto_Form: TH_Terminator_Goto_Form
       Width = 134
       Height = 19
       Hint = 
-        'Distance of point from Moon'#39's center (applies only when display ' +
-        'is a three-dimensional DEM-based simulation)'
+        'Distance of point from object'#39's center (applies only when displa' +
+        'y is a three-dimensional DEM-based simulation)'
       AutoSize = True
       TabOrder = 4
       inherited Item_Label: TLabel
@@ -472,8 +472,8 @@ object H_Terminator_Goto_Form: TH_Terminator_Goto_Form
     Width = 97
     Height = 17
     Hint = 
-      'Specify location in X-Y cartesian system with Moon'#39's center at (' +
-      '0,0) and radius = 1'
+      'Specify location in X-Y cartesian system with object'#39's center at' +
+      ' (0,0) and object'#39's radius = 1'
     Caption = 'By X-Y position'
     TabOrder = 1
     OnClick = XY_RadioButtonClick
@@ -484,6 +484,9 @@ object H_Terminator_Goto_Form: TH_Terminator_Goto_Form
     Top = 8
     Width = 89
     Height = 17
+    Hint = 
+      'Positions on one of the zones defined in Antonin R'#252'kl'#39's maps of ' +
+      'the nearside of the Moon'
     Caption = 'By R'#252'kl zone'
     TabOrder = 2
     OnClick = RuklZone_RadioButtonClick

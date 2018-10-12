@@ -9,16 +9,18 @@ type
   TDemData = class(TObject)
   private
     Stored_DEM_data : array of array of Single;  // in [km] as deviation from RefHeightKm
-    ValidNoDataValue : Boolean;
+    ValidNoDataValue, StereographicProjection : Boolean;
     NoDataValue : Single;
-    NumLons, NumLats : Integer;
+    NumLons, NumLats  : Integer;
+    StereoCenterLatRad, StereoCenterIndex, StereoScaleFactor, StereoLamba0Rad,
+    LonStepRad,   {[rad]}
+    FirstLonRad, FirstLatRad : Extended; // *center* of first sample in first line (upper left of image) in [rad]
   public
     FileOpen, DisplayTimings : Boolean;
     DEM_info : TStringList;
     Filename : String;
+    LatStepRad,  // used as basic Grid Step in LTVT computed for both polar and cylindrical projections
     RefHeightKm,
-    LonStepRad, LatStepRad,  {[rad]}
-    FirstLonRad, FirstLatRad, // *center* of first sample in first line (upper left of image) in [rad]
     MinHtDeviationKm, MaxHtDeviationKm : Extended;  {deviation from RefHeightKm}
 
     constructor Create;
@@ -69,14 +71,16 @@ const
 var
   NameOfFileToRead : String;
   Mission : (Kaguya, Apollo, Unknown);
-  RawDataType : (ReversedDoubleData, SingleData, WordData, ReversedSmallIntData, ReversedLongIntData, ByteData);
+  RawDataType : (ReversedDoubleData, SingleData, WordData, SmallIntData, LongIntData, ReversedSmallIntData, ReversedLongIntData, ByteData);
   TestFile : file of Char;
   TestChar : Char;
   ByteFile : file;  // untyped
   ByteRow : array of Byte; // unsigned 8-bit integers
   WordRow : array of Word; // unsigned 16-bit integers
-  ReversedSmallIntRow : array of TTwoByteArray;  // signed integers
-  ReversedLongIntRow : array of TFourByteArray;   // signed integers
+  SmallIntRow : array of SmallInt; // signed 16-bit integers
+  LongIntRow : array of LongInt; // signed 32-bit integers
+  ReversedSmallIntRow : array of TTwoByteArray;  // signed 16-bit integers
+  ReversedLongIntRow : array of TFourByteArray;   // signed 32-bit integers
   ReversedDoubleRow : array of TEightByteArray;
   TwoByteArray : TTwoByteArray;
   FourByteArray : TFourByteArray;
@@ -96,10 +100,10 @@ var
 
 function ReadPDS_Header : Boolean;
   var
-    MissionName : String;
-    StepsPerRadian, MapStep : Extended;
+    MissionName, MapProjection, UnitString, A_AXIS_RADIUS : String;
+    StepsPerRadian, MapStep, KmPerPixel, A_radius : Extended;
 
-  function FindItem(const SearchString : String; var DataString : String; const DisplayWarning : Boolean) : Boolean;
+  function FindItem(const SearchString : String; var DataString, Units : String; const DisplayWarning : Boolean) : Boolean;
   // reads Infile until identifier field = SearchString
     var
       Infile : TextFile;
@@ -127,6 +131,7 @@ function ReadPDS_Header : Boolean;
         begin
   //        DataLine is now part after identifier, following '='
           DataString := LeadingElement(DataLine,'<'); // number sometimes followed by <xxx>  indicating units
+          Units := LeadingElement(DataLine,'>');
         end
       else if DisplayWarning then
         ShowMessage('"'+SearchString+'" not found');
@@ -167,7 +172,7 @@ function ReadPDS_Header : Boolean;
           end;
       end;
 
-    if FindItem('MISSION_NAME',MissionName,False) and (MissionName='SELENE') then
+    if FindItem('MISSION_NAME',MissionName,UnitString,False) and (MissionName='SELENE') then
       Mission := Kaguya
     else
       Mission := Unknown;
@@ -175,33 +180,33 @@ function ReadPDS_Header : Boolean;
     case Mission of
       Kaguya:
         begin  // items unique to Kaguya records
-          if not FindItem('^IMAGE',ItemString,True) then Exit;
+          if not FindItem('^IMAGE',ItemString,UnitString,True) then Exit;
           NumHeaderBytes := IntegerValue(ItemString) - 1;
-          if not FindItem('DUMMY_DATA',ItemString,True) then Exit;
+          if not FindItem('DUMMY_DATA',ItemString,UnitString,True) then Exit;
           NoRawDataValue := ExtendedValue(ItemString);
         end;
       else
         begin
           if ASCII_file_detected then
             begin
-              if not FindItem('RECORD_BYTES',ItemString,True) then Exit;
+              if not FindItem('RECORD_BYTES',ItemString,UnitString,True) then Exit;
               NumHeaderBytes := IntegerValue(ItemString);
-              if not FindItem('^IMAGE',ItemString,True) then Exit;
+              if not FindItem('^IMAGE',ItemString,UnitString,True) then Exit;
               NumHeaderBytes := NumHeaderBytes*(IntegerValue(ItemString) - 1);
             end
           else
             begin
               NumHeaderBytes := 0;
-              if not FindItem('^IMAGE',ItemString,True) then Exit;
+              if not FindItem('^IMAGE',ItemString,UnitString,True) then Exit;
               if (ItemString<>UpperCase(ExtractFileName(DesiredFilename))) and (ItemString<>'"'+UpperCase(ExtractFileName(DesiredFilename))+'"') then
                 begin
                   ShowMessage('Image name in PDS label ('+ItemString+') does not match requested file name ('+ExtractFileName(DesiredFilename)+')' );
                   Exit;
                 end;
             end;
-          if FindItem('NULL',ItemString,False) then
+          if FindItem('NULL',ItemString,UnitString,False) then
             NoRawDataValue := ExtendedValue(ItemString)
-          else if FindItem('MISSING_CONSTANT',ItemString,False) and (ItemString='16#FF7FFFFB#') then
+          else if FindItem('MISSING_CONSTANT',ItemString,UnitString,False) and (ItemString='16#FF7FFFFB#') then
             NoRawDataValue := -3.40282265508890445E38;
         end;
       end;
@@ -209,7 +214,7 @@ function ReadPDS_Header : Boolean;
  // Default unit in calling routine is METER
     if Mission=Kaguya then
       RawDataToKmMultiplier := 1
-    else if FindItem('UNIT',ItemString,False) then
+    else if FindItem('UNIT',ItemString,UnitString,False) then
       begin
         if (ItemString='KILOMETER') then
           RawDataToKmMultiplier := 1
@@ -217,49 +222,10 @@ function ReadPDS_Header : Boolean;
           RawDataToKmMultiplier := 0.000001;
       end;
 
-    if FindItem('SCALING_FACTOR',ItemString,False) then RawDataToKmMultiplier := ExtendedValue(ItemString)*RawDataToKmMultiplier;
+    if FindItem('A_AXIS_RADIUS',A_AXIS_RADIUS,UnitString,True) then
+      RefHeightKm := Round(100*ExtendedValue(A_AXIS_RADIUS))/100; // discard least significant digits in single format
 
-// note: 'OFFSET' handled below after reading A_AXIS
-
-    if FindItem('MINIMUM',ItemString,False) then
-      MinRawDataValue := ExtendedValue(ItemString)
-    else if FindItem('VALID_MINIMUM',ItemString,False) then
-      MinRawDataValue := ExtendedValue(ItemString);
-    if FindItem('MAXIMUM',ItemString,False) then
-      MaxRawDataValue := ExtendedValue(ItemString)
-    else if FindItem('VALID_MAXIMUM',ItemString,False) then
-      MaxRawDataValue := ExtendedValue(ItemString);
-
-  //  ShowMessage('Header bytes: '+IntToStr(NumHeaderBytes));
-
-    if not FindItem('LINE_SAMPLES',ItemString,True) then Exit;
-    NumLons := IntegerValue(ItemString);
-    if not FindItem('LINES',ItemString,True) then Exit;
-    NumLats := IntegerValue(ItemString);
-    if not FindItem('SAMPLE_BITS',ItemString,True) then Exit;
-    BytesPerDataItem := IntegerValue(ItemString) div 8;
-
-    if not FindItem('SAMPLE_TYPE',ItemString,True) then Exit;
-    if ((ItemString='"IEEE REAL"') or (ItemString='IEEE_REAL')) and (BytesPerDataItem=8) then
-      RawDataType := ReversedDoubleData
-    else if ((ItemString='4BYTE_FLOAT') or (ItemString='PC_REAL')) and (BytesPerDataItem=4) then
-      RawDataType := SingleData
-    else if (ItemString='MSB_INTEGER') and (BytesPerDataItem=2) then
-      RawDataType := ReversedSmallIntData
-    else if (ItemString='MSB_INTEGER') and (BytesPerDataItem=4) then
-      RawDataType := ReversedLongIntData
-    else if BytesPerDataItem=1 then
-      RawDataType := ByteData
-    else
-      begin
-        ShowMessage(Format('Unsupported data type "%s", %d bytes',[ItemString,BytesPerDataItem]));
-        Exit;
-      end;
-
-    if FindItem('A_AXIS_RADIUS',ItemString,True) then
-      RefHeightKm := Round(100*ExtendedValue(ItemString))/100; // discard least significant digits in single format
-
-    if (not (Mission=Kaguya)) and FindItem('OFFSET',ItemString,False) then
+    if (not (Mission=Kaguya)) and FindItem('OFFSET',ItemString,UnitString,False) then
       begin
         RawDataOffset := RawDataToKmMultiplier*ExtendedValue(ItemString);
 //        ShowMessage(Format('Processing OFFSET = %0.3f km vs. RefHt = %0.3f km',[RawDataOffset,RefHeightKm]));
@@ -269,43 +235,147 @@ function ReadPDS_Header : Boolean;
           RefHeightKm := RefHeightKm + RawDataOffset;  // meaning of a small offset is unclear, but might mean this
       end;
 
-  // Note: FirstLon, FirstLat and LonStep, LatStep are used to locate data in array
-  //  FirstLon and FirstLat refer to *center* longitude, latitude of first element in array
-
-  // LastLon and Last Lat are not used except for consistency checking.
-  // If they are also centers, then they are separated by 1 step length less than the number of rows or columns
-
-    if not FindItem('EASTERNMOST_LONGITUDE',ItemString,True) then Exit;
-    LastLonRad := OneDegree*ExtendedValue(ItemString);
-    if not FindItem('WESTERNMOST_LONGITUDE',ItemString,True) then Exit;
-    FirstLonRad := OneDegree*ExtendedValue(ItemString);
-    if not FindItem('MAXIMUM_LATITUDE',ItemString,True) then Exit;
-    FirstLatRad := OneDegree*ExtendedValue(ItemString);
-    if not FindItem('MINIMUM_LATITUDE',ItemString,True) then Exit;
-    LastLatRad := OneDegree*ExtendedValue(ItemString);
-
-    if FindItem('MAP_RESOLUTION',ItemString,False) then
-      StepsPerRadian := ExtendedValue(ItemString)/OneDegree
-    else
-      StepsPerRadian := 0;
-
-    if StepsPerRadian>0 then
+    if FindItem('SCALING_FACTOR',ItemString,UnitString,False) then
       begin
-        MapStep := 1/StepsPerRadian;
-        if Abs(Round((LastLonRad - FirstLonRad)*StepsPerRadian))=NumLons then
-          begin // values refer to edges of cells -- adjust to centers
-            FirstLonRad := FirstLonRad + 0.5*MapStep*Sign(LastLonRad - FirstLonRad);
-            LastLonRad  := LastLonRad  - 0.5*MapStep*Sign(LastLonRad - FirstLonRad);
-          end;
-        if Abs(Round((LastLatRad - FirstLatRad)*StepsPerRadian))=NumLats then
-          begin // values refer to edges of cells -- adjust to centers
-            FirstLatRad := FirstLatRad + 0.5*MapStep*Sign(LastLatRad - FirstLatRad);
-            LastLatRad  := LastLatRad  - 0.5*MapStep*Sign(LastLatRad - FirstLatRad);
-          end;
+//        ShowMessage(Format('Processing SCALING_FACTOR = %s with RawDataToKmMultiplier = %0.3f km',[ItemString,RawDataToKmMultiplier]));
+//        ShowMessage(Format('Processing SCALING_FACTOR = %0.3f with RawDataToKmMultiplier = %0.3f km',[ExtendedValue(ItemString),RawDataToKmMultiplier]));
+        RawDataToKmMultiplier := ExtendedValue(ItemString)*RawDataToKmMultiplier;
+//        ShowMessage(Format('RawDataToKmMultiplier : %0.3f',[RawDataToKmMultiplier]));
       end;
 
-    LonStepRad := (LastLonRad - FirstLonRad)/(NumLons - 1);
-    LatStepRad := (LastLatRad - FirstLatRad)/(NumLats - 1);
+    if FindItem('MINIMUM',ItemString,UnitString,False) then
+      MinRawDataValue := ExtendedValue(ItemString)
+    else if FindItem('VALID_MINIMUM',ItemString,UnitString,False) then
+      MinRawDataValue := ExtendedValue(ItemString);
+    if FindItem('MAXIMUM',ItemString,UnitString,False) then
+      MaxRawDataValue := ExtendedValue(ItemString)
+    else if FindItem('VALID_MAXIMUM',ItemString,UnitString,False) then
+      MaxRawDataValue := ExtendedValue(ItemString);
+
+  //  ShowMessage('Header bytes: '+IntToStr(NumHeaderBytes));
+
+    if not FindItem('LINE_SAMPLES',ItemString,UnitString,True) then Exit;
+    NumLons := IntegerValue(ItemString);
+    if not FindItem('LINES',ItemString,UnitString,True) then Exit;
+    NumLats := IntegerValue(ItemString);
+    if not FindItem('SAMPLE_BITS',ItemString,UnitString,True) then Exit;
+    BytesPerDataItem := IntegerValue(ItemString) div 8;
+
+    if not FindItem('SAMPLE_TYPE',ItemString,UnitString,True) then Exit;
+    if ((ItemString='"IEEE REAL"') or (ItemString='IEEE_REAL')) and (BytesPerDataItem=8) then
+      RawDataType := ReversedDoubleData
+    else if ((ItemString='4BYTE_FLOAT') or (ItemString='PC_REAL')) and (BytesPerDataItem=4) then
+      RawDataType := SingleData
+    else if (ItemString='MSB_INTEGER') and (BytesPerDataItem=2) then
+      RawDataType := ReversedSmallIntData
+    else if (ItemString='MSB_INTEGER') and (BytesPerDataItem=4) then
+      RawDataType := ReversedLongIntData
+    else if (ItemString='LSB_UNSIGNED_INTEGER') and (BytesPerDataItem=2) then
+      RawDataType := WordData
+    else if (ItemString='LSB_INTEGER') and (BytesPerDataItem=2) then
+      RawDataType := SmallIntData
+    else if (ItemString='LSB_INTEGER') and (BytesPerDataItem=4) then
+      RawDataType := LongIntData
+    else if BytesPerDataItem=1 then
+      RawDataType := ByteData
+    else
+      begin
+        ShowMessage(Format('Unsupported data type "%s", %d bytes',[ItemString,BytesPerDataItem]));
+        Exit;
+      end;
+
+    if FindItem('MAP_PROJECTION_TYPE',MapProjection,UnitString,False) and (MapProjection='"POLAR STEREOGRAPHIC"') then
+      begin
+        StereographicProjection := True;
+
+        if (FindItem('B_AXIS_RADIUS',ItemString,UnitString,False)) and (ItemString<>A_AXIS_RADIUS) then
+          begin
+            ShowMessage('Unsupported polar projection (on ellpsoid)');
+            Exit;
+          end;
+
+        if NumLons<>NumLats then
+          begin
+            ShowMessage('Unsupported polar projection (unequal number of horizontal/vertical samples)');
+            Exit;
+          end;
+
+        if not (FindItem('CENTER_LATITUDE',ItemString,UnitString,False)) then Exit;
+        StereoCenterLatRad := ExtendedValue(ItemString);
+        if Abs(StereoCenterLatRad)<>90 then
+          begin
+            ShowMessage('Unsupported polar projection (center latitude other than +90° or -90°)');
+            Exit;
+          end;
+        StereoCenterLatRad := StereoCenterLatRad*OneDegree;
+
+        if not (FindItem('MAP_SCALE',ItemString,UnitString,False)) then Exit;
+        KmPerPixel := ExtendedValue(ItemString); 
+        if UpperCase(UnitString)='M' then KmPerPixel := 0.001*KmPerPixel;
+
+        A_radius := ExtendedValue(A_AXIS_RADIUS);
+        StereoScaleFactor := 2*A_radius/KmPerPixel;
+
+        LatStepRad := KmPerPixel/A_radius;
+
+        if FindItem('MAP_PROJECTION_ROTATION',ItemString,UnitString,False) then
+          StereoLamba0Rad := ExtendedValue(ItemString)*OneDegree  // not sure if this is correct for LOLA DEM's as there are no examples with this <>0
+        else
+          StereoLamba0Rad := 0;
+
+        StereoCenterIndex := 0.5 + NumLons/2; // index at center of Stored_DEM_data from 0..(NumLons-1)
+
+      // the following are used for the DEM Info display only
+        if FindItem('MAXIMUM_LATITUDE',ItemString,UnitString,False) then
+          FirstLatRad := OneDegree*ExtendedValue(ItemString)
+        else
+          FirstLatRad := 0;
+        if FindItem('MINIMUM_LATITUDE',ItemString,UnitString,False) then
+          LastLatRad := OneDegree*ExtendedValue(ItemString)
+        else
+          LastLatRad := 0;
+
+      end
+    else
+      begin  // Simple Cylindrical Projection
+      // Note: FirstLon, FirstLat and LonStep, LatStep are used to locate data in array
+      //  FirstLon and FirstLat refer to *center* longitude, latitude of first element in array
+
+      // LastLon and Last Lat are not used except for consistency checking.
+      // If they are also centers, then they are separated by 1 step length less than the number of rows or columns
+
+        if not FindItem('EASTERNMOST_LONGITUDE',ItemString,UnitString,True) then Exit;
+        LastLonRad := OneDegree*ExtendedValue(ItemString);
+        if not FindItem('WESTERNMOST_LONGITUDE',ItemString,UnitString,True) then Exit;
+        FirstLonRad := OneDegree*ExtendedValue(ItemString);
+        if not FindItem('MAXIMUM_LATITUDE',ItemString,UnitString,True) then Exit;
+        FirstLatRad := OneDegree*ExtendedValue(ItemString);
+        if not FindItem('MINIMUM_LATITUDE',ItemString,UnitString,True) then Exit;
+        LastLatRad := OneDegree*ExtendedValue(ItemString);
+
+        if FindItem('MAP_RESOLUTION',ItemString,UnitString,False) then
+          StepsPerRadian := ExtendedValue(ItemString)/OneDegree
+        else
+          StepsPerRadian := 0;
+
+        if StepsPerRadian>0 then
+          begin
+            MapStep := 1/StepsPerRadian;
+            if Abs(Round((LastLonRad - FirstLonRad)*StepsPerRadian))=NumLons then
+              begin // values refer to edges of cells -- adjust to centers
+                FirstLonRad := FirstLonRad + 0.5*MapStep*Sign(LastLonRad - FirstLonRad);
+                LastLonRad  := LastLonRad  - 0.5*MapStep*Sign(LastLonRad - FirstLonRad);
+              end;
+            if Abs(Round((LastLatRad - FirstLatRad)*StepsPerRadian))=NumLats then
+              begin // values refer to edges of cells -- adjust to centers
+                FirstLatRad := FirstLatRad + 0.5*MapStep*Sign(LastLatRad - FirstLatRad);
+                LastLatRad  := LastLatRad  - 0.5*MapStep*Sign(LastLatRad - FirstLatRad);
+              end;
+          end;
+
+        LonStepRad := (LastLonRad - FirstLonRad)/(NumLons - 1);
+        LatStepRad := (LastLatRad - FirstLatRad)/(NumLats - 1);
+      end;
 
 // following information (not in attached PDS headers) found in Lunar Consortium *.lab files prepared by ??
     if ExtractFileName(DesiredFilename)='apo_far.img' then
@@ -647,6 +717,7 @@ begin {TDemData.SelectFile}
   DEM_info.Clear;
 
 // the following information if not supplied in the data file may or may not be correct
+  StereographicProjection := False;
   Mission := Unknown;
   NumHeaderBytes := 0;
   NoRawDataValue := DummyDataValue;
@@ -743,40 +814,75 @@ begin {TDemData.SelectFile}
 
   LTVT_Form.StatusLine_Label.Caption := 'Reading DEM file                ';
   LTVT_Form.StatusLine_Label.Repaint;
+  LTVT_Form.Abort_Button.Show;
+  LTVT_Form.AbortKeyPressed := False;
+  LTVT_Form.ProcessMessages;
 
   try
     case RawDataType of
       SingleData :
         begin
           DEM_info.Add('Data format: 32-bit reals (LSB first)');
-          for LatNum := 1 to NumLats do
+          for LatNum := 1 to NumLats do if not LTVT_Form.AbortKeyPressed then
             begin
               Blockread(ByteFile,Stored_DEM_data[LatNum-1,0],NumLons*BytesPerDataItem,NumRead);
               if RawDataToKmMultiplier<>1 then for LonNum := 1 to NumLons do
                 begin
                   Stored_DEM_data[LatNum-1,LonNum-1] := RawDataToKmMultiplier*Stored_DEM_data[LatNum-1,LonNum-1];  // convert to [km]
                 end;
+              LTVT_Form.ProcessMessages;
             end;
         end;
       WordData :
         begin
           DEM_info.Add('Data format: 16-bit unsigned integers (LSB first)');
           SetLength(WordRow,NumLons);
-          for LatNum := 1 to NumLats do
+          for LatNum := 1 to NumLats do if not LTVT_Form.AbortKeyPressed then
             begin
               Blockread(ByteFile,WordRow[0],NumLons*BytesPerDataItem,NumRead);
               for LonNum := 1 to NumLons do
                 begin
                   Stored_DEM_data[LatNum-1,LonNum-1] := RawDataToKmMultiplier*WordRow[LonNum-1];  // convert to [km]
                 end;
+              LTVT_Form.ProcessMessages;
             end;
           SetLength(WordRow,0);
+        end;
+      SmallIntData :
+        begin
+          DEM_info.Add('Data format: 16-bit signed integers (LSB first)');
+          SetLength(SmallIntRow,NumLons);
+          for LatNum := 1 to NumLats do if not LTVT_Form.AbortKeyPressed then
+            begin
+              Blockread(ByteFile,SmallIntRow[0],NumLons*BytesPerDataItem,NumRead);
+              for LonNum := 1 to NumLons do
+                begin
+                  Stored_DEM_data[LatNum-1,LonNum-1] := RawDataToKmMultiplier*SmallIntRow[LonNum-1];  // convert to [km]
+                end;
+              LTVT_Form.ProcessMessages;
+            end;
+          SetLength(SmallIntRow,0);
+        end;
+      LongIntData :
+        begin
+          DEM_info.Add('Data format: 32-bit signed integers (LSB first)');
+          SetLength(LongIntRow,NumLons);
+          for LatNum := 1 to NumLats do if not LTVT_Form.AbortKeyPressed then
+            begin
+              Blockread(ByteFile,LongIntRow[0],NumLons*BytesPerDataItem,NumRead);
+              for LonNum := 1 to NumLons do
+                begin
+                  Stored_DEM_data[LatNum-1,LonNum-1] := RawDataToKmMultiplier*LongIntRow[LonNum-1];  // convert to [km]
+                end;
+              LTVT_Form.ProcessMessages;
+            end;
+          SetLength(LongIntRow,0);
         end;
       ReversedSmallIntData :
         begin
           DEM_info.Add('Data format: 16-bit signed integers (MSB first)');
           SetLength(ReversedSmallIntRow,NumLons);
-          for LatNum := 1 to NumLats do
+          for LatNum := 1 to NumLats do if not LTVT_Form.AbortKeyPressed then
             begin
               Blockread(ByteFile,ReversedSmallIntRow[0],NumLons*BytesPerDataItem,NumRead);
               for LonNum := 1 to NumLons do
@@ -785,6 +891,7 @@ begin {TDemData.SelectFile}
                   TwoByteArray[2] := ReversedSmallIntRow[LonNum-1,1];
                   Stored_DEM_data[LatNum-1,LonNum-1] := RawDataToKmMultiplier*Smallint(TwoByteArray);  // convert to [km]
                 end;
+              LTVT_Form.ProcessMessages;
             end;
           SetLength(ReversedSmallIntRow,0);
         end;
@@ -792,7 +899,7 @@ begin {TDemData.SelectFile}
         begin
           DEM_info.Add('Data format: 32-bit signed integers (MSB first)');
           SetLength(ReversedLongIntRow,NumLons);
-          for LatNum := 1 to NumLats do
+          for LatNum := 1 to NumLats do if not LTVT_Form.AbortKeyPressed then
             begin
               Blockread(ByteFile,ReversedLongIntRow[0],NumLons*BytesPerDataItem,NumRead);
               for LonNum := 1 to NumLons do
@@ -803,6 +910,7 @@ begin {TDemData.SelectFile}
                   FourByteArray[4] := ReversedLongIntRow[LonNum-1,1];
                   Stored_DEM_data[LatNum-1,LonNum-1] := RawDataToKmMultiplier*Longint(FourByteArray);  // convert to [km]
                 end;
+              LTVT_Form.ProcessMessages;
             end;
           SetLength(ReversedLongIntRow,0);
         end;
@@ -810,7 +918,7 @@ begin {TDemData.SelectFile}
         begin
           DEM_info.Add('Data format: 64-bit reals (MSB first)');
           SetLength(ReversedDoubleRow,NumLons);
-          for LatNum := 1 to NumLats do
+          for LatNum := 1 to NumLats do if not LTVT_Form.AbortKeyPressed then
             begin
               Blockread(ByteFile,ReversedDoubleRow[0],NumLons*BytesPerDataItem,NumRead);
               for LonNum := 1 to NumLons do
@@ -825,6 +933,7 @@ begin {TDemData.SelectFile}
                   EightByteArray[8] := ReversedDoubleRow[LonNum-1,1];
                   Stored_DEM_data[LatNum-1,LonNum-1] := RawDataToKmMultiplier*Double(EightByteArray);  // convert to [km]
                 end;
+              LTVT_Form.ProcessMessages;
             end;
           SetLength(ReversedDoubleRow,0);
         end;
@@ -832,13 +941,14 @@ begin {TDemData.SelectFile}
         begin
           DEM_info.Add('Data format: 8-bit unsigned integers');
           SetLength(ByteRow,NumLons);
-          for LatNum := 1 to NumLats do
+          for LatNum := 1 to NumLats do if not LTVT_Form.AbortKeyPressed then
             begin
               Blockread(ByteFile,ByteRow[0],NumLons*BytesPerDataItem,NumRead);
               for LonNum := 1 to NumLons do
                 begin
                   Stored_DEM_data[LatNum-1,LonNum-1] := RawDataToKmMultiplier*ByteRow[LonNum-1];  // convert to [km]
                 end;
+              LTVT_Form.ProcessMessages;
             end;
           SetLength(ByteRow,0);
         end;
@@ -859,10 +969,6 @@ begin {TDemData.SelectFile}
   if DisplayTimings then
     DEM_info.Add(Format('Time to read DEM : %0.3f sec',[(Now - StartTime)*OneDay]));
 
-  FileOpen := True;
-  Filename := DesiredFilename;
-  Result := True;
-
   ValidNoDataValue := NoRawDataValue<>DummyDataValue;
 
   NoDataValue := RawDataToKmMultiplier*NoRawDataValue;
@@ -882,7 +988,7 @@ begin {TDemData.SelectFile}
       MinHtDeviationKm := 999999;
       MaxHtDeviationKm := -999999;
       for LatNum := 0 to (NumLats - 1) do
-        for LonNum := 0 to (NumLons - 1) do
+        for LonNum := 0 to (NumLons - 1) do if not LTVT_Form.AbortKeyPressed then
           begin
             DataValue := Stored_DEM_data[LatNum,LonNum];
             if (not ValidNoDataValue) or (DataValue<>NoDataValue) then
@@ -910,6 +1016,7 @@ begin {TDemData.SelectFile}
                     Stored_DEM_data[LatNum,LonNum] := Stored_DEM_data[LatNum-1,LonNum];
                 end;
               // otherwise ignore non-data value in evaluating min and max
+            LTVT_Form.ProcessMessages;
           end;
 
     // after this clean-up there are no missing data
@@ -927,18 +1034,26 @@ begin {TDemData.SelectFile}
   with DEM_info do
     begin
       if DisplayTimings then Add('');
-      Add(Format('Number of lines (latitudes) : %d in steps of %0.6f°',[NumLats,LatStepRad/OneDegree]));
-      Add(Format('Number of samples per line (longitudes) : %d in steps of %0.6f°',[NumLons,LonStepRad/OneDegree]));
-      Add('');
-      LeftLonDeg := LTVT_Form.PosNegDegrees((FirstLonRad-0.5*LonStepRad)/OneDegree,LTVT_Form.PlanetaryLongitudeConvention);
-      RightLonDeg := LeftLonDeg + (NumLons*LonStepRad)/OneDegree; // insures RightLonDeg numerically larger than LeftLonDeg
-      Add(Format('Longitude range (edge to edge) : %0.6f° left to %0.6f° right',[LeftLonDeg,RightLonDeg]));
-      Add(Format('Latitude range (edge to edge) : %0.6f° top to %0.6f° bottom',
-        [(FirstLatRad-0.5*LatStepRad)/OneDegree,(FirstLatRad+(NumLats - 0.5)*LatStepRad)/OneDegree]));
+      if StereographicProjection then
+        begin
+          Add(Format('Polar stereographic projection centered on latitude %0.6f°',[StereoCenterLatRad/OneDegree]));
+          Add(Format('From latitude %0.3f° to %0.3f° in %d steps',[FirstLatRad/OneDegree,LastLatRad/OneDegree,NumLats div 2]));
+        end
+      else
+        begin
+          Add(Format('Number of lines (latitudes) : %d in steps of %0.6f°',[NumLats,LatStepRad/OneDegree]));
+          Add(Format('Number of samples per line (longitudes) : %d in steps of %0.6f°',[NumLons,LonStepRad/OneDegree]));
+          Add('');
+          LeftLonDeg := LTVT_Form.PosNegDegrees((FirstLonRad-0.5*LonStepRad)/OneDegree,LTVT_Form.PlanetaryLongitudeConvention);
+          RightLonDeg := LeftLonDeg + (NumLons*LonStepRad)/OneDegree; // insures RightLonDeg numerically larger than LeftLonDeg
+          Add(Format('Longitude range (edge to edge) : %0.6f° left to %0.6f° right',[LeftLonDeg,RightLonDeg]));
+          Add(Format('Latitude range (edge to edge) : %0.6f° top to %0.6f° bottom',
+            [(FirstLatRad-0.5*LatStepRad)/OneDegree,(FirstLatRad+(NumLats - 0.5)*LatStepRad)/OneDegree]));
+        end;
       Add('');
       Add(Format('Base height : %0.3f km',[RefHeightKm]));
-      Add(Format('Scale factor (raw height deviation data to kilometers) : %0.3f',[RawDataToKmMultiplier]));
-      Add(Format('Scaled no data value : %0.3f',[NoDataValue]));
+      Add(Format('Scale factor (raw height deviation data to kilometers) : %0.6f',[RawDataToKmMultiplier]));
+      if ValidNoDataValue then Add(Format('Scaled no data value : %0.3f',[NoDataValue]));
       Add('');
       if MinHtLonNum>=0 then
         Add(Format('Minimum height deviation: %0.3f km; found at Line %d, Sample %d',[MinHtDeviationKm,MinHtLatNum+1,MinHtLonNum+1]))
@@ -948,10 +1063,25 @@ begin {TDemData.SelectFile}
         Add(Format('Maximum height deviation: %0.3f km; found at Line %d, Sample %d',[MaxHtDeviationKm,MaxHtLatNum+1,MaxHtLonNum+1]))
       else
         Add(Format('Maximum height deviation: %0.3f km (as listed in file header)',[MaxHtDeviationKm]));
+      if LTVT_Form.AbortKeyPressed then
+        begin
+          Add('');
+          Add('*** loading of DEM aborted by user ***');
+        end;
     end;
 
   LTVT_Form.StatusLine_Label.Caption := '';
   LTVT_Form.StatusLine_Label.Repaint;
+  LTVT_Form.Abort_Button.Hide;
+
+  if LTVT_Form.AbortKeyPressed then
+    ClearStorage
+  else
+    begin
+      FileOpen := True;
+      Filename := DesiredFilename;
+      Result := True;
+    end;
 
 end;  {TDemData.SelectFile}
 
@@ -959,29 +1089,42 @@ function TDemData.ReadHeight(const LonRad, LatRad : Extended; var Height : Exten
 var
   LatNum, LonNum : Integer;
   AdjustedLon, HeightData : Single;
+  Rho : Extended;
 begin
   Result := False;
   Height := 0;
 
   if not FileOpen then Exit;
 
-  LatNum := Round((LatRad - FirstLatRad)/LatStepRad);
-  if (LatNum<0) or (LatNum>=NumLats) then Exit;
-
-  AdjustedLon := LonRad;
-
-  LonNum := Round((AdjustedLon - FirstLonRad)/LonStepRad);
-  if (LonNum<0) then
-    begin // check if longitude can be placed in acceptable range by adding 360°
-      AdjustedLon := AdjustedLon + Sign(LonStepRad)*TwoPi;
-      LonNum := Round((AdjustedLon - FirstLonRad)/LonStepRad);
+  if StereographicProjection then
+    begin
+      if Abs(LatRad - StereoCenterLatRad)>PiByTwo then Exit;
+      Rho := StereoScaleFactor*Tan((PiByTwo - Abs(LatRad))/2);
+      LonNum := Round(StereoCenterIndex + Rho*Sin(LonRad - StereoLamba0Rad));
       if (LonNum<0) or (LonNum>=NumLons) then Exit;
+      LatNum := Round(StereoCenterIndex + Sign(StereoCenterLatRad)*Rho*Cos(LonRad - StereoLamba0Rad));
+      if (LatNum<0) or (LatNum>=NumLats) then Exit;
     end
-  else if (LonNum>=NumLons) then
-    begin  // check if longitude can be placed in acceptable range by subtracting 360°
-      AdjustedLon := AdjustedLon - Sign(LonStepRad)*TwoPi;
+  else
+    begin
+      LatNum := Round((LatRad - FirstLatRad)/LatStepRad);
+      if (LatNum<0) or (LatNum>=NumLats) then Exit;
+
+      AdjustedLon := LonRad;
+
       LonNum := Round((AdjustedLon - FirstLonRad)/LonStepRad);
-      if (LonNum<0) or (LonNum>=NumLons) then Exit;
+      if (LonNum<0) then
+        begin // check if longitude can be placed in acceptable range by adding 360°
+          AdjustedLon := AdjustedLon + Sign(LonStepRad)*TwoPi;
+          LonNum := Round((AdjustedLon - FirstLonRad)/LonStepRad);
+          if (LonNum<0) or (LonNum>=NumLons) then Exit;
+        end
+      else if (LonNum>=NumLons) then
+        begin  // check if longitude can be placed in acceptable range by subtracting 360°
+          AdjustedLon := AdjustedLon - Sign(LonStepRad)*TwoPi;
+          LonNum := Round((AdjustedLon - FirstLonRad)/LonStepRad);
+          if (LonNum<0) or (LonNum>=NumLons) then Exit;
+        end;
     end;
 
   HeightData := Stored_DEM_data[LatNum,LonNum];

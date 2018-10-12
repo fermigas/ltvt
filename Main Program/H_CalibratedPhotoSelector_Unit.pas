@@ -89,6 +89,7 @@ type
     procedure FormKeyDown(Sender: TObject; var Key: Word;
       Shift: TShiftState);
     procedure ShowNote_ButtonClick(Sender: TObject);
+    procedure FormShow(Sender: TObject);
   private
     { Private declarations }
   public
@@ -998,6 +999,24 @@ end;
 procedure TCalibratedPhotoLoader_Form.FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
   LTVT_Form.DisplayF1Help(Key,Shift,'CalibratedPhotoSelection_Form.htm');
+end;
+
+procedure TCalibratedPhotoLoader_Form.FormShow(Sender: TObject);
+begin
+  if CurrentTargetPlanet=Moon then
+    begin
+      Colongitude_CheckBox.Caption := 'By colongitude';
+      Colongitude_CheckBox.Hint := 'Display and sort by colongitude';
+      SubObsPt_Label.Hint := 'Selenographic longitude/latitude of center point on Moon (also called librations)';
+      SubSolPt_Label.Hint := 'Selenographic longitude/latitude of point on Moon directly beneath Sun';
+    end
+  else
+    begin
+      Colongitude_CheckBox.Caption := 'By CM';
+      Colongitude_CheckBox.Hint := 'Display and sort by Central Meridian longitude';
+      SubObsPt_Label.Hint := 'Longitude/latitude of center point on '+CurrentPlanetName;
+      SubSolPt_Label.Hint := 'Longitude/latitude of point on '+CurrentPlanetName+' directly beneath Sun';
+    end;
 end;
 
 end.
