@@ -28,7 +28,7 @@ interface
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, LabeledNumericEdit, StdCtrls, ComCtrls, Math, DateUtils, ExtCtrls,
-  H_JPL_Ephemeris, MoonPosition, Constnts, {TimLib,} MP_Defs;
+  H_JPL_Ephemeris, MoonPosition, Constnts, {TimLib,} MP_Defs, MPVectors;
 
 type
   TMoonEventPredictor_Form = class(TForm)

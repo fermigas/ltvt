@@ -53,6 +53,9 @@ type
     StartEnd_CheckBox: TCheckBox;
     ObservatoryList_ComboBox: TComboBox;
     AddLocation_Button: TButton;
+    MinLibration_RadioButton: TRadioButton;
+    MinLibrationDeg_LabeledNumericEdit: TLabeledNumericEdit;
+    MaxCenterAngle_RadioButton: TRadioButton;
     procedure ClearMemo_ButtonClick(Sender: TObject);
     procedure Tabulate_ButtonClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
@@ -115,6 +118,12 @@ type
     procedure AddLocation_ButtonKeyDown(Sender: TObject; var Key: Word;
       Shift: TShiftState);
     procedure AddLocation_ButtonClick(Sender: TObject);
+    procedure MinLibrationDeg_LabeledNumericEditNumericEditKeyDown(
+      Sender: TObject; var Key: Word; Shift: TShiftState);
+    procedure MaxCenterAngle_RadioButtonKeyDown(Sender: TObject;
+      var Key: Word; Shift: TShiftState);
+    procedure MinLibration_RadioButtonKeyDown(Sender: TObject;
+      var Key: Word; Shift: TShiftState);
   private
     { Private declarations }
   public
@@ -138,7 +147,8 @@ var
 
 implementation
 
-uses Win_Ops, NumericEdit, LTVT_Unit, H_Terminator_SetYear_Unit, ObserverLocationName_Unit;
+uses Win_Ops, NumericEdit, LTVT_Unit, H_Terminator_SetYear_Unit,
+  MPVectors, ObserverLocationName_Unit;
 
 {$R *.dfm}
 
@@ -385,7 +395,6 @@ begin
 end;
 
 procedure TLibrationTabulator_Form.Tabulate_ButtonClick(Sender: TObject);
-
 var
   LinesPrinted : integer;
   OldGeocentricMode, CriteriaValid : boolean;
@@ -394,9 +403,12 @@ var
   StartMJD, EndMJD, MJDStep, CurrentMJD, IntervalStartMJD, IntervalEndMJD,
   MinMJD, MinCenterAngle,
   CraterLat, CraterLon, MinSunAngle, MaxSunAngle, MinMoonElevDeg, MaxSunElevDeg,  // all in radians
-  CenterAngle, CenterAngleAz, SunAngle, SunAngleAz, MaxCenterAngle : Extended;
+  CenterAngle, CenterAngleAz, SunAngle, SunAngleAz, MaxCenterAngle, MinLibration,
+  NominalCenterAngle, PercentIllum, Libration : Extended;
 
 procedure CalculateCircumstances(const MJD: Extended);
+  var
+    Lat1, Lon1, Lat2, Lon2, CosTheta : Extended;
   begin
     SubSolarPoint := SubSolarPointOnMoon(MJD);
     ComputeDistanceAndBearing(CraterLon, CraterLat, SubSolarPoint.Longitude, SubSolarPoint.Latitude, SunAngle, SunAngleAz);
@@ -404,10 +416,23 @@ procedure CalculateCircumstances(const MJD: Extended);
 
     SubEarthPoint := SubEarthPointOnMoon(MJD);
     ComputeDistanceAndBearing(SubEarthPoint.Longitude, SubEarthPoint.Latitude, CraterLon, CraterLat, CenterAngle, CenterAngleAz);
+    Libration := NominalCenterAngle-CenterAngle;
 
     CalculatePosition(MJD,Moon,BlankStarDataRecord,MoonPosition);
     CalculatePosition(MJD,Sun, BlankStarDataRecord,SunPosition);
 
+    Lon1 := SubEarthPoint.Longitude;
+    Lat1 := SubEarthPoint.Latitude;
+    Lon2 := SubSolarPoint.Longitude;
+    Lat2 := SubSolarPoint.Latitude;
+    CosTheta := Sin(Lat1)*Sin(Lat2) + Cos(Lat1)*Cos(Lat2)*Cos(Lon2 - Lon1);
+    PercentIllum := 50*(1 + CosTheta);
+
+  if MinLibration_RadioButton.Checked then
+    CriteriaValid := (SunAngle>=MinSunAngle)
+                 and (SunAngle<=MaxSunAngle)
+                 and (Libration>=MinLibration)
+  else
     CriteriaValid := (SunAngle>=MinSunAngle)
                  and (SunAngle<=MaxSunAngle)
                  and (CenterAngle<=MaxCenterAngle);
@@ -439,29 +464,36 @@ function NS_Tag(const Latitude : extended): string;
     if GeocentricSubEarthMode then
       Memo1.Lines.Add('Librations calculated for a geocentric observer')
     else
-      Memo1.Lines.Add(Format('Librations and Moon/Sun positions calculated for observer at %0.4f %s  %0.4f %s  %0.0f m',
+      Memo1.Lines.Add(Format('Librations and Moon/Sun positions calculated for observer at %0.4f°%s  %0.4f°%s  %0.0f m',
         [Abs(-ObserverLongitude),EW_Tag(-ObserverLongitude),Abs(ObserverLatitude),NS_Tag(ObserverLatitude),ObserverElevation]));
-    Memo1.Lines.Add(Format('Center Distance and Sun Angle calculated for feature at %0.4f %s  %0.4f %s',
+    Memo1.Lines.Add(Format('Center Dist(ance) and Sun Angle calculated for feature at %0.4f°%s  %0.4f°%s',
       [Abs(RadToDeg(CraterLon)),EW_Tag(RadToDeg(CraterLon)),Abs(RadToDeg(CraterLat)),NS_Tag(RadToDeg(CraterLat))]));
+    Memo1.Lines.Add(Format('  Feature is %0.4f° from disk center at zero libration.',
+      [RadToDeg(NominalCenterAngle)]));
+    Memo1.Lines.Add('  "Libr(ation)" is how much closer feature is to disk center at time of observation.');
+    Memo1.Lines.Add('  "%Illum" is percent illumination of the full lunar disk.');
     Memo1.Lines.Add('');
     Memo1.Lines.Add('Times being searched at interval of '+SearchTimeStepMin_LabeledNumericEdit.NumericEdit.Text+' minutes subject to constraints:');
-    Memo1.Lines.Add('  *  Sun angle at feature >'+MinSunAngleDeg_LabeledNumericEdit.NumericEdit.Text+' deg and <'
-      +MaxSunAngleDeg_LabeledNumericEdit.NumericEdit.Text+' deg');
-    Memo1.Lines.Add('  *  Distance of feature from apparent lunar disk center <'+MaxCenterAngleDeg_LabeledNumericEdit.NumericEdit.Text+' deg');
+    Memo1.Lines.Add('  *  Sun angle at feature >'+MinSunAngleDeg_LabeledNumericEdit.NumericEdit.Text+'° and <'
+      +MaxSunAngleDeg_LabeledNumericEdit.NumericEdit.Text+'°');
+    if MinLibration_RadioButton.Checked then
+      Memo1.Lines.Add('  *  Distance of feature from apparent lunar disk center >'+MinLibrationDeg_LabeledNumericEdit.NumericEdit.Text+'° closer than at zero libration')
+    else
+      Memo1.Lines.Add('  *  Distance of feature from apparent lunar disk center <'+MaxCenterAngleDeg_LabeledNumericEdit.NumericEdit.Text+'°');
     if not GeocentricSubEarthMode then
        Memo1.Lines.Add('  *  Center of Moon >'+MinMoonElevDeg_LabeledNumericEdit.NumericEdit.Text
-         +' deg and center of Sun <'+MaxSunElevDeg_LabeledNumericEdit.NumericEdit.Text
-         +' deg above observer''s horizon');
+         +'° and center of Sun <'+MaxSunElevDeg_LabeledNumericEdit.NumericEdit.Text
+         +'° above observer''s horizon');
     Memo1.Lines.Add('');
     if GeocentricSubEarthMode then
       begin
-        Memo1.Lines.Add('                        Center        Sun Angle          Librations');
-        Memo1.Lines.Add('   Date      Time UT   Distance   Altitude  Azimuth     Long.   Lat.');
+        Memo1.Lines.Add('                      Center                      Sun Angle       Librations');
+        Memo1.Lines.Add('   Date      Time UT   Dist.   Libr.  %Illum  Altitude Azimuth   Long.    Lat.');
       end
     else
       begin
-        Memo1.Lines.Add('                        Center        Sun Angle          Librations      Center of Moon      Center of Sun');
-        Memo1.Lines.Add('   Date      Time UT   Distance   Altitude  Azimuth     Long.   Lat.      Alt.     Azi.       Alt.     Azi');
+        Memo1.Lines.Add('                      Center                      Sun Angle       Librations      Center of Moon    Center of Sun');
+        Memo1.Lines.Add('   Date      Time UT   Dist.   Libr.  %Illum  Altitude Azimuth   Long.    Lat.     Alt.     Azi.     Alt.     Azi');
       end;
   end;  {PrintHeader}
 
@@ -476,13 +508,15 @@ procedure PrintData(const PrintMJD : Extended);
     while SubEarthPoint.Longitude>Pi do SubEarthPoint.Longitude := SubEarthPoint.Longitude - TwoPi;
 
     if GeocentricSubEarthMode then
-      Memo1.Lines.Add(Format('%10s%10s%11.4f%11.4f%8.3f%10.3f%8.3f',
+      Memo1.Lines.Add(Format('%10s%10s%8.3f%8.3f%8.2f%9.4f%9.3f%8.3f%8.3f',
         [DateToStr(PrintDateTime),TimeToStr(PrintDateTime), RadToDeg(CenterAngle),
+        RadToDeg(Libration), PercentIllum,
         RadToDeg(SunAngle), RadToDeg(SunAngleAz),
         RadToDeg(SubEarthPoint.Longitude),RadToDeg(SubEarthPoint.Latitude)]))
     else
-      Memo1.Lines.Add(Format('%10s%10s%11.4f%11.4f%8.3f%10.3f%8.3f%10.3f%10.3f%10.3f%10.3f',
+      Memo1.Lines.Add(Format('%10s%10s%8.3f%8.3f%8.2f%9.4f%9.3f%8.3f%8.3f%9.2f%9.2f%9.2f%9.2f',
         [DateToStr(PrintDateTime),TimeToStr(PrintDateTime), RadToDeg(CenterAngle),
+        RadToDeg(Libration), PercentIllum,
         RadToDeg(SunAngle), RadToDeg(SunAngleAz),
         RadToDeg(SubEarthPoint.Longitude),RadToDeg(SubEarthPoint.Latitude),
         MoonPosition.TopocentricAlt,MoonPosition.Azimuth,
@@ -528,6 +562,9 @@ begin {Tabulate_ButtonClick}
   MaxSunElevDeg  := MaxSunElevDeg_LabeledNumericEdit.NumericEdit.ExtendedValue;
 
   MaxCenterAngle := DegToRad(MaxCenterAngleDeg_LabeledNumericEdit.NumericEdit.ExtendedValue);
+
+  MinLibration := DegToRad(MinLibrationDeg_LabeledNumericEdit.NumericEdit.ExtendedValue);
+  ComputeDistanceAndBearing(0, 0, CraterLon, CraterLat, NominalCenterAngle, CenterAngleAz);
 
   LinesPrinted := 0;
 
@@ -781,6 +818,24 @@ begin
 end;
 
 procedure TLibrationTabulator_Form.AddLocation_ButtonKeyDown(
+  Sender: TObject; var Key: Word; Shift: TShiftState);
+begin
+  LTVT_Form.DisplayF1Help(Key,Shift,'LibrationTabulatorForm.htm');
+end;
+
+procedure TLibrationTabulator_Form.MaxCenterAngle_RadioButtonKeyDown(
+  Sender: TObject; var Key: Word; Shift: TShiftState);
+begin
+  LTVT_Form.DisplayF1Help(Key,Shift,'LibrationTabulatorForm.htm');
+end;
+
+procedure TLibrationTabulator_Form.MinLibration_RadioButtonKeyDown(
+  Sender: TObject; var Key: Word; Shift: TShiftState);
+begin
+  LTVT_Form.DisplayF1Help(Key,Shift,'LibrationTabulatorForm.htm');
+end;
+
+procedure TLibrationTabulator_Form.MinLibrationDeg_LabeledNumericEditNumericEditKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
   LTVT_Form.DisplayF1Help(Key,Shift,'LibrationTabulatorForm.htm');

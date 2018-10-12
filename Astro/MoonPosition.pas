@@ -43,13 +43,6 @@ type
       AltAzCoordinateSystem : TCoordinateSystem;
     end;
 
-  TPolarCoordinates = record
-      Longitude, {[rad]}
-      Latitude,  {[rad]}
-      Radius
-        : extended;
-    end;
-
 const
   GeocentricSubEarthMode : boolean = False;  {if True, ignores corrections for observer position on Earth in SubEarthPointOnMoon}
 
@@ -78,9 +71,6 @@ var
   EarthAxisVector, ObserverZenithVector : TVector;  // set by CalculatePosition
 
 procedure ComputeMeanEarthSystemOffsetMatix;
-
-procedure ComputeDistanceAndBearing(const Lon1, Lat1, Lon2, Lat2 : extended; var AngleBetween, Bearing : extended);
-{all arguments in radians}
 
 procedure CalculatePosition(const UTC_MJD : extended; const SelectedPlanet : Planet;
   const SelectedStarData: StarDataRecord; var PositionResults: PositionResultRecord);
@@ -125,7 +115,7 @@ var
 
 procedure ComputeMeanEarthSystemOffsetMatix;
   var
-    sinp1, cosp1, sinp2, cosp2, sintau, costau : extended; 
+    sinp1, cosp1, sinp2, cosp2, sintau, costau : extended;
   begin
   {matrix from M.E. Davies, T.R. Colvin and D.L. Meyer,
   "A Unified Lunar Control Network -- The Near Side," (A Rand Note) N-2664-NASA
@@ -171,40 +161,6 @@ function TDT_Offset(const UTC_MJD: extended): extended;
     Result := 32.184 + LeapSecs;
   end;
 }
-
-procedure ComputeDistanceAndBearing(const Lon1, Lat1, Lon2, Lat2 : extended; var AngleBetween, Bearing : extended);
-var
-  SinLat1, CosLat1, SinLat2, CosLat2, CosTheta, SinTheta,
-  CosThetaSqrd, Denom, PolarAngle, CosAz, SinAz : extended;
-begin
-    PolarAngle := Lon2 - Lon1;
-    SinLat1 := Sin(Lat1);
-    CosLat1 := Cos(Lat1);
-    SinLat2 := Sin(Lat2);
-    CosLat2 := Cos(Lat2);
-    CosTheta := SinLat1*SinLat2 + CosLat1*CosLat2*Cos(PolarAngle);
-    CosThetaSqrd := Sqr(CosTheta);
-    if CosThetaSqrd>=1 then // note: can only be >1 due to round-off error
-      begin
-        AngleBetween := 0;
-        Bearing := 0;
-      end
-    else
-      begin
-        AngleBetween := ACos(CosTheta);
-
-        SinTheta := Sqrt(1-CosThetaSqrd);
-        Denom := CosLat1*SinTheta;
-        if Denom=0 then
-          Bearing := 0
-        else
-          begin
-            CosAz := (SinLat1*CosTheta - SinLat2)/Denom;
-            SinAz := Sin(PolarAngle)*CosLat2/SinTheta;
-            Bearing := Pi - ATan2(SinAz,CosAz);
-          end;
-      end;
-end;
 
 procedure CalculatePosition;
   var

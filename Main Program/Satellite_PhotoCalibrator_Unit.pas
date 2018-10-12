@@ -716,7 +716,7 @@ var
   FeatureVector, LineOfSight : TVector;
 begin
   Result := False;
-  LTVT_Form.PolarToVector(Lon,Lat,LTVT_Form.MoonRadius,FeatureVector);
+  PolarToVector(Lon,Lat,LTVT_Form.MoonRadius,FeatureVector);
 
   VectorDifference(FeatureVector,SatelliteVector,LineOfSight);
 
@@ -768,12 +768,12 @@ begin {UpdateGeometry}
 
 // determine vectors in orthographic system with z = central point, y = north polar direction
 
-  LTVT_Form.PolarToVector(DegToRad(SatelliteLonDeg_LabeledNumericEdit.NumericEdit.ExtendedValue),
+  PolarToVector(DegToRad(SatelliteLonDeg_LabeledNumericEdit.NumericEdit.ExtendedValue),
     DegToRad(SatelliteLatDeg_LabeledNumericEdit.NumericEdit.ExtendedValue),
     LTVT_Form.MoonRadius + SatelliteElevation_LabeledNumericEdit.NumericEdit.ExtendedValue,
     SatelliteVector);
 
-  LTVT_Form.PolarToVector(DegToRad(GroundPointLonDeg_LabeledNumericEdit.NumericEdit.ExtendedValue),
+  PolarToVector(DegToRad(GroundPointLonDeg_LabeledNumericEdit.NumericEdit.ExtendedValue),
     DegToRad(GroundPointLatDeg_LabeledNumericEdit.NumericEdit.ExtendedValue),
     LTVT_Form.MoonRadius,
     GroundPointVector);

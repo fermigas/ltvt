@@ -350,7 +350,7 @@ var
       begin
         Result := False;
 
-        LTVT_Form.PolarToVector(Lon, Lat, LTVT_Form.MoonRadius, FeatureVector);
+        PolarToVector(Lon, Lat, LTVT_Form.MoonRadius, FeatureVector);
 
         VectorDifference(FeatureVector,SatelliteVector,LineOfSight);
 
@@ -382,7 +382,7 @@ var
       end
     else // Earthbased photo
       begin
-        LTVT_Form.PolarToVector(Lon,Lat,1,FeatureVector);
+        PolarToVector(Lon,Lat,1,FeatureVector);
         if DotProduct(FeatureVector,UserPhoto_SubObsVector)>0 then
           begin
             UserX := DotProduct(FeatureVector,UserPhoto_XPrime_Unit_Vector);
@@ -463,10 +463,10 @@ begin {TCalibratedPhotoLoader_Form.FeatureInPhoto}
           Exit;
         end;
 
-      LTVT_Form.PolarToVector(DegToRad(SatelliteElonDeg), DegToRad(SatelliteNLatDeg),
+      PolarToVector(DegToRad(SatelliteElonDeg), DegToRad(SatelliteNLatDeg),
         LTVT_Form.MoonRadius + SatelliteElevKm, SatelliteVector);
 
-      LTVT_Form.PolarToVector(DegToRad(SubObsLonDeg), DegToRad(SubObsLatDeg),
+      PolarToVector(DegToRad(SubObsLonDeg), DegToRad(SubObsLatDeg),
         LTVT_Form.MoonRadius, GroundPointVector);
 
       VectorDifference(GroundPointVector,SatelliteVector,UserPhoto_ZPrime_Unit_Vector);
@@ -506,7 +506,7 @@ begin {TCalibratedPhotoLoader_Form.FeatureInPhoto}
       Exit;
     end;
 
-  LTVT_Form.PolarToVector(DegToRad(SubObsLonDeg),DegToRad(SubObsLatDeg),1,UserPhoto_SubObsVector);
+  PolarToVector(DegToRad(SubObsLonDeg),DegToRad(SubObsLatDeg),1,UserPhoto_SubObsVector);
   NormalizeVector(UserPhoto_SubObsVector);
 
   if UserPhotoType=Earthbased then

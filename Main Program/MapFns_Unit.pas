@@ -158,7 +158,7 @@ function Rukl_String(const LonRad, LatRad : Extended) : String;
     RuklRow, RuklColOffset, RuklNum, MaxOffset : Integer;
 
   begin {Rukl_String}
-    LTVT_Form.PolarToVector(LonRad, LatRad, 1, FeatureVector);
+    PolarToVector(LonRad, LatRad, 1, FeatureVector);
     if FeatureVector[Z]<0 then
       Rukl_String := ''
     else

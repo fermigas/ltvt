@@ -563,12 +563,6 @@ type
     {uses Sub-observer and Sub-solar point input boxes to determine parameters cited above; also sets range of plot,
      returns True iff successfully completed}
 
-    procedure PolarToVector(const Lon_radians, Lat_radians, Radius : extended;  var VectorResult : TVector);
-    {returns vector in selenographic system with y-axis = north, z-axis = origin of longitude and latitude}
-
-    function VectorToPolar(const InputVector : TVector): TPolarCoordinates;
-   {InputVector is in selenographic system with y = north pole}
-
     function ConvertXYtoVector(const XProj, YProj, MaxRadius : extended;  Var PointUnitVector : TVector) : Boolean;
     {converts from orthographic +/-1.0 system to (X,Y,Z) in selenographic system with radius = 1;
      setting MaxRadius>1 transforms points outside nominal limb (but within that limit) to vector to limb}
@@ -582,6 +576,10 @@ type
     procedure DrawCross(const CenterXPixel, CenterYPixel, CrossSize : Integer; const CrossColor : TColor);
     {CrossSize determines extension of arms about central point. CrossSize=0 gives single pixel dot.
      Nothing is drawn if CrossSize<0.}
+
+    procedure DrawGrid;
+
+    procedure MarkCenter;
 
     procedure DrawTerminator;
     {draws segment of ellipse in current Pen color over current Image1}
@@ -669,7 +667,7 @@ uses FileCtrl, H_Terminator_About_Unit, H_Terminator_Goto_Unit, H_Terminator_Set
 {$R *.dfm}
 
 const
-  ProgramVersion = '0.20';
+  ProgramVersion = '0.20.1';
 
 // note: the following constants specify (in degrees) that texture files span
 //   the full lunar globe.  They should not be changed.
@@ -1127,26 +1125,6 @@ begin
   Result := Format(FormatString+' %0s',[Abs(DisplayLatitude),LatitudeTag]);
 end;
 
-procedure TLTVT_Form.PolarToVector(const Lon_radians, Lat_radians, Radius : extended;  var VectorResult : TVector);
-{determines vector components of a point in polar form taking
-  y-axis = polar direction
-  z-axis = origin of Longitude (which is measured CCW about y-axis)
-  x-axis = y cross z
- Lat, Lon are in radians }
-  begin
-    VectorResult[x] := Radius*Sin(Lon_radians)*Cos(Lat_radians);
-    VectorResult[y] := Radius*Sin(Lat_radians);
-    VectorResult[z] := Radius*Cos(Lon_radians)*Cos(Lat_radians);
-  end;
-
-function TLTVT_Form.VectorToPolar(const InputVector : TVector): TPolarCoordinates;
-{InputVector is in selenographic system with y = north pole}
-begin
-  Result.Radius := VectorMagnitude(InputVector);
-  Result.Latitude := ArcSin(InputVector[y]/Result.Radius);
-  Result.Longitude := ArcTan2(InputVector[x],InputVector[z]);
-end;
-
 function TLTVT_Form.ConvertXYtoVector(const XProj, YProj, MaxRadius : extended;  Var PointUnitVector : TVector) : Boolean;
 {converts from orthographic +/-1.0 system to (X,Y,Z) in selenographic system with radius = 1}
 var
@@ -1553,7 +1531,7 @@ begin
     end;
 end;
 
-procedure TLTVT_Form.DrawTerminator;
+procedure TLTVT_Form.DrawGrid;
 {this should be called only after a current CalculateGeometry}
 var
   GridStepDeg, GridDeg, MaxLon, MinLon, MaxLat, MinLat : Extended;
@@ -1573,7 +1551,7 @@ procedure TestCorner(const X, Y : Integer);
       begin
         Lon := RadToDeg(Lon);
         Lat := RadToDeg(Lat);
-        
+
         if Lon>MaxLon then MaxLon := Lon;
         if Lon<MinLon then MinLon := Lon;
         if Lat>MaxLat then MaxLat := Lat;
@@ -1583,15 +1561,7 @@ procedure TestCorner(const X, Y : Integer);
       CornersGood := False;
   end;
 
-begin {TLTVT_Form.DrawTerminator}
-  if IncludeLibrationCircle then DrawCircle(0,0,90,LibrationCircleColor);
-
-  if IncludeTerminatorLines then
-    begin
-      DrawCircle(RadToDeg(SubSolarPoint.Longitude),RadToDeg(SubSolarPoint.Latitude),RadToDeg(Pi/2-SunRad),clRed); // Evening terminator
-      DrawCircle(RadToDeg(SubSolarPoint.Longitude),RadToDeg(SubSolarPoint.Latitude),RadToDeg(Pi/2+SunRad),clBlue); // Morning terminator
-    end;
-
+begin {TLTVT_Form.DrawGrid}
   MaxLat := -999;
   MinLat := 999;
   MaxLon := -999;
@@ -1628,11 +1598,32 @@ begin {TLTVT_Form.DrawTerminator}
         end;
     end;
 
+end;  {TLTVT_Form.DrawGrid}
+
+procedure TLTVT_Form.MarkCenter;
+{this should be called only after a current CalculateGeometry}
+begin {TLTVT_Form.MarkCenter}
   if MarkCenter_CheckBox.Checked then
     begin
 //      ShowMessage('Marking center');
       MarkXY(ImageCenterX,ImageCenterY,ReferencePointColor);
     end;
+end;  {TLTVT_Form.DrawTerminator}
+
+procedure TLTVT_Form.DrawTerminator;
+{this should be called only after a current CalculateGeometry}
+begin {TLTVT_Form.DrawTerminator}
+  if IncludeLibrationCircle then DrawCircle(0,0,90,LibrationCircleColor);
+
+  if IncludeTerminatorLines then
+    begin
+      DrawCircle(RadToDeg(SubSolarPoint.Longitude),RadToDeg(SubSolarPoint.Latitude),RadToDeg(Pi/2-SunRad),clRed); // Evening terminator
+      DrawCircle(RadToDeg(SubSolarPoint.Longitude),RadToDeg(SubSolarPoint.Latitude),RadToDeg(Pi/2+SunRad),clBlue); // Morning terminator
+    end;
+
+  DrawGrid;
+
+  MarkCenter;
 
 end;  {TLTVT_Form.DrawTerminator}
 
@@ -2197,7 +2188,13 @@ begin  {TLTVT_Form.DrawDEM_ButtonClick}
 
   BackgroundPattern.Free;
 
-  if DrawTerminatorOnDEM then DrawTerminator;
+  if DrawTerminatorOnDEM then
+    DrawTerminator
+  else
+    begin
+      DrawGrid;
+      MarkCenter;
+    end;
 
   Screen.Cursor := DefaultCursor;
   ProgressBar1.Hide;
@@ -3143,9 +3140,15 @@ begin {LTVT_Form.Image1MouseMove}
 
           if (DrawingMode=Dem_3D) then with SurfaceData[X,Y] do
             begin
+              if HeightDev_km=SurfaceData_NoDataValue then
+                begin
+                  HideMouseMoveLabels;
+                  Exit;
+                end;
               Lon := Lon_rad;
               Lat := Lat_rad;
             end;
+
 
           MouseLonLat_Label.Caption := format('Longitude = %0s   Latitude = %0s',
             [LongitudeString(RadToDeg(Lon),2),LatitudeString(RadToDeg(Lat),2)]);
@@ -4509,11 +4512,24 @@ begin
 
   with H_Terminator_Goto_Form do
     begin
-      if ConvertXYtoLonLat(MouseOrthoX,MouseOrthoY,MouseLon,MouseLat) then
+      XY_RadioButton.Checked := True;
+      if (DrawingMode=Dem_3D) then with SurfaceData[LastMouseClickPosition.X,LastMouseClickPosition.Y] do
         begin
-          SetToLon_LabeledNumericEdit.NumericEdit.Text := Format('%0.3f',[RadToDeg(MouseLon)]);
-          SetToLat_LabeledNumericEdit.NumericEdit.Text := Format('%0.3f',[RadToDeg(MouseLat)]);
-        end;
+          if HeightDev_km<>SurfaceData_NoDataValue then
+            begin
+              LonLat_RadioButton.Checked := True;
+              SetToLon_LabeledNumericEdit.NumericEdit.Text := Format('%0.3f',[RadToDeg(Lon_rad)]);
+              SetToLat_LabeledNumericEdit.NumericEdit.Text := Format('%0.3f',[RadToDeg(Lat_rad)]);
+              SetToRadius_TLabeledNumericEdit.NumericEdit.Text := Format('%0.3f',[MoonRadius+HeightDev_km]);
+            end;
+        end
+      else
+        if ConvertXYtoLonLat(MouseOrthoX,MouseOrthoY,MouseLon,MouseLat) then
+          begin
+            LonLat_RadioButton.Checked := True;
+            SetToLon_LabeledNumericEdit.NumericEdit.Text := Format('%0.3f',[RadToDeg(MouseLon)]);
+            SetToLat_LabeledNumericEdit.NumericEdit.Text := Format('%0.3f',[RadToDeg(MouseLat)]);
+          end;
       CenterX_LabeledNumericEdit.NumericEdit.Text := format('%0.4f',[MouseOrthoX]);
       CenterY_LabeledNumericEdit.NumericEdit.Text := format('%0.4f',[MouseOrthoY]);
     end;

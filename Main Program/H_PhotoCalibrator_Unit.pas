@@ -491,7 +491,7 @@ function ConvertCalPhotoLonLatToXY(const Lon, Lat : extended; var UserX, UserY :
 var
   FeatureVector : TVector;
 begin
-  LTVT_Form.PolarToVector(Lon,Lat,1,FeatureVector);
+  PolarToVector(Lon,Lat,1,FeatureVector);
   if DotProduct(FeatureVector,CalPhoto_ZPrime_Unit_Vector)>0 then
     begin
       UserX := DotProduct(FeatureVector,CalPhoto_XPrime_Unit_Vector);
@@ -532,7 +532,7 @@ begin
 
   ResultsMemo.Memo.Lines.Add(Format('Sub-obs lon=%0.3f, lat=%0.3f',[RadToDeg(CalPhotoSubObsPoint.Longitude),RadToDeg(CalPhotoSubObsPoint.Latitude)]));
 
-  LTVT_Form.PolarToVector(CalPhotoSubObsPoint.Longitude,CalPhotoSubObsPoint.Latitude,1,CalPhoto_ZPrime_Unit_Vector);
+  PolarToVector(CalPhotoSubObsPoint.Longitude,CalPhotoSubObsPoint.Latitude,1,CalPhoto_ZPrime_Unit_Vector);
   NormalizeVector(CalPhoto_ZPrime_Unit_Vector);
 
   CrossProduct(Uy,CalPhoto_ZPrime_Unit_Vector,CalPhoto_XPrime_Unit_Vector);

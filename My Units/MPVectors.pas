@@ -24,13 +24,6 @@ type
    TVectorValue = array[1..3] of extended;
   {this is a type-cast compatible reference to the same values, but indexed by 1..3}
 
-   TCoordinateSystem = record
-  {expressed by axes in ICRF system}
-      UnitX,
-      UnitY,
-      UnitZ : TVector
-    end;
-
    Ray = record  {the name "Line" is already in GRAPH unit}
       Origin,
       Direction : TVector
@@ -41,7 +34,19 @@ type
       Normal : TVector
     end;
 
+   TCoordinateSystem = record
+  {expressed by axes in ICRF system}
+      UnitX,
+      UnitY,
+      UnitZ : TVector
+    end;
 
+  TPolarCoordinates = record
+      Longitude, {[rad]}
+      Latitude,  {[rad]}
+      Radius
+        : extended;
+    end;
 
 
 { - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - }
@@ -172,6 +177,17 @@ procedure DescribePlane(const PlaneToDescribe: Plane; const PlaneID: string);
 
 function PlaneDescription(const PlaneToDescribe: Plane; const PlaneID: string): TStringList;
 {same except result returned as TStringList}
+
+// functions useful for spherical trigonometry operations
+
+procedure PolarToVector(const Lon_radians, Lat_radians, Radius : extended;  var VectorResult : TVector);
+{returns vector in system with y-axis = north, z-axis = origin of longitude and latitude}
+
+function VectorToPolar(const InputVector : TVector): TPolarCoordinates;
+{InputVector is in system with y = north pole, z-axis = origin of longitude and latitude}
+
+procedure ComputeDistanceAndBearing(const Lon1, Lat1, Lon2, Lat2 : extended; var AngleBetween, Bearing : extended);
+{all arguments in radians}
 
 implementation
 
@@ -643,6 +659,60 @@ function PlaneDescription(const PlaneToDescribe: Plane; const PlaneID: string): 
     Result.Add('   Center = '+VectorString(PlaneToDescribe.Point,6));
     Result.Add('   Normal = '+VectorString(PlaneToDescribe.Normal,6));
   end;
+
+procedure PolarToVector(const Lon_radians, Lat_radians, Radius : extended;  var VectorResult : TVector);
+{determines vector components of a point in polar form taking
+  y-axis = polar direction
+  z-axis = origin of Longitude (which is measured CCW about y-axis)
+  x-axis = y cross z
+ Lat, Lon are in radians }
+  begin
+    VectorResult[x] := Radius*Sin(Lon_radians)*Cos(Lat_radians);
+    VectorResult[y] := Radius*Sin(Lat_radians);
+    VectorResult[z] := Radius*Cos(Lon_radians)*Cos(Lat_radians);
+  end;
+
+function VectorToPolar(const InputVector : TVector): TPolarCoordinates;
+{InputVector is in system with y = north pole, z-axis = origin of longitude and latitude}
+begin
+  Result.Radius := VectorMagnitude(InputVector);
+  Result.Latitude := Asin(InputVector[y]/Result.Radius);       // formerly used routines in Math unit
+  Result.Longitude := Atan2(InputVector[x],InputVector[z]);
+end;
+
+procedure ComputeDistanceAndBearing(const Lon1, Lat1, Lon2, Lat2 : extended; var AngleBetween, Bearing : extended);
+var
+  SinLat1, CosLat1, SinLat2, CosLat2, CosTheta, SinTheta,
+  CosThetaSqrd, Denom, PolarAngle, CosAz, SinAz : extended;
+begin
+    PolarAngle := Lon2 - Lon1;
+    SinLat1 := Sin(Lat1);
+    CosLat1 := Cos(Lat1);
+    SinLat2 := Sin(Lat2);
+    CosLat2 := Cos(Lat2);
+    CosTheta := SinLat1*SinLat2 + CosLat1*CosLat2*Cos(PolarAngle);
+    CosThetaSqrd := Sqr(CosTheta);
+    if CosThetaSqrd>=1 then // note: can only be >1 due to round-off error
+      begin
+        AngleBetween := 0;
+        Bearing := 0;
+      end
+    else
+      begin
+        AngleBetween := ACos(CosTheta);
+
+        SinTheta := Sqrt(1-CosThetaSqrd);
+        Denom := CosLat1*SinTheta;
+        if Denom=0 then
+          Bearing := 0
+        else
+          begin
+            CosAz := (SinLat1*CosTheta - SinLat2)/Denom;
+            SinAz := Sin(PolarAngle)*CosLat2/SinTheta;
+            Bearing := Pi - ATan2(SinAz,CosAz);
+          end;
+      end;
+end;
 
 begin
   AssignToVector(Ux,1,0,0);

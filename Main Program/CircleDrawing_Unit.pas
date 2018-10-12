@@ -342,7 +342,7 @@ begin
   if FileExists(LTVT_Form.ShadowProfileFilename) and
     (mrNO=MessageDlg('Overwrite existing shadow profile?',mtConfirmation,[mbYes,mbNo],0)) then Exit;
 
-  LTVT_Form.PolarToVector(DegToRad(LonDeg_LabeledNumericEdit.NumericEdit.ExtendedValue),
+  PolarToVector(DegToRad(LonDeg_LabeledNumericEdit.NumericEdit.ExtendedValue),
     DegToRad(LatDeg_LabeledNumericEdit.NumericEdit.ExtendedValue), 1, LTVT_Form.ShadowProfileCenterVector);
 
   AssignFile(ShadowFile, LTVT_Form.ShadowProfileFilename);

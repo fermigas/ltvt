@@ -28,7 +28,8 @@ interface
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, LabeledNumericEdit, StdCtrls, ComCtrls, Math, DateUtils, ExtCtrls,
-  H_JPL_Ephemeris, MoonPosition, Constnts, {TimLib,} MP_Defs, Win_Ops, FileCtrl;
+  H_JPL_Ephemeris, MoonPosition, Constnts, {TimLib,} MP_Defs, Win_Ops, FileCtrl,
+  MPVectors;
 
 type
   TPhotosessionSearch_Form = class(TForm)

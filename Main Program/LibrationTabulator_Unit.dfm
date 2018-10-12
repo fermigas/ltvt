@@ -4,7 +4,7 @@ object LibrationTabulator_Form: TLibrationTabulator_Form
   Width = 925
   Height = 690
   ActiveControl = Tabulate_Button
-  Caption = 'LTVT Libration Tabulator v0.2'
+  Caption = 'LTVT Libration Tabulator v0.3'
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -195,7 +195,7 @@ object LibrationTabulator_Form: TLibrationTabulator_Form
     end
     inline MaxSunElevDeg_LabeledNumericEdit: TLabeledNumericEdit
       Left = 8
-      Top = 52
+      Top = 50
       Width = 170
       Height = 19
       Hint = 
@@ -221,31 +221,82 @@ object LibrationTabulator_Form: TLibrationTabulator_Form
       end
     end
     inline MaxCenterAngleDeg_LabeledNumericEdit: TLabeledNumericEdit
-      Left = 15
-      Top = 84
-      Width = 202
+      Left = 31
+      Top = 76
+      Width = 194
       Height = 19
       Hint = 
         'Ignore events when requested feature is not closer than this dis' +
         'tance to the Moon'#39's center -- DD.ddd format'
       AutoSize = True
-      TabOrder = 2
+      TabOrder = 3
       inherited Item_Label: TLabel
         Width = 105
         Caption = 'Max. Center Distance:'
       end
       inherited Units_Label: TLabel
-        Left = 184
+        Left = 176
         Width = 18
         Caption = 'deg'
       end
       inherited NumericEdit: TNumericEdit
-        Left = 120
+        Left = 112
         Width = 57
         Height = 19
         Text = '90.00'
         OnKeyDown = MaxCenterAngleDeg_LabeledNumericEditNumericEditKeyDown
       end
+    end
+    object MinLibration_RadioButton: TRadioButton
+      Left = 8
+      Top = 96
+      Width = 17
+      Height = 17
+      Hint = 
+        'List events for which feature is at least this much closer to di' +
+        'sk center than usual'
+      TabOrder = 4
+      OnKeyDown = MinLibration_RadioButtonKeyDown
+    end
+    inline MinLibrationDeg_LabeledNumericEdit: TLabeledNumericEdit
+      Left = 31
+      Top = 100
+      Width = 194
+      Height = 19
+      Hint = 
+        'Ignore events when requested feature is not this much closer to ' +
+        'Moon'#39's center than usual -- DD.ddd format'
+      AutoSize = True
+      TabOrder = 5
+      inherited Item_Label: TLabel
+        Width = 66
+        Caption = 'Min. Libration:'
+      end
+      inherited Units_Label: TLabel
+        Left = 176
+        Width = 18
+        Caption = 'deg'
+      end
+      inherited NumericEdit: TNumericEdit
+        Left = 112
+        Width = 57
+        Height = 19
+        Text = '5.00'
+        OnKeyDown = MinLibrationDeg_LabeledNumericEditNumericEditKeyDown
+      end
+    end
+    object MaxCenterAngle_RadioButton: TRadioButton
+      Left = 8
+      Top = 72
+      Width = 17
+      Height = 17
+      Hint = 
+        'List events for which feature is within this distance of disk ce' +
+        'nter'
+      Checked = True
+      TabOrder = 2
+      TabStop = True
+      OnKeyDown = MaxCenterAngle_RadioButtonKeyDown
     end
   end
   object Memo1: TRichEdit
@@ -260,7 +311,7 @@ object LibrationTabulator_Form: TLibrationTabulator_Form
     Font.Style = []
     ParentFont = False
     ScrollBars = ssBoth
-    TabOrder = 9
+    TabOrder = 10
     WordWrap = False
     OnKeyDown = Memo1KeyDown
   end
@@ -271,7 +322,7 @@ object LibrationTabulator_Form: TLibrationTabulator_Form
     Height = 25
     Hint = 'Clear Memo area'
     Caption = 'Clear'
-    TabOrder = 12
+    TabOrder = 13
     OnClick = ClearMemo_ButtonClick
     OnKeyDown = ClearMemo_ButtonKeyDown
   end
@@ -284,7 +335,7 @@ object LibrationTabulator_Form: TLibrationTabulator_Form
       'List date/time and libration for events meeting criteria in requ' +
       'ested range of dates'
     Caption = 'Tabulate'
-    TabOrder = 13
+    TabOrder = 9
     OnClick = Tabulate_ButtonClick
     OnKeyDown = Tabulate_ButtonKeyDown
   end
@@ -327,7 +378,7 @@ object LibrationTabulator_Form: TLibrationTabulator_Form
     Height = 25
     Hint = 'Change font used in Memo area'
     Caption = 'Font'
-    TabOrder = 10
+    TabOrder = 11
     OnClick = Font_ButtonClick
     OnKeyDown = Font_ButtonKeyDown
   end
@@ -465,7 +516,7 @@ object LibrationTabulator_Form: TLibrationTabulator_Form
     Height = 25
     Hint = 'Click to halt tabulation '
     Caption = 'Abort'
-    TabOrder = 11
+    TabOrder = 12
     OnClick = Abort_ButtonClick
     OnKeyDown = Abort_ButtonKeyDown
   end
