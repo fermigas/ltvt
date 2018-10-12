@@ -20,7 +20,8 @@ uses
   H_PhotoCalibrator_Unit in 'H_PhotoCalibrator_Unit.pas' {PhotoCalibrator_Form},
   CircleDrawing_Unit in 'CircleDrawing_Unit.pas' {CircleDrawing_Form},
   H_MoonEventPredictor_Unit in 'H_MoonEventPredictor_Unit.pas' {MoonEventPredictor_Form},
-  H_CalibratedPhotoSelector_Unit in 'H_CalibratedPhotoSelector_Unit.pas' {CalibratedPhotoLoader_Form};
+  H_CalibratedPhotoSelector_Unit in 'H_CalibratedPhotoSelector_Unit.pas' {CalibratedPhotoLoader_Form},
+  MapFns_Unit in 'MapFns_Unit.pas';
 
 {$R *.res}
 

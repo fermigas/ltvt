@@ -119,12 +119,12 @@ object CartographicOptions_Form: TCartographicOptions_Form
   object LibrationCircle_CheckBox: TCheckBox
     Left = 16
     Top = 136
-    Width = 129
+    Width = 113
     Height = 17
     Hint = 
       'Include a circle at 90 degrees from the Moon'#39's center -- this is' +
       ' the boundary of the region "normally" visible from Earth'
-    Caption = 'Show libration circle'
+    Caption = 'Show mean limb'
     TabOrder = 5
     OnKeyDown = LibrationCircle_CheckBoxKeyDown
   end
@@ -177,7 +177,7 @@ object CartographicOptions_Form: TCartographicOptions_Form
     OnKeyDown = Restore_ButtonKeyDown
   end
   object TerminatorLines_CheckBox: TCheckBox
-    Left = 176
+    Left = 184
     Top = 136
     Width = 193
     Height = 17

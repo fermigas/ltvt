@@ -39,6 +39,9 @@ object Terminator_Form: TTerminator_Form
     Top = 536
     Width = 313
     Height = 113
+    Hint = 
+      'Information related to current mouse position; in top caption, "' +
+      'Map" is IAU format LTO zone number; "Rnn" is R'#252'kl sheet number'
     Caption = 'Mouse Position'
     Ctl3D = False
     ParentCtl3D = False
@@ -49,8 +52,8 @@ object Terminator_Form: TTerminator_Form
       Width = 78
       Height = 13
       Hint = 
-        'Altitude and azimuth of center of Sun as viewed from current mou' +
-        'se point'
+        'Information related to mouse distance from current reference poi' +
+        'nt'
       Caption = 'SunAngle_Label'
     end
     object RefPtDistance_Label: TLabel
@@ -65,6 +68,7 @@ object Terminator_Form: TTerminator_Form
       Top = 92
       Width = 88
       Height = 13
+      Hint = 'Information about dot closest to current mouse point'
       Caption = 'CraterName_Label'
     end
     object MouseLonLat_Label: TLabel
@@ -812,6 +816,10 @@ object Terminator_Form: TTerminator_Form
       object DrawCircle_MainMenuItem: TMenuItem
         Caption = '&Draw circle...'
         OnClick = DrawCircle_MainMenuItemClick
+      end
+      object DrawLimb_MainMenuItem: TMenuItem
+        Caption = 'Draw observer'#39's &limb'
+        OnClick = DrawLimb_MainMenuItemClick
       end
       object Changelabelpreferences_MainMenuItem: TMenuItem
         Caption = 'Change dot/label &preferences...'

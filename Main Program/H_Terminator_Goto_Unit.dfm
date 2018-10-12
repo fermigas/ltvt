@@ -155,8 +155,8 @@ object H_Terminator_Goto_Form: TH_Terminator_Goto_Form
       Width = 75
       Height = 19
       Hint = 
-        'Enter desired left-right screen position on scale where size of ' +
-        'full Moon is +1.0 to -1.0'
+        'Enter desired horizontal screen position on scale where full ima' +
+        'ge ranges from -1.0 (left) to +1.0 (right)'
       AutoSize = True
       TabOrder = 0
       inherited Item_Label: TLabel
@@ -185,8 +185,8 @@ object H_Terminator_Goto_Form: TH_Terminator_Goto_Form
       Width = 75
       Height = 19
       Hint = 
-        'Enter desired up-down screen position on scale where size of ful' +
-        'l Moon is +1.0 to -1.0'
+        'Enter desired vertical screen position on scale where full Moon ' +
+        'ranges from +1.0 (top) to -1.0 (bottom)'
       AutoSize = True
       TabOrder = 1
       inherited Item_Label: TLabel
@@ -259,7 +259,7 @@ object H_Terminator_Goto_Form: TH_Terminator_Goto_Form
         'ere is no LTO map for this subzone'
       Caption = 'Zone'
     end
-    object Label3: TLabel
+    object LAC_Label: TLabel
       Left = 250
       Top = 112
       Width = 52
@@ -408,9 +408,7 @@ object H_Terminator_Goto_Form: TH_Terminator_Goto_Form
     Top = 195
     Width = 57
     Height = 25
-    Hint = 
-      'Use a cross to mark specified location on current map -- also se' +
-      't Reference Point to this location'
+    Hint = 'Place plus mark at specified location on current map'
     Caption = 'Mark'
     TabOrder = 6
     OnClick = MarkFeature_ButtonClick

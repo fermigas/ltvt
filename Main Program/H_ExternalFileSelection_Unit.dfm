@@ -48,7 +48,7 @@ object ExternalFileSelection_Form: TExternalFileSelection_Form
     TabOrder = 0
     object Texture1Filename_Label: TLabel
       Left = 128
-      Top = 88
+      Top = 80
       Width = 585
       Height = 13
       Hint = 'Choose a new file by clicking "Change"'
@@ -57,7 +57,7 @@ object ExternalFileSelection_Form: TExternalFileSelection_Form
     end
     object Texture2Filename_Label: TLabel
       Left = 128
-      Top = 152
+      Top = 144
       Width = 585
       Height = 13
       Hint = 'Choose a new file by clicking "Change"'
@@ -66,7 +66,7 @@ object ExternalFileSelection_Form: TExternalFileSelection_Form
     end
     object Texture3Filename_Label: TLabel
       Left = 128
-      Top = 220
+      Top = 209
       Width = 585
       Height = 13
       Hint = 'Choose a new file by clicking "Change"'
@@ -75,14 +75,14 @@ object ExternalFileSelection_Form: TExternalFileSelection_Form
     end
     object Label9: TLabel
       Left = 96
-      Top = 184
+      Top = 176
       Width = 62
       Height = 13
       Caption = 'Description:  '
     end
     object Label8: TLabel
       Left = 8
-      Top = 184
+      Top = 176
       Width = 55
       Height = 13
       Hint = 
@@ -98,21 +98,21 @@ object ExternalFileSelection_Form: TExternalFileSelection_Form
     end
     object Label7: TLabel
       Left = 96
-      Top = 152
+      Top = 144
       Width = 19
       Height = 13
       Caption = 'File:'
     end
     object Label5: TLabel
       Left = 96
-      Top = 120
+      Top = 112
       Width = 62
       Height = 13
       Caption = 'Description:  '
     end
     object Label4: TLabel
       Left = 8
-      Top = 120
+      Top = 112
       Width = 55
       Height = 13
       Hint = 
@@ -128,28 +128,28 @@ object ExternalFileSelection_Form: TExternalFileSelection_Form
     end
     object Label3: TLabel
       Left = 96
-      Top = 88
+      Top = 80
       Width = 19
       Height = 13
       Caption = 'File:'
     end
     object Label2: TLabel
       Left = 96
-      Top = 56
+      Top = 48
       Width = 62
       Height = 13
       Caption = 'Description:  '
     end
     object Label11: TLabel
       Left = 96
-      Top = 220
+      Top = 209
       Width = 19
       Height = 13
       Caption = 'File:'
     end
     object Label1: TLabel
       Left = 8
-      Top = 56
+      Top = 48
       Width = 55
       Height = 13
       Hint = 
@@ -197,7 +197,7 @@ object ExternalFileSelection_Form: TExternalFileSelection_Form
     end
     object Texture1Description_Edit: TEdit
       Left = 168
-      Top = 56
+      Top = 48
       Width = 225
       Height = 19
       Hint = 'Enter text you want to appear next to radio button on main form'
@@ -207,7 +207,7 @@ object ExternalFileSelection_Form: TExternalFileSelection_Form
     end
     object Texture2Description_Edit: TEdit
       Left = 168
-      Top = 120
+      Top = 112
       Width = 225
       Height = 19
       Hint = 'Enter text you want to appear next to radio button on main form'
@@ -217,7 +217,7 @@ object ExternalFileSelection_Form: TExternalFileSelection_Form
     end
     object Texture3Description_Edit: TEdit
       Left = 168
-      Top = 184
+      Top = 176
       Width = 225
       Height = 19
       Hint = 'Enter text you want to appear next to radio button on main form'
@@ -227,7 +227,7 @@ object ExternalFileSelection_Form: TExternalFileSelection_Form
     end
     object ChangeTexture3_Button: TButton
       Left = 24
-      Top = 208
+      Top = 200
       Width = 57
       Height = 25
       Hint = 
@@ -240,7 +240,7 @@ object ExternalFileSelection_Form: TExternalFileSelection_Form
     end
     object ChangeTexture2_Button: TButton
       Left = 24
-      Top = 144
+      Top = 136
       Width = 57
       Height = 25
       Hint = 
@@ -253,7 +253,7 @@ object ExternalFileSelection_Form: TExternalFileSelection_Form
     end
     object ChangeTexture1_Button: TButton
       Left = 24
-      Top = 80
+      Top = 72
       Width = 57
       Height = 25
       Hint = 
@@ -266,7 +266,7 @@ object ExternalFileSelection_Form: TExternalFileSelection_Form
     end
     object GraphicalBrowser_CheckBox: TCheckBox
       Left = 24
-      Top = 24
+      Top = 16
       Width = 137
       Height = 17
       Hint = 
@@ -278,7 +278,7 @@ object ExternalFileSelection_Form: TExternalFileSelection_Form
     end
     object WineCompatibility_CheckBox: TCheckBox
       Left = 200
-      Top = 24
+      Top = 16
       Width = 377
       Height = 17
       Hint = 'Try this if you are unable to see texture simulations'
@@ -290,7 +290,7 @@ object ExternalFileSelection_Form: TExternalFileSelection_Form
     end
     inline Tex3MinLon_LabeledNumericEdit: TLabeledNumericEdit
       Left = 32
-      Top = 248
+      Top = 240
       Width = 130
       Height = 19
       Hint = 'Enter lunar longitude along left margin of Texture 3 map'
@@ -312,7 +312,7 @@ object ExternalFileSelection_Form: TExternalFileSelection_Form
     end
     inline Tex3MaxLon_LabeledNumericEdit: TLabeledNumericEdit
       Left = 192
-      Top = 248
+      Top = 240
       Width = 138
       Height = 19
       Hint = 'Enter lunar longitude along right margin of Texture 3 map'
@@ -336,7 +336,7 @@ object ExternalFileSelection_Form: TExternalFileSelection_Form
     end
     inline Tex3MinLat_LabeledNumericEdit: TLabeledNumericEdit
       Left = 544
-      Top = 248
+      Top = 240
       Width = 138
       Height = 19
       Hint = 'Enter lunar laitude along bottom margin of Texture 3 map'
@@ -360,7 +360,7 @@ object ExternalFileSelection_Form: TExternalFileSelection_Form
     end
     inline Tex3MaxLat_LabeledNumericEdit: TLabeledNumericEdit
       Left = 384
-      Top = 248
+      Top = 240
       Width = 130
       Height = 19
       Hint = 'Enter lunar laitude along bottom margin of Texture 3 map'
@@ -382,12 +382,12 @@ object ExternalFileSelection_Form: TExternalFileSelection_Form
     end
     object ChangeEarthTexture_Button: TButton
       Left = 24
-      Top = 296
+      Top = 294
       Width = 57
       Height = 25
       Hint = 
-        'Associate a new reference map with the third simulation texture ' +
-        'radio button'
+        'Choose a new texture map for drawing the Earth as viewed from th' +
+        'e Moon'
       Caption = 'Change'
       TabOrder = 12
       OnClick = ChangeEarthTexture_ButtonClick

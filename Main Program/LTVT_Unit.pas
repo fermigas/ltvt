@@ -868,11 +868,39 @@ v0.19
        on which Equatorial and Alt-Az orientations are based.
     4. Change default sky color to "Navy" (dark blue).
 
-                                                                      11/22/08 }
+  v0.19.7
+    1. Move routines for determining map zone from GoTo form to a separate unit.
+    2. Correct error in assignment of Rukl zone for features in the small limb
+       areas that fall outside the normal Rukl rectangles.
+    3. Add continuous readout of map location to caption of Mouse Position
+       readout box in main screen.  If the current mouse location can be
+       converted to a valid selenographic longitude and latitude, this will
+       include the IAU format LAC/LTO zone and if the feature is on the
+       Earth-facing hemisphere it will be followed by the Rukl zone denoted
+       R1..R76.
+    4. Add libration readout to information in Mouse Position box when in Earth
+       Viewer mode.
+    5. Correct hints for information lines in Mouse Position box so they change
+       depending on the display mode (Earth vs. Moon images).
+    6. Add to Tools menu an option to draw circle representing limb as seen by
+       currently specified observer at currently specified time.  This is
+       accomplished by setting the appropriate values in the Circle Drawing Tool
+       and clicking the "Draw" button, so the color will be whatever is specified
+       there. This option has to be used with caution because there is no
+       guarantee the specified time and location correspond to the desired
+       observer.
+    7. Corrected variable MoonRadius, used in some distance calculations, from
+       1738 to 1737.4 (formerly used only in angular diameter calculations).
+    8. In Cartographic Options form, change caption of check box from "Show
+       libration circle" to "Show mean limb".
+    9. Modify GoTo form hints and visibility of controls to change between
+       Earth and Moon viewing modes. Delete obsolete/erroneous hint saying Mark
+       button set reference point.
+
+                                                                      11/25/08 }
 
 // 11/28/08: correct duplicate variable names for SubEarth and SubSolar points in MouseMove
-// this caused sun angle/azimuth readout in normal lunar views to be non-functional                                                                      
-                                                                      
+// this caused sun angle/azimuth readout in normal lunar views to be non-functional
 
 interface
 
@@ -997,6 +1025,7 @@ type
     Recordshadowmeasurement_RightClickMenuItem: TMenuItem;
     LabelFeatureAndSatellites_RightClickMenuItem: TMenuItem;
     ShowEarth_MainMenuItem: TMenuItem;
+    DrawLimb_MainMenuItem: TMenuItem;
     procedure DrawDots_ButtonClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure DrawTexture_ButtonClick(Sender: TObject);
@@ -1127,6 +1156,7 @@ type
     procedure LabelFeatureAndSatellites_RightClickMenuItemClick(
       Sender: TObject);
     procedure ShowEarth_MainMenuItemClick(Sender: TObject);
+    procedure DrawLimb_MainMenuItemClick(Sender: TObject);
   private
     { Private declarations }
   public
@@ -1468,12 +1498,12 @@ uses FileCtrl, H_Terminator_About_Unit, H_Terminator_Goto_Unit, H_Terminator_Set
   H_ExternalFileSelection_Unit, H_CartographicOptions_Unit, NumericEdit,
   H_MouseOptions_Unit, H_PhotoCalibrator_Unit, H_CalibratedPhotoSelector_Unit,
   LTO_Viewer_Unit, Satellite_PhotoCalibrator_Unit, CircleDrawing_Unit,
-  LibrationTabulator_Unit;
+  LibrationTabulator_Unit, MapFns_Unit;
 
 {$R *.dfm}
 
 const
-  ProgramVersion = '0.19.6.1';
+  ProgramVersion = '0.19.7.1';
 
 // note: the following constants specify (in degrees) that texture files span
 //   the full lunar globe.  They should not be changed.
@@ -1734,7 +1764,7 @@ begin {TTerminator_Form.FormCreate}
   RefPtLon := 0;
   RefPtLat := 0;
 
-  MoonRadius := 3476/2;  {from IAU mapping diameter in km}
+  MoonRadius := 1737.4;  {JPL lunar radius [km] = consistent with IAU mapping diameter?}
 
   SunRad := 1920*OneArcSec/2;  // this is overridden by Estimate Geometry if a JPL file is available
 
@@ -2989,7 +3019,7 @@ begin {EstimateData_ButtonClick}
         [MoonPosition.TopocentricAlt,MoonPosition.Azimuth,SunPosition.TopocentricAlt,SunPosition.Azimuth]);
     end;
 
-  MoonDiameter_Label.Caption := Format('Moon''s angular diameter: %0.1f arc-seconds',[7200*RadToDeg(ArcSin(1737.4*OneKm/OneAU/ObserverToMoonAU))]);
+  MoonDiameter_Label.Caption := Format('Moon''s angular diameter: %0.1f arc-seconds',[7200*RadToDeg(ArcSin(MoonRadius*OneKm/OneAU/ObserverToMoonAU))]);
 
   SetEstimatedGeometryLabels;
 
@@ -3204,7 +3234,7 @@ var
   MagV2, ACosArg,
   Lon1, Lat1, Lon2, Lat2, CosTheta : extended;
   i, MinI, RSqrd, MinRsqrd : integer;
-  FeatureDescription : string;
+  FeatureDescription, RuklString : string;
   V1, V2, S : TVector;
   SavedGeocentricMode : Boolean;
   SunPosition, MoonPosition : PositionResultRecord;
@@ -3283,17 +3313,26 @@ begin {Terminator_Form.JimsGraph1MouseMove}
   CurrentMouseX := ProjectedX;
   CurrentMouseY := ProjectedY;
 
-  MousePosition_GroupBox.Caption := format('Mouse Position  ( X = %0.4f  Y = %0.4f )',[ProjectedX,ProjectedY]);
 
   if not ConvertXYtoLonLat(ProjectedX,ProjectedY,Lon,Lat) then
-    HideMouseMoveLabels
+    begin
+      MousePosition_GroupBox.Hint := 'X = horizontal, Y = vertical position on scale of -1 to +1; mouse is outside projected sphere';
+      MousePosition_GroupBox.Caption := format('Mouse Position:  X = %0.4f  Y = %0.4f',[ProjectedX,ProjectedY]);
+      HideMouseMoveLabels;
+    end
   else
     begin
-      MouseLonLat_Label.Caption := format('Longitude = %0s   Latitude = %0s',
-        [LongitudeString(RadToDeg(Lon),2),LatitudeString(RadToDeg(Lat),2)]);
-
       if ShowingEarth then
         begin
+          MousePosition_GroupBox.Hint := 'Box gives information related to observations of Sun and Moon from sea level at current mouse point on Earth';
+          MousePosition_GroupBox.Caption := format('Mouse Position:  Longitude = %0s   Latitude = %0s',
+            [LongitudeString(RadToDeg(Lon),2),LatitudeString(RadToDeg(Lat),2)]);
+
+          MouseLonLat_Label.Hint := 'Altitude and azimuth of center of Sun as viewed from sea level at current mouse point';
+          SunAngle_Label.Hint := 'Altitude and azimuth of center of Moon as viewed from sea level at current mouse point';
+          RefPtDistance_Label.Hint := 'Librations in longitude and latitude and diameter of Moon as viewed from sea level at current mouse point';
+          CraterName_Label.Hint := 'Angular separation of Sun and Moon and percent illumination of Moon as viewed from sea level at current mouse point';
+
           SavedGeocentricMode := GeocentricSubEarthMode;
 
           GeocentricSubEarthMode := False;
@@ -3307,9 +3346,9 @@ begin {Terminator_Form.JimsGraph1MouseMove}
           CalculatePosition(UT_MJD,Moon,BlankStarDataRecord,MoonPosition);
           CalculatePosition(UT_MJD,Sun, BlankStarDataRecord,SunPosition);
 
-          SunAngle_Label.Caption :=      Format('Sun is at :  %0.2f deg altitude and %0.2f deg azimuth',
+          MouseLonLat_Label.Caption := Format(' Sun is at :  %0.2f deg altitude and %0.2f deg azimuth',
             [SunPosition.TopocentricAlt,SunPosition.Azimuth]);
-          RefPtDistance_Label.Caption := Format('Moon is at : %0.2f deg altitude and %0.2f deg azimuth',
+          SunAngle_Label.Caption := Format('Moon is at : %0.2f deg altitude and %0.2f deg azimuth',
             [MoonPosition.TopocentricAlt,MoonPosition.Azimuth]);
 
        {Note: need to correct reversal of positive West to negative West longitude}
@@ -3326,15 +3365,32 @@ begin {Terminator_Form.JimsGraph1MouseMove}
 
               ComputeDistanceAndBearing(MoonPosition.Azimuth*OneDegree,MoonPosition.TopocentricAlt*OneDegree,SunPosition.Azimuth*OneDegree,SunPosition.TopocentricAlt*OneDegree,SunAngle,SunBearing);
 
-              CraterName_Label.Caption := format('Elon = %0.2f deg;  Illum = %0.3f%s;  Diam = %0.1f arc-sec',
-                [SunAngle/OneDegree, 50*(1 + CosTheta), '%', 7200*RadToDeg(ArcSin(1737.4*OneKm/OneAU/ObserverToMoonAU))]);
+              RefPtDistance_Label.Caption := Format('Librations : %s / %s   Diam = %0.1f arc-sec'   ,
+                [LongitudeString(RadToDeg(EarthViewerSubEarthPoint.Longitude),3),LatitudeString(RadToDeg(EarthViewerSubEarthPoint.Latitude),3),
+                7200*RadToDeg(ArcSin(MoonRadius*OneKm/OneAU/ObserverToMoonAU))]);
+              CraterName_Label.Caption := format(' Elongation = %0.2f deg;  Illumination = %0.3f%s',
+                [SunAngle/OneDegree, 50*(1 + CosTheta), '%']);
             end;
 
           GeocentricSubEarthMode := SavedGeocentricMode;
 
         end
-      else
+      else // showing Moon image
         begin
+          MousePosition_GroupBox.Hint := 'Box gives information related to current mouse position on Moon; in top caption, "Map" is IAU format LTO zone number; "Rnn" is Rükl sheet number';
+          RuklString := Rukl_String(Lon,Lat);
+          if RuklString='' then
+            MousePosition_GroupBox.Caption := format('Mouse Position:  X = %0.4f  Y = %0.4f  Map: %s',[ProjectedX,ProjectedY,LTO_String(Lon,Lat)])
+          else
+            MousePosition_GroupBox.Caption := format('Mouse Position:  X = %0.4f  Y = %0.4f  Map: %s / R%s',[ProjectedX,ProjectedY,LTO_String(Lon,Lat),RuklString]);
+
+          MouseLonLat_Label.Hint := 'Selenographic longitude and latitude of current mouse point';
+          SunAngle_Label.Hint := 'Altitude and azimuth of center of Sun as viewed from current mouse point on Moon';
+          RefPtDistance_Label.Hint := 'Information related to mouse distance from current reference point';
+          CraterName_Label.Hint := 'Information about dot closest to current mouse point';
+
+          MouseLonLat_Label.Caption := format('Longitude = %0s   Latitude = %0s',
+            [LongitudeString(RadToDeg(Lon),2),LatitudeString(RadToDeg(Lat),2)]);
 
           ComputeDistanceAndBearing(Lon,Lat,SubSolarPoint.Longitude,SubSolarPoint.Latitude,SunAngle,SunBearing);
 
@@ -3347,39 +3403,48 @@ begin {Terminator_Form.JimsGraph1MouseMove}
             DistanceAndBearingRefPtMode :
               begin
                 ComputeDistanceAndBearing(RefPtLon,RefPtLat,Lon,Lat,RefPtAngle,RefPtBearing);
+                RefPtDistance_Label.Hint := 'Distance of current mouse point from reference point and azimuth CW from lunar north';
                 RefPtDistance_Label.Caption := Format('From ref. pt. = %0.2f km  (%0.2f deg at %0.2f deg az)',
                   [MoonRadius*RefPtAngle,RadToDeg(RefPtAngle),RadToDeg(RefPtBearing)]);
               end;
             ShadowLengthRefPtMode :
-              if UserPhoto_RadioButton.Checked then
-                UserPhotoElevationReadout
-              else
-                begin
-                  PolarToVector(Lat,Lon,MoonRadius,ShadowTipVector);
-                  ComputeDistanceAndBearing(RefPtLon,RefPtLat,Lon,Lat,RefPtAngle,RefPtBearing);
-                  CurrentElevationDifference_m := 1000*MoonRadius*(Cos(RefPtAngle-RefPtSunAngle)/Cos(RefPtSunAngle)-1);
-                  RefPtDistance_Label.Caption := Format('Shadow length = %0.2f deg; Height difference = %0.0f m',
-                    [RadToDeg(RefPtAngle),CurrentElevationDifference_m]);
-                end;
+              begin
+                RefPtDistance_Label.Hint := 'Interpretation of current mouse position based on reference point at start of shadow';
+                if UserPhoto_RadioButton.Checked then
+                  UserPhotoElevationReadout
+                else
+                  begin
+                    PolarToVector(Lat,Lon,MoonRadius,ShadowTipVector);
+                    ComputeDistanceAndBearing(RefPtLon,RefPtLat,Lon,Lat,RefPtAngle,RefPtBearing);
+                    CurrentElevationDifference_m := 1000*MoonRadius*(Cos(RefPtAngle-RefPtSunAngle)/Cos(RefPtSunAngle)-1);
+                    RefPtDistance_Label.Caption := Format('Shadow length = %0.2f deg; Height difference = %0.0f m',
+                      [RadToDeg(RefPtAngle),CurrentElevationDifference_m]);
+                  end;
+              end;
             InverseShadowLengthRefPtMode :
-              if UserPhoto_RadioButton.Checked then
-                UserPhotoElevationReadout
-              else
-                begin
-                  PolarToVector(Lat,Lon,MoonRadius,ShadowTipVector);
-                  ComputeDistanceAndBearing(RefPtLon,RefPtLat,Lon,Lat,RefPtAngle,RefPtBearing);
-                  CurrentElevationDifference_m := 1000*MoonRadius*(Cos(RefPtAngle-SunAngle)/Cos(SunAngle)-1);
-                  RefPtDistance_Label.Caption := Format('Shadow length = %0.2f deg; Height difference = %0.0f m',
-                    [RadToDeg(RefPtAngle),CurrentElevationDifference_m]);
-                end;
+              begin
+                RefPtDistance_Label.Hint := 'Interpretation of current mouse position based on reference point at tip of shadow';
+                if UserPhoto_RadioButton.Checked then
+                  UserPhotoElevationReadout
+                else
+                  begin
+                    PolarToVector(Lat,Lon,MoonRadius,ShadowTipVector);
+                    ComputeDistanceAndBearing(RefPtLon,RefPtLat,Lon,Lat,RefPtAngle,RefPtBearing);
+                    CurrentElevationDifference_m := 1000*MoonRadius*(Cos(RefPtAngle-SunAngle)/Cos(SunAngle)-1);
+                    RefPtDistance_Label.Caption := Format('Shadow length = %0.2f deg; Height difference = %0.0f m',
+                      [RadToDeg(RefPtAngle),CurrentElevationDifference_m]);
+                  end;
+              end;
             RayHeightsRefPtMode :
               begin
                 ComputeDistanceAndBearing(RefPtLon,RefPtLat,Lon,Lat,RefPtAngle,RefPtBearing);
+                RefPtDistance_Label.Hint := 'Interpretation of current mouse position based on reference point at start of shadow';
                 RefPtDistance_Label.Caption := Format('Distance = %0.2f deg; Min. ray = %0.0f m; Max. = %0.0f m',
                   [RadToDeg(RefPtAngle),RayHeight(RefPtSunAngle+SunRad,RefPtAngle),RayHeight(RefPtSunAngle-SunRad,RefPtAngle)]);
               end;
             else
               begin
+                RefPtDistance_Label.Hint := '';
                 RefPtDistance_Label.Caption := '';
               end;
             end;
@@ -3428,7 +3493,10 @@ begin {Terminator_Form.JimsGraph1MouseMove}
     }
             end
           else
-            CraterName_Label.Caption  := '';
+            begin
+              CraterName_Label.Hint  := '';
+              CraterName_Label.Caption  := '';
+            end;
         end;
     end;
 end;  {Terminator_Form.JimsGraph1MouseMove}
@@ -3643,19 +3711,41 @@ end;
 procedure TTerminator_Form.GoTo_MainMenuItemClick(Sender: TObject);
 var
   Rukl_Xi, Rukl_Eta, Rukl_LonDeg, Rukl_LatDeg : Extended;
+
+  procedure ShowLunarControls(const DesiredState : Boolean);
+    begin
+      with H_Terminator_Goto_Form do
+        begin
+          RuklZone_RadioButton.Visible := DesiredState;
+          GoTo_Button.Visible := DesiredState;
+          AerialView_Button.Visible := DesiredState;
+          LAC_Label.Visible := DesiredState;
+          LTOZone_Label.Visible := DesiredState;
+          RuklZone_Label.Visible := DesiredState;
+          XY_Redraw_Button.Visible := DesiredState;
+        end;
+    end;
+
 begin
   RefreshGoToList;
   with H_Terminator_Goto_Form do
     begin
       if ShowingEarth then
         begin
-          GoTo_Button.Hide;
-          AerialView_Button.Hide;
+          SetToLon_LabeledNumericEdit.Hint := 'Geographic longitude in decimal degrees (E=+  W=-)';
+          SetToLat_LabeledNumericEdit.Hint := 'Geographic Latitude in decimal degrees (N=+  S=-)';
+          CenterX_LabeledNumericEdit.Hint := 'Enter desired horizontal screen position on scale where full Earth ranges from -1.0 (left) to +1.0 (right)';
+          CenterY_LabeledNumericEdit.Hint := 'Enter desired vertical screen position on scale where full Earth ranges from +1.0 (top) to -1.0 (bottom)';
+          if RuklZone_RadioButton.Checked then LonLat_RadioButton.Checked := True;
+          ShowLunarControls(False);
         end
       else
         begin
-          GoTo_Button.Show;
-          AerialView_Button.Show;
+          SetToLon_LabeledNumericEdit.Hint := 'Selenographic longitude in decimal degrees (E=+  W=-)';
+          SetToLat_LabeledNumericEdit.Hint := 'Selenographic Latitude in decimal degrees (N=+  S=-)';
+          CenterX_LabeledNumericEdit.Hint := 'Enter desired horizontal screen position on scale where full Moon ranges from -1.0 (left) to +1.0 (right)';
+          CenterY_LabeledNumericEdit.Hint := 'Enter desired vertical screen position on scale where full Moon ranges from +1.0 (top) to -1.0 (bottom)';
+          ShowLunarControls(True);
         end;
 
       ShowModal;
@@ -3684,7 +3774,7 @@ begin
                       ProposedFilename := 'Rukl_'+RuklZone_LabeledNumericEdit.NumericEdit.Text+'_satellites_SE.bmp';
                 end;
 
-              Rukl_Position(Rukl_Xi, Rukl_Eta, Rukl_LonDeg, Rukl_LatDeg);
+              GoToRuklZone_Center(Rukl_Xi, Rukl_Eta, Rukl_LonDeg, Rukl_LatDeg);
               if (Rukl_LonDeg=-999) or (Rukl_LatDeg=-999) then
                 begin
                   ShowMessage('Using Xi-Eta : the requested Rukl zone does not have a well defined lunar lon-lat');
@@ -3780,7 +3870,10 @@ begin
   Y := DotProduct(CraterVector,YPrime_UnitVector);
   if FarsideFeature then
     begin
-      ShowMessage('In the current viewing geometry, the requested feature is on the Moon''s farside');
+      if ShowingEarth then
+        ShowMessage('In the current viewing geometry, the requested feature is on the Earth''s farside')
+      else
+        ShowMessage('In the current viewing geometry, the requested feature is on the Moon''s farside');
       if H_Terminator_Goto_Form.GoToState=Mark then MarkXY(X,Y,clRed);
     end
   else
@@ -6364,13 +6457,34 @@ begin
     end;
 end;
 
+procedure TTerminator_Form.DrawLimb_MainMenuItemClick(Sender: TObject);
+var
+  Theta : Extended;
+  SubObsPoint, SubSolPoint : TPolarCoordinates;
+begin
+  if ShowingEarth then
+    begin
+      ShowMessage('This tool is not intended for use with Earth images');
+      Exit;
+    end;
+
+  if not CalculateSubPoints(DateTimeToModifiedJulianDate(DateOf(Date_DateTimePicker.Date) + TimeOf(Time_DateTimePicker.Time)),
+    ExtendedValue(ObserverLongitudeText),ExtendedValue(ObserverLatitudeText),ExtendedValue(ObserverElevationText),
+    SubObsPoint,SubSolPoint) then exit;
+
+  Theta := ArcCos(MoonRadius*OneKm/OneAU/ObserverToMoonAU);  // angle from sub-observer point to limb [rad]
+
+  with CircleDrawing_Form do
+    begin
+      LonDeg_LabeledNumericEdit.NumericEdit.Text := Format('%0.3f',[RadToDeg(SubObsPoint.Longitude)]);
+      LatDeg_LabeledNumericEdit.NumericEdit.Text := Format('%0.3f',[RadToDeg(SubObsPoint.Latitude)]);
+      Diam_LabeledNumericEdit.NumericEdit.Text := Format('%0.1f',[2*Theta*MoonRadius]);
+      DrawCircle_Button.Click;
+    end;
+end;
+
 procedure TTerminator_Form.DrawRuklGrid1Click(Sender: TObject);
 {note: this is a simplified routine that works only for a zero libration view}
-const
-  NumRuklRows = 8;
-  NumRuklCols = 11;
-  RuklXStep = 2/NumRuklCols;
-  RuklYStep = 2/NumRuklRows;
 var
   I : Integer;
   X, Y : Extended;
@@ -6398,14 +6512,14 @@ begin
 
               if WantRuklSubgrid then
                 begin
-                  X := X + RuklXStep/2;
+                  X := X + RuklXiStep/2;
                   Pen.Style := psDashDot;
                   MoveTo(XPix(X),YPix(1));
                   LineTo(XPix(X),YPix(-1));    // note: LineTo stops short of destination by 1 pixel
-                  X := X + RuklXStep/2;
+                  X := X + RuklXiStep/2;
                 end
               else
-                X := X + RuklXStep;
+                X := X + RuklXiStep;
 
             end;
 
@@ -6418,14 +6532,14 @@ begin
 
               if WantRuklSubgrid then
                 begin
-                  Y := Y - RuklYStep/2;
+                  Y := Y - RuklEtaStep/2;
                   Pen.Style := psDashDot;
                   MoveTo(XPix(-1),YPix(Y));
                   LineTo(XPix(1),YPix(Y));    // note: LineTo stops short of destination by 1 pixel
-                  Y := Y - RuklYStep/2;
+                  Y := Y - RuklEtaStep/2;
                 end
               else
-                  Y := Y - RuklYStep;
+                  Y := Y - RuklEtaStep;
             end;
 
           Pen.Style := psSolid; // probably not necessary if other routines set desired style
