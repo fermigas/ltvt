@@ -2,7 +2,7 @@
 
 ## October 2018 Update 
 
-Welcome to a fork of the LTVT code base.  LTVT lost their home when wikispaces shut down.  We're getting the content from ltvt.wikisapces.com [here](https://github.com/fermigas/ltvt/wiki), and this is a repository of the program's code and binaries.   Our intent is to take LTVT forward, but we don't have a plan yet.  There's some talk of Javascript, Typescript, React and Electron, but we've got a lot to learn about the existing program.  
+Welcome to a fork of the LTVT code base.  LTVT lost their home when wikispaces shut down.  We're getting the content from ltvt.wikispaces.com back up [here](https://github.com/fermigas/ltvt/wiki), and this is a repository of the program's code and binaries.   Our intent is to take LTVT forward, but we don't have a plan yet.  There's some talk of Javascript, Typescript, React and Electron, but we've got a lot to learn about the existing program.  
 
 This isn't the official site, but the original author Jim Mosher was kind enough to provide permission and a huge archive of files (through John Moore on [Cloudy Nights](https://www.cloudynights.com/topic/623894-long-term-status-of-lunar-terminator-visualization-tool/#entry8879915)). 
 
