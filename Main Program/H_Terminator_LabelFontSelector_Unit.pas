@@ -153,7 +153,7 @@ procedure TLabelFontSelector_Form.RefreshFontSample;
 var
   TestInfo : TCraterInfo;
 begin
-  with TestInfo do
+  with TestInfo.CraterData do
     begin
       Name := 'Ptolemaeus';
       NumericData := '164';
@@ -163,7 +163,7 @@ begin
     IncludeName_CheckBox.Checked,FullCraterNames_CheckBox.Checked,
     IncludeSize_CheckBox.Checked,IncludeUnits_CheckBox.Checked,False);
 
-  with TestInfo do
+  with TestInfo.CraterData do
     begin
       Name := 'Ptolemaeus A';
       NumericData := '17';

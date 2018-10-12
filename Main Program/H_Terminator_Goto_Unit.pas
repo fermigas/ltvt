@@ -633,7 +633,11 @@ end;
 procedure TH_Terminator_Goto_Form.MinimizeGotoList_CheckBoxClick(
   Sender: TObject);
 begin
-  Terminator_Form.RefreshGoToList;
+  with Terminator_Form do
+    begin
+      GoToListCurrent := False;
+      RefreshGoToList;
+    end;  
 end;
 
 procedure TH_Terminator_Goto_Form.XY_Redraw_ButtonClick(Sender: TObject);

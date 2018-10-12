@@ -843,7 +843,20 @@ v0.19
        equatorial and alt-az orientations. A warning is issued if the information
        needed to do this does not seem to be current.
 
-                                                                        11/15/08 }
+  v0.19.5
+    1. Read Feature List from disk to memory and update only as needed.
+    2. Update GoTo list only as needed.
+    3. Change caption of "Change Location" button in main window to
+       "Location".
+    4. Add status info to Mouse Display box caption that identifies orientation
+       mode of current map.
+    5. Add warning if shadow measurements are attempted using a user photo
+       drawn with a subsolar point differing from the one encoded in the
+       calibration data by more than 0.01 deg, and if so, offer to transfer
+       the subsolar point data from current photo calibration info to the
+       boxes in the Main Screen and redraw the texture.
+
+                                                                      11/20/08 }
 
 interface
 
@@ -856,7 +869,10 @@ uses
 
 type
   TCrater = record
-    Name : string;
+    UserFlag,
+    Name,
+    LatStr,
+    LonStr : string;
     Lon,  {in radians}
     Lat  : extended; {in radians}
     NumericData : string;  {in km}
@@ -865,13 +881,8 @@ type
     end;
 
   TCraterInfo = record  {holds info on all features currently indicated by dots}
-    Name : string;
-    Lon,  {in radians}
-    Lat  : extended; {in radians}
+    CraterData : TCrater;
     Dot_X, Dot_Y : integer;  {pixel at which feature is plotted}
-    NumericData : string;
-    USGS_Code : string;
-    AdditionalInfo1, AdditionalInfo2 : string;
     end;
 
 type
@@ -1126,7 +1137,6 @@ type
 
     StartWithCurrentUT : Boolean;
     OrientationMode : (LineOfCusps, Cartographic, Equatorial, AltAz);
-//    CartographicOrientation : boolean;
     IncludeLibrationCircle : boolean;
     IncludeTerminatorLines : boolean;
     LibrationCircleColor : TColor;
@@ -1199,12 +1209,15 @@ type
     ManualRotationDegrees : extended; {[deg]}
     SunRad : extended; {semi-diameter of Sun [radians] -- initialized to 1920/2 arc-sec, re-set by EstimateData_ButtonClick}
 
-    SubSolarPoint : TPolarCoordinates; {set by CalculateGeometry}
+    SubSolarPoint : TPolarCoordinates;   {set by CalculateGeometry}
     SinSSLat, CosSSLat : extended;
 
-    PrimaryCraterList : array of TCrater; {list of primary craters in list used for current overlay}
     CraterList,  {current feature list}
+    PrimaryCraterList : array of TCrater; {list of primary craters in list used for current overlay}
     CraterInfo : array of TCraterInfo; {list of craters represented by dots in current overlay}
+
+    CraterListCurrent, GoToListCurrent : Boolean;
+    LastCraterListFileRecord : TSearchRec;
 
     IdentifySatellites : Boolean;
 
@@ -1274,6 +1287,9 @@ type
 
     function VectorToPolar(const InputVector : TVector): TPolarCoordinates;
    {InputVector is in selenographic system with y = north pole}
+
+    function RefreshCraterList : Boolean;
+    {reads feature name list from disk}
 
     function PositionInCraterInfo(const ScreenX, ScreenY : integer) : boolean;
     {tests if there is already a known dot at the stated pixel position}
@@ -1433,7 +1449,7 @@ uses FileCtrl, H_Terminator_About_Unit, H_Terminator_Goto_Unit, H_Terminator_Set
 {$R *.dfm}
 
 const
-  ProgramVersion = '0.19.4';
+  ProgramVersion = '0.19.5';
 
 // note: the following constants specify (in degrees) that texture files span
 //   the full lunar globe.  They should not be changed.
@@ -1646,6 +1662,8 @@ var
   IniFile : TIniFile;
 
 begin {TTerminator_Form.FormCreate}
+  CraterListCurrent := False;
+  GoToListCurrent := False;
   IdentifySatellites := False;
 
   DefaultCursor := Screen.Cursor;
@@ -1817,6 +1835,7 @@ var
   LeftRight_Factor, UpDown_Factor : Integer;
   Lat1, Lon1, Lat2, Lon2, Colong, RotationAngle,
   CenterX, CenterY, ZoomFactor : Extended;
+  InversionTag : String;
 
 //  PolarAngle : Extended;
 
@@ -1861,9 +1880,22 @@ begin {TTerminator_Form.CalculateGeometry}
   ZPrime_UnitVector := SubObsvrVector;
   NormalizeVector(ZPrime_UnitVector);
 
+  InversionTag := '';
+  if InvertLR then InversionTag := ' (Inverted L-R';
+  if InvertUD then
+    begin
+      if InversionTag='' then
+        InversionTag := ' (Inverted U-D'
+      else
+        InversionTag := InversionTag+' and U-D';
+    end;
+  if InversionTag<>'' then InversionTag := InversionTag+')';
+
   case OrientationMode of
     LineOfCusps :
       begin
+        MoonDisplay_GroupBox.Caption := 'Moon Display:  Line of Cusps View'+InversionTag;
+
         CrossProduct(ZPrime_UnitVector,SubSolarVector,YPrime_UnitVector);
 
         {check if SubObsvrVector and SubSolarVector are parallel; if so, terminator is at limb so rotations relative
@@ -1900,6 +1932,8 @@ begin {TTerminator_Form.CalculateGeometry}
                 if VectorModSqr(EarthAxisVector)=0 then EarthAxisVector := Uz;
               end;
           end;
+
+        MoonDisplay_GroupBox.Caption := 'Moon Display:  Equatorial View'+InversionTag;
         with SelenographicCoordinates(EarthAxisVector) do PolarToVector(Latitude,Longitude,1,CelestialPoleVector);
 //        ShowMessage('Moon pole at : '+VectorString(SelenographicCoordinateSystem.UnitZ,3)+'  Earth pole in seleno system : '+VectorString(CelestialPoleVector,3)+'  ZPrime : '+VectorString(ZPrime_UnitVector,3));
         CrossProduct(CelestialPoleVector,ZPrime_UnitVector,XPrime_UnitVector);
@@ -1926,6 +1960,8 @@ begin {TTerminator_Form.CalculateGeometry}
                 if VectorModSqr(ObserverZenithVector)=0 then ObserverZenithVector := Uz;
               end;
           end;
+
+        MoonDisplay_GroupBox.Caption := 'Moon Display:  Alt-Az View'+InversionTag;
         with SelenographicCoordinates(ObserverZenithVector) do PolarToVector(Latitude,Longitude,1,ZenithVector);
 //        ShowMessage('Moon pole at : '+VectorString(SelenographicCoordinateSystem.UnitZ,3)+'  Zenith direction in seleno system : '+VectorString(ObserverVertical,3)+'  ZPrime : '+VectorString(ZPrime_UnitVector,3));
         CrossProduct(ZenithVector,ZPrime_UnitVector,XPrime_UnitVector);
@@ -1936,6 +1972,7 @@ begin {TTerminator_Form.CalculateGeometry}
 
     else {Cartographic}
       begin
+        MoonDisplay_GroupBox.Caption := 'Moon Display:  Cartographic View'+InversionTag;
         CrossProduct(Uy,ZPrime_UnitVector,XPrime_UnitVector);
         if VectorMagnitude(XPrime_UnitVector)=0 then XPrime_UnitVector := Ux;  //ZPrime_UnitVector parallel to Uy (looking from over north or south pole)
         NormalizeVector(XPrime_UnitVector);
@@ -2152,28 +2189,11 @@ procedure TTerminator_Form.OverlayDots_ButtonClick(Sender: TObject);
 
   procedure DrawCraters;
     var
-      CraterFile : TextFile;
-      DataLine, UserFlag, LatStr, LonStr : string;
       MaxDiam,   // largest circle to plot
       Diam, MinKm : Extended;
       CurrentCrater : TCrater;
-      LineNum, DotRadius, DotRadiusSqrd, DiamErrorCode,
-      PrimaryCraterCount  : integer;
-
-    function DecimalValue(StringToConvert: string): extended;
-      var
-        ErrorCode : integer;
-      begin
-        RemoveBlanks(StringToConvert);
-        val(StringToConvert, Result, ErrorCode);
-        if ErrorCode<>0 then
-          begin
-            ShowMessage('Unable to convert "'+StringToConvert
-             +'" on line '+IntToStr(LineNum)+' to decimal number, error at position '+IntToStr(ErrorCode)+CR
-             +'Substituting 0.00');
-            Result := 0;
-          end;
-      end;
+      CraterNum, DotRadius, DotRadiusSqrd, DiamErrorCode
+        : Integer;
 
     procedure PlotCrater;
       var
@@ -2229,23 +2249,9 @@ procedure TTerminator_Form.OverlayDots_ButtonClick(Sender: TObject);
                       begin
                         CraterIndex := Length(CraterInfo);
                         SetLength(CraterInfo,CraterIndex+1);
-                        CraterInfo[CraterIndex].Name := CurrentCrater.Name;
-                        CraterInfo[CraterIndex].Lon := CurrentCrater.Lon;
-                        CraterInfo[CraterIndex].Lat := CurrentCrater.Lat;
-                        CraterInfo[CraterIndex].USGS_Code := CurrentCrater.USGS_Code;
-                        CraterInfo[CraterIndex].NumericData := CurrentCrater.NumericData;
+                        CraterInfo[CraterIndex].CraterData := CurrentCrater;
                         CraterInfo[CraterIndex].Dot_X := CraterCenterX;
                         CraterInfo[CraterIndex].Dot_Y := CraterCenterY;
-                        if (USGS_Code='CN') or (USGS_Code='CN5')then
-                          begin
-                            CraterInfo[CraterIndex].AdditionalInfo1 := LeadingElement(DataLine,',');
-                            CraterInfo[CraterIndex].AdditionalInfo2 := LeadingElement(DataLine,',');
-                          end
-                        else
-                          begin
-                            CraterInfo[CraterIndex].AdditionalInfo1 := '';
-                            CraterInfo[CraterIndex].AdditionalInfo2 := '';
-                          end;
                       end;
                   end;
               end;
@@ -2257,40 +2263,8 @@ procedure TTerminator_Form.OverlayDots_ButtonClick(Sender: TObject);
     begin {DrawCraters}
       MaxDiam := MoonRadius*PiByTwo;
 
-      OldFilename := CraterFilename;
+      RefreshCraterList;
 
-      if (not FileExists(OldFilename)) and (MessageDlg('LTVT is looking for the named features file'+CR
-                        +'   Do you want help with this topic?',
-          mtWarning,[mbYes,mbNo],0)=mrYes) then
-            begin
-              HtmlHelp(0,PChar(Application.HelpFile+'::/Help Topics/LunarFeatureFile.htm'),HH_DISPLAY_TOPIC, 0);
-            end;
-
-      if not FileFound('Crater file',OldFilename,CraterFilename) then
-        begin
-//          ShowMessage('Cannot draw dots -- no feature file loaded');
-          ShowMessage('Cannot draw dots -- '+CraterFilename+' not loaded');
-          Exit;
-        end;
-      if CraterFilename<>OldFilename then FileSettingsChanged := True;
-
-      AssignFile(CraterFile,CraterFilename);
-      Reset(CraterFile);
-
-      if EOF(CraterFile) then
-        begin
-          ShowMessage('Lunar feature file ['+CraterFilename+'] is empty');
-          Exit;
-        end;
-
-      Readln(CraterFile,DataLine);
-      if Substring(DataLine,1,5)<>'USGS1' then
-        begin
-          ShowMessage('Lunar feature file ['+CraterFilename+'] is not in USGS1 format');
-          Exit;
-        end;
-
-      LineNum := 1;
       MinKm := CraterThreshold_LabeledNumericEdit.NumericEdit.ExtendedValue;
 
       DotRadius := Round(DotSize/2.0 + 0.5);
@@ -2307,62 +2281,33 @@ procedure TTerminator_Form.OverlayDots_ButtonClick(Sender: TObject);
       DrawCircles_CheckBox.Hide;
       MarkCenter_CheckBox.Hide;
 
-      SetLength(PrimaryCraterList,10000); // max number to store in list
-      PrimaryCraterCount := 0;
-
-      while not EOF(CraterFile) do with CurrentCrater do
+      for CraterNum := 1 to Length(CraterList) do with CraterList[CraterNum-1] do
         begin
-          Readln(CraterFile,DataLine);
-          Inc(LineNum);
-          if (LineNum mod 1000)=0 then ProgressBar1.Position := LineNum; // update periodically
-          DataLine := Trim(DataLine);
-          if (DataLine<>'') and (Substring(DataLine,1,1)<>'*') then
-            begin
-              UserFlag := LeadingElement(DataLine,',');
-//              ShowMessage('User flag = "'+UserFlag+'"');
-              Name := LeadingElement(DataLine,',');
-              LatStr := LeadingElement(DataLine,',');
-              LonStr := LeadingElement(DataLine,',');
-              Lat  := DegToRad(DecimalValue(LatStr));
-              Lon  := DegToRad(DecimalValue(LonStr));
-              NumericData := LeadingElement(DataLine,',');
-              val(NumericData,Diam,DiamErrorCode);
-              USGS_Code := LeadingElement(DataLine,',');  // read first element of remainder -- ignore possible comments at end of line
+          if (CraterNum mod 1000)=0 then ProgressBar1.Position := CraterNum; // update periodically
 
-              if (UpperCaseString(USGS_Code)='AA') and (PrimaryCraterCount<Length(PrimaryCraterList)) then
-                begin
-                  PrimaryCraterList[PrimaryCraterCount] := CurrentCrater;
-                  PrimaryCraterList[PrimaryCraterCount].AdditionalInfo1 := '';
-                  PrimaryCraterList[PrimaryCraterCount].AdditionalInfo2 := '';
-                  Inc(PrimaryCraterCount);
-                end;
+          CurrentCrater := CraterList[CraterNum-1];
 
-              if MinKm=0 then
-                begin  // plot all features
-                  if IncludeDiscontinuedNames or (Substring(Name,1,1)<>'[') then PlotCrater;
-                end
-              else if MinKm=-1 then
-                begin // plot flagged features
-                  if UserFlag<>'' then PlotCrater;
-                end
-              else
-                begin // plot all features above threshold
-                  if (DiamErrorCode=0) and (Diam>=MinKm) and
-                    (IncludeDiscontinuedNames or (Substring(Name,1,1)<>'[')) then PlotCrater;
-                end;
-
+          val(NumericData,Diam,DiamErrorCode);
+          if MinKm=0 then
+            begin  // plot all features
+              if IncludeDiscontinuedNames or (Substring(Name,1,1)<>'[') then PlotCrater;
+            end
+          else if MinKm=-1 then
+            begin // plot flagged features
+              if UserFlag<>'' then PlotCrater;
+            end
+          else
+            begin // plot all features above threshold
+              if (DiamErrorCode=0) and (Diam>=MinKm) and
+                (IncludeDiscontinuedNames or (Substring(Name,1,1)<>'[')) then PlotCrater;
             end;
+
         end;
 
       ProgressBar1.Hide;
       DrawCircles_CheckBox.Show;
       MarkCenter_CheckBox.Show;
       DrawingMap_Label.Caption := '';
-
-      CloseFile(CraterFile);
-
-      SetLength(PrimaryCraterList,PrimaryCraterCount); // max number to store in list
-//      ShowMessage(IntToStr(PrimaryCraterCount)+' primary names read');
 
     end;  {DrawCraters}
 
@@ -3091,6 +3036,165 @@ begin {EstimateData_ButtonClick}
   Screen.Cursor := DefaultCursor;
 end;  {EstimateData_ButtonClick}
 
+function TTerminator_Form.RefreshCraterList : Boolean;
+var
+  CraterFile : TextFile;
+  FileRecord : TSearchRec;
+  CurrentCrater : TCrater;
+  DataLine : String;
+  LineNum, CraterCount, PrimaryCraterCount : Integer;
+
+  function DecimalValue(StringToConvert: string): extended;
+    var
+      ErrorCode : integer;
+    begin
+      RemoveBlanks(StringToConvert);
+      val(StringToConvert, Result, ErrorCode);
+      if ErrorCode<>0 then
+        begin
+          ShowMessage('Unable to convert "'+StringToConvert
+           +'" on line '+IntToStr(LineNum)+' to decimal number, error at position '+IntToStr(ErrorCode)+CR
+           +'Substituting 0.00');
+          Result := 0;
+        end;
+    end;
+
+begin  {RefreshCraterList}
+  Result := False;
+
+  OldFilename := CraterFilename;
+
+  if (not FileExists(OldFilename)) and (MessageDlg('LTVT is looking for the named features file'+CR
+                    +'   Do you want help with this topic?',
+      mtWarning,[mbYes,mbNo],0)=mrYes) then
+        begin
+          HtmlHelp(0,PChar(Application.HelpFile+'::/Help Topics/LunarFeatureFile.htm'),HH_DISPLAY_TOPIC, 0);
+        end;
+
+  if not FileFound('Crater file',OldFilename,CraterFilename) then
+    begin
+//          ShowMessage('Cannot draw dots -- no feature file loaded');
+      ShowMessage('Cannot draw dots -- '+CraterFilename+' not loaded');
+      Exit;
+    end;
+  if CraterFilename<>OldFilename then FileSettingsChanged := True;
+
+  if CraterListCurrent then
+    begin
+      FindFirst(CraterFilename,faAnyFile,FileRecord);
+      if FileRecord.Time=LastCraterListFileRecord.Time then
+        Exit
+      else
+        LastCraterListFileRecord := FileRecord;
+    end;
+
+  CraterListCurrent := False;
+  GoToListCurrent := False;
+
+  AssignFile(CraterFile,CraterFilename);
+  Reset(CraterFile);
+
+  if EOF(CraterFile) then
+    begin
+      ShowMessage('Lunar feature file ['+CraterFilename+'] is empty');
+      Exit;
+    end;
+
+  Readln(CraterFile,DataLine);
+  if Substring(DataLine,1,5)<>'USGS1' then
+    begin
+      ShowMessage('Lunar feature file ['+CraterFilename+'] is not in USGS1 format');
+      Exit;
+    end;
+
+  LineNum := 1;
+
+  Screen.Cursor := crHourGlass;
+  DrawingMap_Label.Caption := 'Reading feature list...';
+  Application.ProcessMessages;
+  ProgressBar1.Max := 9100;  // approx. num. lines in CraterFile
+  ProgressBar1.Position := 0;
+  ProgressBar1.Show;
+  DrawCircles_CheckBox.Hide;
+  MarkCenter_CheckBox.Hide;
+
+  SetLength(CraterList,300000); // max number to store in list
+  CraterCount := 0;
+
+  SetLength(PrimaryCraterList,10000); // max number to store in list
+  PrimaryCraterCount := 0;
+
+  while not EOF(CraterFile) do with CurrentCrater do
+    begin
+      Readln(CraterFile,DataLine);
+      Inc(LineNum);
+      if (LineNum mod 1000)=0 then ProgressBar1.Position := LineNum; // update periodically
+      DataLine := Trim(DataLine);
+      if (DataLine<>'') and (Substring(DataLine,1,1)<>'*') then
+        begin
+          UserFlag := LeadingElement(DataLine,',');
+          Name := LeadingElement(DataLine,',');
+//          if Name='' then ShowMessage('No name on line '+IntToStr(LineNum)); //Note: this is normal in latter part of 1994 ULCN
+          LatStr := LeadingElement(DataLine,',');
+          LonStr := LeadingElement(DataLine,',');
+          Lat  := DegToRad(DecimalValue(LatStr));
+          Lon  := DegToRad(DecimalValue(LonStr));
+          NumericData := LeadingElement(DataLine,',');
+          USGS_Code := LeadingElement(DataLine,',');  // read first element of remainder -- ignore possible comments at end of line
+          if (USGS_Code='CN') or (USGS_Code='CN5')then
+            begin
+              AdditionalInfo1 := LeadingElement(DataLine,',');
+              AdditionalInfo2 := LeadingElement(DataLine,',');
+            end
+          else
+            begin
+              AdditionalInfo1 := '';
+              AdditionalInfo2 := '';
+            end;
+
+          if CraterCount<Length(CraterList) then
+            begin
+              CraterList[CraterCount] := CurrentCrater;
+            end
+          else
+            begin
+              SetLength(CraterList,Length(CraterList)+1);
+              CraterList[Length(CraterList)-1] := CurrentCrater;
+            end;
+
+          Inc(CraterCount);
+
+          if (UpperCaseString(USGS_Code)='AA') then
+            begin
+              if (PrimaryCraterCount<Length(PrimaryCraterList)) then
+                PrimaryCraterList[PrimaryCraterCount] := CurrentCrater
+              else
+                begin
+                  SetLength(PrimaryCraterList,Length(PrimaryCraterList)+1);
+                  PrimaryCraterList[Length(PrimaryCraterList)-1] := CurrentCrater;
+                end;
+
+              Inc(PrimaryCraterCount);
+            end;
+
+        end;
+    end;
+
+  CloseFile(CraterFile);
+
+  SetLength(CraterList,CraterCount);
+  SetLength(PrimaryCraterList,PrimaryCraterCount);
+  Screen.Cursor := DefaultCursor;
+
+  ProgressBar1.Hide;
+  DrawCircles_CheckBox.Show;
+  MarkCenter_CheckBox.Show;
+  DrawingMap_Label.Caption := '';
+
+  CraterListCurrent := True;
+  Result := True;
+end;   {RefreshCraterList}
+
 procedure TTerminator_Form.ResetZoom_ButtonClick(Sender: TObject);
 begin
   ImageCenterX := 0;
@@ -3259,7 +3363,7 @@ begin {Terminator_Form.JimsGraph1MouseMove}
         end;
 
   // display name iff mouse pointer is within 5 pixel radius of a dot
-      if MinRsqrd<Sqr(5) then with CraterInfo[MinI] do
+      if MinRsqrd<Sqr(5) then with CraterInfo[MinI].CraterData do
         begin
           if (USGS_Code='AA') or (USGS_Code='SF') then
             FeatureDescription := 'Crater:  '
@@ -3450,95 +3554,41 @@ end;
 
 procedure TTerminator_Form.RefreshGoToList;
 var
-  CraterFile : TextFile;
-  DataLine, UserFlag, FeatureName : String;
-  LineNum : integer;
-
-  function DecimalValue(StringToConvert: string): extended;
-    var
-      ErrorCode : integer;
-    begin
-      RemoveBlanks(StringToConvert);
-      val(StringToConvert, Result, ErrorCode);
-      if ErrorCode<>0 then
-        begin
-          ShowMessage('Unable to convert "'+StringToConvert
-           +'" on line '+IntToStr(LineNum)+' to decimal number, error at position '+IntToStr(ErrorCode)+CR
-           +'Substituting 0.00');
-          Result := 0;
-        end;
-    end;
+  CraterNum : Integer;
+  FeatureName : String;
 
 begin
+  RefreshCraterList;
+  if GoToListCurrent then Exit;
+
   with H_Terminator_Goto_Form do
     begin
-      OldFilename := CraterFilename;
-
-      if (not FileExists(OldFilename)) and (MessageDlg('LTVT is looking for the named features file'+CR
-                        +'   Do you want help with this topic?',
-          mtWarning,[mbYes,mbNo],0)=mrYes) then
-            begin
-              HtmlHelp(0,PChar(Application.HelpFile+'::/Help Topics/LunarFeatureFile.htm'),HH_DISPLAY_TOPIC, 0);
-            end;
-
-      if not FileFound('Crater file',OldFilename,CraterFilename) then
-        begin
-//          ShowMessage('Cannot draw dots -- no feature file loaded');
-          ShowMessage('Cannot draw dots -- '+CraterFilename+' not loaded');
-          Exit;
-        end;
-      if CraterFilename<>OldFilename then FileSettingsChanged := True;
-
-      AssignFile(CraterFile,CraterFilename);
-      Reset(CraterFile);
-
-      if EOF(CraterFile) then
-        begin
-          ShowMessage('Lunar feature file ['+CraterFilename+'] is empty');
-          Exit;
-        end;
-
-      Readln(CraterFile,DataLine);
-      if Substring(DataLine,1,5)<>'USGS1' then
-        begin
-          ShowMessage('Lunar feature file ['+CraterFilename+'] is not in USGS1 format');
-          Exit;
-        end;
-
       Screen.Cursor := crHourGlass;
 
-      LineNum := 1;
       FeatureNameList.Clear;
       FeatureLatStringList.Clear;
       FeatureLonStringList.Clear;
 
-      while (not EOF(CraterFile)) {and (Length(FeatureList)<100)} do
+      for CraterNum := 1 to Length(CraterList) do with CraterList[CraterNum-1] do
         begin
-          Readln(CraterFile,DataLine);
-          Inc(LineNum);
-          DataLine := Trim(DataLine);
-          if (DataLine<>'') and (Substring(DataLine,1,1)<>'*') then
             begin
-              UserFlag := LeadingElement(DataLine,',');
               if (not MinimizeGotoList_CheckBox.Checked) or (UserFlag<>'') then
                 begin
-                  FeatureName := LeadingElement(DataLine,',');
-                  FeatureLatStringList.Add(LeadingElement(DataLine,','));  // read latitude string
-                  FeatureLonStringList.Add(LeadingElement(DataLine,','));  // read longitude string
+                  FeatureName := Name;
+                  FeatureLatStringList.Add(LatStr);  // read latitude string
+                  FeatureLonStringList.Add(LonStr);  // read longitude string
                   if FeatureName='' then
                     begin
-                      FeatureName := LeadingElement(DataLine,','); // read NumericData
-                      FeatureName := LeadingElement(DataLine,','); // read USGS Code
-                      FeatureName := LeadingElement(DataLine,','); // read AdditionalInfo1
-                      // in 1994 ULCN, if there is no common name, then this contains a control point number such as P1021
-                      if FeatureName='' then FeatureName := 'no name available';
+                      // in 1994 ULCN, if there is no common name, then AdditionalInfo1 contains a control point number such as P1021
+                      if AdditionalInfo1<>'' then
+                        FeatureName := AdditionalInfo1
+                      else
+                        FeatureName := 'no name available';
                     end;
                   FeatureNameList.Add(FeatureName);
                 end;
             end;
         end;
-
-      CloseFile(CraterFile);
 
       FeatureNames_ComboBox.Items.Clear;
       FeatureNames_ComboBox.Items.AddStrings(FeatureNameList);
@@ -3550,6 +3600,7 @@ begin
 
 
       Screen.Cursor := DefaultCursor;
+      GoToListCurrent := True;
 
     end;
 end;
@@ -3770,31 +3821,14 @@ end;  {TTerminator_Form.DrawlinestonorthandtowardsSun1Click}
 
 procedure TTerminator_Form.IdentifyNearestFeature_RightClickMenuItemClick(Sender: TObject);
 var
-  CraterFile : TextFile;
-  ParentName,
-  DataLine, UserFlag, LatStr, LonStr : string;
+  ParentName : string;
   CraterX, CraterY, LastMouseX, LastMouseY, RSqrd, MinRsqrd, ClosestCraterX, ClosestCraterY,
   Diam : extended;
-  CurrentCrater, ClosestCrater : TCrater;
+  ClosestCrater, CurrentCrater : TCrater;
   CraterVector : TVector;
-  LineNum, CraterIndex, DiamErrorCode : integer;
+  CraterNum, CraterIndex, DiamErrorCode : integer;
   DotRadius, DotRadiusSqrd, XOffset, YOffset  : integer;
   CraterColor : TColor;
-
-  function DecimalValue(StringToConvert: string): extended;
-    var
-      ErrorCode : integer;
-    begin
-      RemoveBlanks(StringToConvert);
-      val(StringToConvert, Result, ErrorCode);
-      if ErrorCode<>0 then
-        begin
-          ShowMessage('Unable to convert "'+StringToConvert
-           +'" on line '+IntToStr(LineNum)+' to decimal number, error at position '+IntToStr(ErrorCode)+CR
-           +'Substituting 0.00');
-          Result := 0;
-        end;
-    end;
 
 begin {TTerminator_Form.IdentifyNearestFeature_RightClickMenuItemClick}
   ClosestCraterX := 0;  // compiler is complaining these may not be initialized
@@ -3803,72 +3837,13 @@ begin {TTerminator_Form.IdentifyNearestFeature_RightClickMenuItemClick}
   LastMouseX := JimsGraph1.XValue(LastMouseClickPosition.X);
   LastMouseY := JimsGraph1.YValue(LastMouseClickPosition.Y);
 
-  OldFilename := CraterFilename;
-
-  if (not FileExists(OldFilename)) and (MessageDlg('LTVT is looking for the named features file'+CR
-                    +'   Do you want help with this topic?',
-      mtWarning,[mbYes,mbNo],0)=mrYes) then
-        begin
-          HtmlHelp(0,PChar(Application.HelpFile+'::/Help Topics/LunarFeatureFile.htm'),HH_DISPLAY_TOPIC, 0);
-        end;
-
-  if not FileFound('Crater file',OldFilename,CraterFilename) then
-    begin
-//          ShowMessage('Cannot draw dots -- no feature file loaded');
-      ShowMessage('Cannot draw dots -- '+CraterFilename+' not loaded');
-      Exit;
-    end;
-  if CraterFilename<>OldFilename then FileSettingsChanged := True;
-
-  AssignFile(CraterFile,CraterFilename);
-  Reset(CraterFile);
-
-  if EOF(CraterFile) then
-    begin
-      ShowMessage('Lunar feature file ['+CraterFilename+'] is empty');
-      Exit;
-    end;
-
-  Readln(CraterFile,DataLine);
-  if Substring(DataLine,1,5)<>'USGS1' then
-    begin
-      ShowMessage('Lunar feature file ['+CraterFilename+'] is not in USGS1 format');
-      Exit;
-    end;
-
-  LineNum := 1;
+  RefreshCraterList;
   MinRsqrd := MaxExtended;
 
-  while not EOF(CraterFile) do with CurrentCrater do
+  for CraterNum := 1 to Length(CraterList) do with CraterList[CraterNum-1] do
     begin
-      Readln(CraterFile,DataLine);
-      Inc(LineNum);
-      DataLine := Trim(DataLine);
-      if (DataLine<>'') and (Substring(DataLine,1,1)<>'*') then
-        begin
-          UserFlag := LeadingElement(DataLine,',');
-//              ShowMessage('User flag = "'+UserFlag+'"');
-          Name := LeadingElement(DataLine,',');
           if IncludeDiscontinuedNames or (Substring(Name,1,1)<>'[') then
           begin
-            LatStr := LeadingElement(DataLine,',');
-            LonStr := LeadingElement(DataLine,',');
-            NumericData  := LeadingElement(DataLine,',');
-//            USGS_Code := Substring(DataLine,1,2);  // read first two characters of remainder -- ignore possible comments at end of line
-            USGS_Code := LeadingElement(DataLine,',');
-            if (USGS_Code='CN') or (USGS_Code='CN5')then
-              begin
-                AdditionalInfo1 := LeadingElement(DataLine,',');
-                AdditionalInfo2 := LeadingElement(DataLine,',');
-              end
-            else
-              begin
-                AdditionalInfo1 := '';
-                AdditionalInfo2 := '';
-              end;
-
-            Lat  := DegToRad(DecimalValue(LatStr));
-            Lon  := DegToRad(DecimalValue(LonStr));
             PolarToVector(Lat,Lon,1,CraterVector);
             if DotProduct(CraterVector,SubObsvrVector)>=0 then with JimsGraph1 do
               begin {crater is on visible hemisphere, so check its projection to see if it is in viewable area}
@@ -3877,17 +3852,13 @@ begin {TTerminator_Form.IdentifyNearestFeature_RightClickMenuItemClick}
                 RSqrd := Sqr(CraterX - LastMouseX) + Sqr(CraterY - LastMouseY);
                 if RSqrd<MinRsqrd then
                   begin
-                    ClosestCrater := CurrentCrater;
+                    ClosestCrater := CraterList[CraterNum-1];
                     ClosestCraterX := CraterX;
                     ClosestCraterY := CraterY;
-//                    ClosestCraterDiamString := DiamStr;
-//                    ClosestCraterLat := Lat;
-//                    ClosestCraterLon := Lon;
                     MinRsqrd := RSqrd;
                   end;
               end;
           end;
-        end;
     end;
 
   with JimsGraph1 do
@@ -3922,55 +3893,19 @@ begin {TTerminator_Form.IdentifyNearestFeature_RightClickMenuItemClick}
     begin
       CraterIndex := Length(CraterInfo);
       SetLength(CraterInfo,CraterIndex+1);
-      CraterInfo[CraterIndex].Name := ClosestCrater.Name;
-      CraterInfo[CraterIndex].Lon := ClosestCrater.Lon;
-      CraterInfo[CraterIndex].Lat := ClosestCrater.Lat;
-      CraterInfo[CraterIndex].USGS_Code := ClosestCrater.USGS_Code;
-      CraterInfo[CraterIndex].NumericData := ClosestCrater.NumericData;
-      CraterInfo[CraterIndex].AdditionalInfo1 := ClosestCrater.AdditionalInfo1;
-      CraterInfo[CraterIndex].AdditionalInfo2 := ClosestCrater.AdditionalInfo2;
+      CraterInfo[CraterIndex].CraterData := ClosestCrater;
       CraterInfo[CraterIndex].Dot_X := JimsGraph1.XPix(ClosestCraterX);
       CraterInfo[CraterIndex].Dot_Y := JimsGraph1.YPix(ClosestCraterY);
     end;
 
   if IdentifySatellites then
     begin
-      Reset(CraterFile);
-
-      LineNum := 1;
-
-      while not EOF(CraterFile) do with CurrentCrater do
+      for CraterNum := 1 to Length(CraterList) do with CraterList[CraterNum-1] do
         begin
-          Readln(CraterFile,DataLine);
-          Inc(LineNum);
-          DataLine := Trim(DataLine);
-          if (DataLine<>'') and (Substring(DataLine,1,1)<>'*') then
-            begin
-              UserFlag := LeadingElement(DataLine,',');
-    //              ShowMessage('User flag = "'+UserFlag+'"');
-              Name := LeadingElement(DataLine,',');
               if IncludeDiscontinuedNames or (Substring(Name,1,1)<>'[') then
               begin
-                LatStr := LeadingElement(DataLine,',');
-                LonStr := LeadingElement(DataLine,',');
-                NumericData  := LeadingElement(DataLine,',');
-    //            USGS_Code := Substring(DataLine,1,2);  // read first two characters of remainder -- ignore possible comments at end of line
-                USGS_Code := LeadingElement(DataLine,',');
-//                ShowMessage('Evaluating: '+Name+'  Parent: '+UpperCaseParentName(Name,USGS_Code));
                 if UpperCaseParentName(Name,USGS_Code)=ParentName then
                   begin
-                    if (USGS_Code='CN') or (USGS_Code='CN5')then
-                      begin
-                        AdditionalInfo1 := LeadingElement(DataLine,',');
-                        AdditionalInfo2 := LeadingElement(DataLine,',');
-                      end
-                    else
-                      begin
-                        AdditionalInfo1 := '';
-                        AdditionalInfo2 := '';
-                      end;
-                    Lat  := DegToRad(DecimalValue(LatStr));
-                    Lon  := DegToRad(DecimalValue(LonStr));
                     PolarToVector(Lat,Lon,1,CraterVector);
                     if DotProduct(CraterVector,SubObsvrVector)>=0 then with JimsGraph1 do
                       begin {crater is on visible hemisphere, so check its projection to see if it is in viewable area}
@@ -3979,7 +3914,7 @@ begin {TTerminator_Form.IdentifyNearestFeature_RightClickMenuItemClick}
 
                         with JimsGraph1 do
                           begin
-                            val(CurrentCrater.NumericData,Diam,DiamErrorCode);
+                            val(NumericData,Diam,DiamErrorCode);
 
                             if (USGS_Code='AA') or (USGS_Code='SF') or (USGS_Code='CN')
                              or (USGS_Code='CN5') or (USGS_Code='GD') or (USGS_Code='CD') then
@@ -4010,32 +3945,24 @@ begin {TTerminator_Form.IdentifyNearestFeature_RightClickMenuItemClick}
                               end;
 
                             if DrawCircles_CheckBox.Checked and (DiamErrorCode=0) and (Diam>0) and (Diam<(MoonRadius*PiByTwo)) then
-                              DrawCircle(RadToDeg(CurrentCrater.Lon),RadToDeg(CurrentCrater.Lat),
+                              DrawCircle(RadToDeg(Lon),RadToDeg(Lat),
                                 RadToDeg(Diam/MoonRadius/2),CraterCircleColor);
                           end;
 
                         if not PositionInCraterInfo(JimsGraph1.XPix(CraterX), JimsGraph1.YPix(CraterY)) then
                           begin
+                            CurrentCrater := CraterList[CraterNum-1];
                             CraterIndex := Length(CraterInfo);
                             SetLength(CraterInfo,CraterIndex+1);
-                            CraterInfo[CraterIndex].Name := CurrentCrater.Name;
-                            CraterInfo[CraterIndex].Lon := CurrentCrater.Lon;
-                            CraterInfo[CraterIndex].Lat := CurrentCrater.Lat;
-                            CraterInfo[CraterIndex].USGS_Code := CurrentCrater.USGS_Code;
-                            CraterInfo[CraterIndex].NumericData := CurrentCrater.NumericData;
-                            CraterInfo[CraterIndex].AdditionalInfo1 := CurrentCrater.AdditionalInfo1;
-                            CraterInfo[CraterIndex].AdditionalInfo2 := CurrentCrater.AdditionalInfo2;
+                            CraterInfo[CraterIndex].CraterData := CurrentCrater;
                             CraterInfo[CraterIndex].Dot_X := JimsGraph1.XPix(CraterX);
                             CraterInfo[CraterIndex].Dot_Y := JimsGraph1.YPix(CraterY);
                           end;
                       end;
                   end;
               end;
-            end;
         end;
     end;
-
-  CloseFile(CraterFile);
 
   if Length(CraterInfo)>0 then LabelDots_Button.Show;
 
@@ -4058,6 +3985,9 @@ begin
 end;
 
 procedure TTerminator_Form.SetRefPt_RightClickMenuItemClick(Sender: TObject);
+var
+  UserPhotoSubSolarLon, UserPhotoSubSolarLat,
+  SubSolarErrorDistance, SubSolarErrorBearing : Extended;
 
   procedure DrawLineInShadowDirection;
   var
@@ -4211,6 +4141,30 @@ procedure TTerminator_Form.SetRefPt_RightClickMenuItemClick(Sender: TObject);
   end;
 
 begin  {TTerminator_Form.SetRefPt_RightClickMenuItemClick}
+  case RefPtReadoutMode of
+  ShadowLengthRefPtMode, InverseShadowLengthRefPtMode, RayHeightsRefPtMode :
+    begin
+      if UserPhoto_RadioButton.Checked then
+        begin
+          UserPhotoSubSolarLon := DegToRad(ExtendedValue(UserPhotoData.SubSolLon));
+          UserPhotoSubSolarLat := DegToRad(ExtendedValue(UserPhotoData.SubSolLat));
+          ComputeDistanceAndBearing(SubSolarPoint.Longitude, SubSolarPoint.Latitude,
+            UserPhotoSubSolarLon, UserPhotoSubSolarLat, SubSolarErrorDistance, SubSolarErrorBearing);
+          if SubSolarErrorDistance>DegToRad(0.01) then
+            case MessageDlg('Shadow measurements require an accurate SubSolar Point--'+CR+
+                '    redraw with value in photo data?',mtConfirmation,[mbYes, mbNo, mbCancel],0) of
+               mrYes :
+                 begin
+                   SubSol_Lon_LabeledNumericEdit.NumericEdit.Text := UserPhotoData.SubSolLon;
+                   SubSol_Lat_LabeledNumericEdit.NumericEdit.Text := UserPhotoData.SubSolLat;
+                   DrawTexture_Button.Click;
+                 end;
+               mrCancel : Exit;
+               end;
+        end;
+    end;
+  end;
+
   with JimsGraph1 do
     begin
       RefX := XValue(LastMouseClickPosition.X);
@@ -4229,7 +4183,7 @@ begin  {TTerminator_Form.SetRefPt_RightClickMenuItemClick}
 
   case RefPtReadoutMode of
     ShadowLengthRefPtMode, InverseShadowLengthRefPtMode, RayHeightsRefPtMode :
-      DrawLineInShadowDirection;
+      DrawLineInShadowDirection
     else
       RefPtReadoutMode := DistanceAndBearingRefPtMode;
     end;
@@ -4241,7 +4195,7 @@ var
   ClosestDot : Integer;
   CraterVector : TVector;
 begin
-  if FindClosestDot(ClosestDot) then with CraterInfo[ClosestDot] do
+  if FindClosestDot(ClosestDot) then with CraterInfo[ClosestDot].CraterData do
     begin
       RefPtLon := Lon;
       RefPtLat := Lat;
@@ -4611,13 +4565,15 @@ var
   EVP : Extended;
   NameText, UnitsText, SizeText, FT_Code, NumericValue : string;
 begin
-      NameText := Trim(FeatureToLabel.Name);
-      if NameText='' then NameText := FeatureToLabel.AdditionalInfo1;
+  with FeatureToLabel.CraterData do
+    begin
+      NameText := Trim(Name);
+      if NameText='' then NameText := AdditionalInfo1;
       if NameText='' then NameText := 'Name unknown';
 
-      FT_Code := FeatureToLabel.USGS_Code;
+      FT_Code := USGS_Code;
 
-      if (FT_Code='CN') and (Length(FeatureToLabel.AdditionalInfo2)>1) then FT_Code := 'CN5';
+      if (FT_Code='CN') and (Length(AdditionalInfo2)>1) then FT_Code := 'CN5';
 
       if (not IncludeParent) and ((FT_Code='SF') or (FT_Code='GD') or (FT_Code='CD')) then
         begin // extract final suffix part of feature name
@@ -4643,11 +4599,11 @@ begin
           UnitsText := ' km';
         end;
 
-      NumericValue := FeatureToLabel.NumericData;
+      NumericValue := NumericData;
 
-      if ShowMore and (FT_Code='CN5') and (FeatureToLabel.AdditionalInfo2<>'999999') then
+      if ShowMore and (FT_Code='CN5') and (AdditionalInfo2<>'999999') then
         begin
-          Val(FeatureToLabel.AdditionalInfo2,EVP,ErrorCode);
+          Val(AdditionalInfo2,EVP,ErrorCode);
           if ErrorCode=0 then
             NumericValue :=  NumericValue + Format(' +/- %0.3f',[EVP/1000]);
         end;
@@ -4680,10 +4636,11 @@ begin
      if ShowMore then
        begin
          if FT_Code='CN' then
-           Result := Result + ' Set '+FeatureToLabel.AdditionalInfo2
+           Result := Result + ' Set '+AdditionalInfo2
          else if FT_Code='CN5' then
-           Result := Result + ' Set '+FeatureToLabel.AdditionalInfo1;
+           Result := Result + ' Set '+AdditionalInfo1;
        end;
+    end;
 end;
 
 function TTerminator_Form.UpperCaseParentName(const FeatureName, FT_Code : String) : String;
@@ -4771,7 +4728,10 @@ begin {LabelDot}
     begin
       LabelXPix := Dot_X+Corrected_LabelXPix_Offset;
       LabelYPix := Dot_Y-Corrected_LabelYPix_Offset;
+    end;
 
+  with DotInfo.CraterData do
+    begin
       if (not FullCraterNames) and RadialDotOffset and (Length(PrimaryCraterList)>0)
         and (USGS_Code='SF') then
         begin
@@ -4811,8 +4771,8 @@ begin {LabelDot}
 //          ShowMessage('Font height = '+IntToStr(FontHeight));
           RadialPixels := (FontHeight div 2) + LabelXPix_Offset;
 
-          LabelXPix := Dot_X + 2 - (FontWidth  div 2) + Round(XMultiplier*RadialPixels);
-          LabelYPix := Dot_Y - 0 - (FontHeight div 2) - Round(YMultiplier*RadialPixels);
+          LabelXPix := DotInfo.Dot_X + 2 - (FontWidth  div 2) + Round(XMultiplier*RadialPixels);
+          LabelYPix := DotInfo.Dot_Y - 0 - (FontHeight div 2) - Round(YMultiplier*RadialPixels);
 
         end;
 

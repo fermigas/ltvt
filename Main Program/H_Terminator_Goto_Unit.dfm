@@ -18,6 +18,129 @@ object H_Terminator_Goto_Form: TH_Terminator_Goto_Form
   OnShow = FormShow
   PixelsPerInch = 96
   TextHeight = 13
+  object RuklZone_GroupBox: TGroupBox
+    Left = 8
+    Top = 32
+    Width = 345
+    Height = 137
+    Hint = 'Select location by longitude and latitude'
+    Ctl3D = False
+    ParentCtl3D = False
+    TabOrder = 5
+    object Label4: TLabel
+      Left = 72
+      Top = 64
+      Width = 52
+      Height = 13
+      Caption = 'Quadrants:'
+    end
+    object NW_RadioButton: TRadioButton
+      Left = 144
+      Top = 64
+      Width = 81
+      Height = 17
+      Hint = 'Position at center of NW quadrant'
+      Caption = 'NorthWest'
+      TabOrder = 3
+      OnKeyDown = NW_RadioButtonKeyDown
+    end
+    object NE_RadioButton: TRadioButton
+      Left = 240
+      Top = 64
+      Width = 81
+      Height = 17
+      Hint = 'Position at center of NE quadrant'
+      Caption = 'NorthEast'
+      TabOrder = 4
+      OnKeyDown = NE_RadioButtonKeyDown
+    end
+    object SW_RadioButton: TRadioButton
+      Left = 144
+      Top = 96
+      Width = 81
+      Height = 17
+      Hint = 'Position at center of SW quadrant'
+      Caption = 'SouthWest'
+      TabOrder = 5
+      OnKeyDown = SW_RadioButtonKeyDown
+    end
+    object SE_RadioButton: TRadioButton
+      Left = 240
+      Top = 96
+      Width = 81
+      Height = 17
+      Hint = 'Position at center of SE quadrant'
+      Caption = 'SouthEast'
+      TabOrder = 6
+      OnKeyDown = SE_RadioButtonKeyDown
+    end
+    inline RuklZone_LabeledNumericEdit: TLabeledNumericEdit
+      Left = 15
+      Top = 17
+      Width = 99
+      Height = 24
+      Hint = 'Select R'#252'kl zone (1..76)'
+      AutoSize = True
+      TabOrder = 0
+      inherited Item_Label: TLabel
+        Top = 5
+        Width = 53
+        Hint = 'Enter desired longitude here'
+        Caption = 'R'#252'kl  Zone'
+      end
+      inherited Units_Label: TLabel
+        Left = 96
+        Top = 0
+        Width = 3
+        Caption = ''
+      end
+      inherited NumericEdit: TNumericEdit
+        Left = 64
+        Top = 5
+        Width = 33
+        Height = 19
+        Text = '1'
+        InputMin = '1'
+        InputMax = '76'
+        InputType = tInteger
+      end
+    end
+    object Center_RadioButton: TRadioButton
+      Left = 144
+      Top = 24
+      Width = 65
+      Height = 17
+      Hint = 'Position at center of zone'
+      Caption = 'Center'
+      Checked = True
+      TabOrder = 1
+      TabStop = True
+      OnKeyDown = Center_RadioButtonKeyDown
+    end
+    object Next_Button: TButton
+      Left = 72
+      Top = 88
+      Width = 49
+      Height = 25
+      Hint = 'Moves selection to next sequential zone'
+      Caption = 'Next'
+      TabOrder = 7
+      OnClick = Next_ButtonClick
+      OnKeyDown = Next_ButtonKeyDown
+    end
+    object AutoLabel_CheckBox: TCheckBox
+      Left = 240
+      Top = 24
+      Width = 81
+      Height = 17
+      Hint = 'Automatically draw Rukl grid and label features'
+      Caption = 'Auto Label'
+      Checked = True
+      State = cbChecked
+      TabOrder = 2
+      OnKeyDown = AutoLabel_CheckBoxKeyDown
+    end
+  end
   object XY_GroupBox: TGroupBox
     Left = 8
     Top = 32
@@ -330,128 +453,5 @@ object H_Terminator_Goto_Form: TH_Terminator_Goto_Form
     TabOrder = 2
     OnClick = RuklZone_RadioButtonClick
     OnKeyDown = RuklZone_RadioButtonKeyDown
-  end
-  object RuklZone_GroupBox: TGroupBox
-    Left = 8
-    Top = 32
-    Width = 345
-    Height = 137
-    Hint = 'Select location by longitude and latitude'
-    Ctl3D = False
-    ParentCtl3D = False
-    TabOrder = 5
-    object Label4: TLabel
-      Left = 72
-      Top = 64
-      Width = 52
-      Height = 13
-      Caption = 'Quadrants:'
-    end
-    object NW_RadioButton: TRadioButton
-      Left = 144
-      Top = 64
-      Width = 81
-      Height = 17
-      Hint = 'Position at center of NW quadrant'
-      Caption = 'NorthWest'
-      TabOrder = 3
-      OnKeyDown = NW_RadioButtonKeyDown
-    end
-    object NE_RadioButton: TRadioButton
-      Left = 240
-      Top = 64
-      Width = 81
-      Height = 17
-      Hint = 'Position at center of NE quadrant'
-      Caption = 'NorthEast'
-      TabOrder = 4
-      OnKeyDown = NE_RadioButtonKeyDown
-    end
-    object SW_RadioButton: TRadioButton
-      Left = 144
-      Top = 96
-      Width = 81
-      Height = 17
-      Hint = 'Position at center of SW quadrant'
-      Caption = 'SouthWest'
-      TabOrder = 5
-      OnKeyDown = SW_RadioButtonKeyDown
-    end
-    object SE_RadioButton: TRadioButton
-      Left = 240
-      Top = 96
-      Width = 81
-      Height = 17
-      Hint = 'Position at center of SE quadrant'
-      Caption = 'SouthEast'
-      TabOrder = 6
-      OnKeyDown = SE_RadioButtonKeyDown
-    end
-    inline RuklZone_LabeledNumericEdit: TLabeledNumericEdit
-      Left = 15
-      Top = 17
-      Width = 99
-      Height = 24
-      Hint = 'Select R'#252'kl zone (1..76)'
-      AutoSize = True
-      TabOrder = 0
-      inherited Item_Label: TLabel
-        Top = 5
-        Width = 53
-        Hint = 'Enter desired longitude here'
-        Caption = 'R'#252'kl  Zone'
-      end
-      inherited Units_Label: TLabel
-        Left = 96
-        Top = 0
-        Width = 3
-        Caption = ''
-      end
-      inherited NumericEdit: TNumericEdit
-        Left = 64
-        Top = 5
-        Width = 33
-        Height = 19
-        Text = '1'
-        InputMin = '1'
-        InputMax = '76'
-        InputType = tInteger
-      end
-    end
-    object Center_RadioButton: TRadioButton
-      Left = 144
-      Top = 24
-      Width = 65
-      Height = 17
-      Hint = 'Position at center of zone'
-      Caption = 'Center'
-      Checked = True
-      TabOrder = 1
-      TabStop = True
-      OnKeyDown = Center_RadioButtonKeyDown
-    end
-    object Next_Button: TButton
-      Left = 72
-      Top = 88
-      Width = 49
-      Height = 25
-      Hint = 'Moves selection to next sequential zone'
-      Caption = 'Next'
-      TabOrder = 7
-      OnClick = Next_ButtonClick
-      OnKeyDown = Next_ButtonKeyDown
-    end
-    object AutoLabel_CheckBox: TCheckBox
-      Left = 240
-      Top = 24
-      Width = 81
-      Height = 17
-      Hint = 'Automatically draw Rukl grid and label features'
-      Caption = 'Auto Label'
-      Checked = True
-      State = cbChecked
-      TabOrder = 2
-      OnKeyDown = AutoLabel_CheckBoxKeyDown
-    end
   end
 end

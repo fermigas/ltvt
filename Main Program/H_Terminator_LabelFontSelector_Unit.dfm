@@ -129,7 +129,6 @@ object LabelFontSelector_Form: TLabelFontSelector_Form
       TabOrder = 2
       inherited Item_Label: TLabel
         Width = 50
-        Height = 17
         Caption = 'Horizontal:'
       end
       inherited Units_Label: TLabel
@@ -427,7 +426,7 @@ object LabelFontSelector_Form: TLabelFontSelector_Form
       Height = 17
       Hint = 
         'Applies to IAU list only:  unless checked, names in [square brac' +
-        'kets] are ignored'
+        'kets] are not plotted'
       Caption = 'Include discontinued  features'
       TabOrder = 0
       OnKeyDown = IncludeDiscontinuedNames_CheckBoxKeyDown

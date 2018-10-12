@@ -3,7 +3,7 @@ object Terminator_Form: TTerminator_Form
   Top = -1
   Width = 994
   Height = 744
-  Caption = 'Jim'#39's Lunar Terminator Visualization Tool'
+  Caption = 'Lunar Terminator Visualization Tool'
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -707,12 +707,12 @@ object Terminator_Form: TTerminator_Form
     OnKeyDown = SearchPhotoSessions_ButtonKeyDown
   end
   object SetLocation_Button: TButton
-    Left = 328
+    Left = 336
     Top = 8
-    Width = 97
+    Width = 65
     Height = 30
     Hint = 'Specify a new observer location and refresh map'
-    Caption = 'Change Location'
+    Caption = 'Location'
     ModalResult = 3
     TabOrder = 3
     OnClick = SetLocation_ButtonClick
