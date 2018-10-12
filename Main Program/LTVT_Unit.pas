@@ -716,7 +716,7 @@ uses FileCtrl, H_Terminator_About_Unit, H_Terminator_Goto_Unit, H_Terminator_Set
 {$R *.dfm}
 
 const
-  ProgramVersion = '0.21.2';
+  ProgramVersion = '0.21.3';
 
 // note: the following constants specify (in degrees) that texture files span
 //   the full lunar globe.  They should not be changed.
@@ -2195,6 +2195,7 @@ begin  {TLTVT_Form.DrawDEM_ButtonClick}
     begin
       MaxProjection := MaxR/MoonRadius;
       SetLength(SurfaceData,Image1.Width,Image1.Height);  // in mouse readout, first coord (X) = horizontal
+//      ShowMessage(Format('Dim 1 : %d   Dim 2 : %d',[Length(SurfaceData),Length(SurfaceData[0])])); // first Length() is width, second is height
     end
   else
     begin
@@ -3283,7 +3284,7 @@ begin {LTVT_Form.Image1MouseMove}
           RefPtDistance_Label.Hint := 'Information related to mouse distance from current reference point';
           CraterName_Label.Hint := 'Information about dot closest to current mouse point';
 
-          if (DrawingMode=Dem_3D) then with SurfaceData[X,Y] do
+          if (DrawingMode=Dem_3D) and (X<Length(SurfaceData)) and (Y<Length(SurfaceData[0])) then with SurfaceData[X,Y] do
             begin
               if HeightDev_km=SurfaceData_NoDataValue then
                 begin
@@ -3381,7 +3382,7 @@ begin {LTVT_Form.Image1MouseMove}
             else
               begin
                 RefPtDistance_Label.Hint := 'Height information from DEM';
-                if (DrawingMode=Dem_3D) then
+                if (DrawingMode=Dem_3D) and (X<Length(SurfaceData)) and (Y<Length(SurfaceData[0])) then
                   begin
                     DEM_height := SurfaceData[X,Y].HeightDev_km;
                     if DEM_height<>SurfaceData_NoDataValue then

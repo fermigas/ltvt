@@ -114,6 +114,7 @@ begin
           Memo.Clear;
           Memo.Lines.AddStrings(DEM_info);
           ShowModal;
+          DEM_Options_Form.ActiveControl := OK_Button;
         end;
     end;
 
