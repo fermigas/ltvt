@@ -716,7 +716,7 @@ uses FileCtrl, H_Terminator_About_Unit, H_Terminator_Goto_Unit, H_Terminator_Set
 {$R *.dfm}
 
 const
-  ProgramVersion = '0.21.3';
+  ProgramVersion = '0.21.3.1';
 
 // note: the following constants specify (in degrees) that texture files span
 //   the full lunar globe.  They should not be changed.
@@ -4464,7 +4464,7 @@ begin
           else
             NumAnnotationLinesAtBottom := 2;
 
-          DisplayingDemMultipliedByTexture := ((DrawingMode=DEM_2D) or (DrawingMode=DEM_2D)) and ImageDemMultipliedByTexture;
+          DisplayingDemMultipliedByTexture := ((DrawingMode=DEM_2D) or (DrawingMode=DEM_3D)) and ImageDemMultipliedByTexture;
           if DisplayingDemMultipliedByTexture then Inc(NumAnnotationLinesAtBottom);
 
           LabeledImage.Height := Image1.Height + AnnotationLineHeight*(2+NumAnnotationLinesAtBottom);
