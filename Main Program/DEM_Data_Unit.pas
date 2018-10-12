@@ -1,7 +1,5 @@
 unit DEM_Data_Unit;
-{Reads the Kaguya Laser Altimeter DEM data in PDS format distributed by JAXA.
-
-                                                               Nov. 24, 2009}
+{reads DEM data in several formats}
 
 interface
 
@@ -41,6 +39,7 @@ begin
   inherited;
 {start custom stuff}
   FileOpen := False;
+  InputFilename := '';
   DisplayTimings := False;
 end;
 
@@ -59,23 +58,27 @@ function TDemData.SelectFile(const DesiredFilename : String) : Boolean;
 const
   DummyDataValue = -999999;
 var
+  NameOfFileToRead : String;
   Mission : (Kaguya, Apollo, Unknown);
-  RawDataType : (ReversedDoubleData, SingleData, WordData, ReversedSmallIntData, ByteData);
+  RawDataType : (ReversedDoubleData, SingleData, WordData, ReversedSmallIntData, ReversedLongIntData, ByteData);
   TestFile : file of Char;
   TestChar : Char;
   ByteFile : file;  // untyped
-  ReversedSmallIntRow : array of array[1..2] of Byte;
-  TwoByteArray : array[1..2] of Byte;
-  EightByteArray : array[1..8] of Byte;
-  ReversedDoubleRow : array of array[1..8] of Byte;
-  WordRow : array of Word; // unsigned 16-bit integers
   ByteRow : array of Byte; // unsigned 8-bit integers
+  WordRow : array of Word; // unsigned 16-bit integers
+  ReversedSmallIntRow : array of array[1..2] of Byte;  // signed integers
+  ReversedLongIntRow : array of array[1..4] of Byte;   // signed integers
+  ReversedDoubleRow : array of array[1..8] of Byte;
+  TwoByteArray : array[1..2] of Byte;
+  FourByteArray : array[1..4] of Byte;
+  EightByteArray : array[1..8] of Byte;
   CharsRead, NumHeaderBytes, BytesPerDataItem, NumDataBytes, NumBytes,
   LatNum, LonNum, NumRead,
   MinHtLonNum, MinHtLatNum, MaxHtLonNum, MaxHtLatNum : Integer;
   DataValue, NoRawDataValue, MinRawDataValue, MaxRawDataValue : Single;
   LastLonRad, LastLatRad,
   LeftLonDeg, RightLonDeg, // for ShowDemInfo display
+  RawDataOffset,
   RawDataToKmMultiplier : Extended;
   ItemString : String;
   StartTime : TDateTime;
@@ -99,7 +102,7 @@ function ReadPDS_Header : Boolean;
       Result := False;
       EndFound := False;
 
-      AssignFile(Infile,InputFilename);
+      AssignFile(Infile,NameOfFileToRead);
       Reset(Infile);
 
       while (not EOF(Infile)) and (not EndFound) and (not Result) do
@@ -144,11 +147,11 @@ function ReadPDS_Header : Boolean;
     CloseFile(TestFile);
 
     if ASCII_file_detected then
-      InputFilename := DesiredFilename
+      NameOfFileToRead := DesiredFilename
     else
       begin
-        InputFilename := ChangeFileExt(DesiredFilename,'.lbl');
-        if not FileExists(InputFilename) then
+        NameOfFileToRead := ChangeFileExt(DesiredFilename,'.lbl');
+        if not FileExists(NameOfFileToRead) then
           begin
             ShowMessage('Unable to find PDS label information');
             Exit;
@@ -194,21 +197,20 @@ function ReadPDS_Header : Boolean;
         end;
       end;
 
-{
-    if (Mission=Kaguya) or (FindItem('UNIT',ItemString,False)) and (ItemString='KM') then
+ // Default unit in calling routine is METER
+    if Mission=Kaguya then
       RawDataToKmMultiplier := 1
-    else if FindItem('SCALING_FACTOR',ItemString,False) then
-      RawDataToKmMultiplier := ExtendedValue(ItemString)
-    else
-      RawDataToKmMultiplier := 0.001;
-}
-
-    if FindItem('UNIT',ItemString,False) and (ItemString='METER') then
-      RawDataToKmMultiplier := 0.001
-    else
-      RawDataToKmMultiplier := 1;
+    else if FindItem('UNIT',ItemString,False) then
+      begin
+        if (ItemString='KILOMETER') then
+          RawDataToKmMultiplier := 1
+        else if (ItemString='MILLIMETER') then
+          RawDataToKmMultiplier := 0.000001;
+      end;
 
     if FindItem('SCALING_FACTOR',ItemString,False) then RawDataToKmMultiplier := ExtendedValue(ItemString)*RawDataToKmMultiplier;
+
+// note: 'OFFSET' handled below after reading A_AXIS
 
     if FindItem('MINIMUM',ItemString,False) then
       MinRawDataValue := ExtendedValue(ItemString)
@@ -235,6 +237,8 @@ function ReadPDS_Header : Boolean;
       RawDataType := SingleData
     else if (ItemString='MSB_INTEGER') and (BytesPerDataItem=2) then
       RawDataType := ReversedSmallIntData
+    else if (ItemString='MSB_INTEGER') and (BytesPerDataItem=4) then
+      RawDataType := ReversedLongIntData
     else if BytesPerDataItem=1 then
       RawDataType := ByteData
     else
@@ -245,6 +249,16 @@ function ReadPDS_Header : Boolean;
 
     if FindItem('A_AXIS_RADIUS',ItemString,True) then
       RefHeightKm := Round(100*ExtendedValue(ItemString))/100; // discard least significant digits in single format
+
+    if (not (Mission=Kaguya)) and FindItem('OFFSET',ItemString,False) then
+      begin
+        RawDataOffset := RawDataToKmMultiplier*ExtendedValue(ItemString);
+//        ShowMessage(Format('Processing OFFSET = %0.3f km vs. RefHt = %0.3f km',[RawDataOffset,RefHeightKm]));
+        if RawDataOffset>(0.5*RefHeightKm) then
+          RefHeightKm := RawDataOffset  // MOLA and LOLA give raw data base height as "OFFSET", probably ignoring A_AXIS_RADIUS
+        else // Kaguya/SELENE gives "OFFSET=0" apparently meaning deviations are referenced to A_AXIS_RADIUS
+          RefHeightKm := RefHeightKm + RawDataOffset;  // meaning of a small offset is unclear, but might mean this
+      end;
 
   // Note: FirstLon, FirstLat and LonStep, LatStep are used to locate data in array
   //  FirstLon and FirstLat refer to *center* longitude, latitude of first element in array
@@ -287,14 +301,14 @@ function ReadPDS_Header : Boolean;
 // following information (not in attached PDS headers) found in Lunar Consortium *.lab files prepared by ??
     if ExtractFileName(DesiredFilename)='apo_far.img' then
       begin
-//        RefHeightKm := 0;  // actually 1738.4??
-//        RawDataToKmMultiplier := 1;  // actually 0.001
+        RefHeightKm := 1738;  // actually Wu 1984 datum which deviates around this mean?
+        RawDataToKmMultiplier := 0.001;  // *.lab file says "1"
         NoRawDataValue := -32768;
       end
     else if ExtractFileName(DesiredFilename)='apo_near.img' then
       begin
-//        RefHeightKm := 0;  // actually 1738.4??
-//        RawDataToKmMultiplier := 1;  // actually 0.001
+        RefHeightKm := 1738;  // actually Wu 1984 datum which deviates around this mean?
+        RawDataToKmMultiplier := 0.001;  // *.lab file says "1"
         NoRawDataValue := -32768;
       end
     else if ExtractFileName(DesiredFilename)='apo_lalt.img' then
@@ -329,7 +343,7 @@ function ReadISIS_Header : Boolean;
 
       StringToFind := UpperCase(SearchString);
 
-      AssignFile(Infile,InputFilename);
+      AssignFile(Infile,NameOfFileToRead);
       Reset(Infile);
 
       while (not EOF(Infile)) and (not EndFound) and (not Result) do
@@ -356,7 +370,7 @@ function ReadISIS_Header : Boolean;
   begin {ReadISIS_Header}
     Result := False;
 
-    InputFilename := DesiredFilename;
+    NameOfFileToRead := DesiredFilename;
 {
     if FindItem('Object',ItemString,False) then
       ShowMessage('Object = '+ItemString)
@@ -511,7 +525,7 @@ function ReadBIL_Header : Boolean;
     begin {FindItem}
       Result := False;
 
-      AssignFile(Infile,InputFilename);
+      AssignFile(Infile,NameOfFileToRead);
       Reset(Infile);
 
       while (not EOF(Infile)) and (not Result) do
@@ -534,10 +548,10 @@ function ReadBIL_Header : Boolean;
   begin {ReadBIL_Header}
     Result := False;
 
-    InputFilename := ChangeFileExt(DesiredFilename,'.hdr');
-    if not FileExists(InputFilename) then
+    NameOfFileToRead := ChangeFileExt(DesiredFilename,'.hdr');
+    if not FileExists(NameOfFileToRead) then
       begin
-        ShowMessage('Unable to find '+InputFilename);
+        ShowMessage('Unable to find '+NameOfFileToRead);
         Exit;
       end;
     if not FindBIL_Item('NROWS',ItemString,True) then Exit;
@@ -559,14 +573,14 @@ function ReadBIL_Header : Boolean;
       end;
     if FindBIL_Item('SKIPBYTES',ItemString,False) then  NumHeaderBytes := IntegerValue(ItemString);
 
-    InputFilename := ChangeFileExt(DesiredFilename,'.BLW');
+    NameOfFileToRead := ChangeFileExt(DesiredFilename,'.BLW');
 // this optional file consists of anumeric values, one per line, in a fixed sequence
-    if not FileExists(InputFilename) then
+    if not FileExists(NameOfFileToRead) then
       begin
-        ShowMessage('Unable to find '+InputFilename);
+        ShowMessage('Unable to find '+NameOfFileToRead);
         Exit;
       end;
-    AssignFile(Text_file,InputFilename);
+    AssignFile(Text_file,NameOfFileToRead);
     Reset(Text_file);
     Readln(Text_file,DataLine);
     LonStepRad := OneDegree*ExtendedValue(DataLine);
@@ -584,11 +598,11 @@ function ReadBIL_Header : Boolean;
 
     CloseFile(Text_file);
 
-    InputFilename := ChangeFileExt(DesiredFilename,'.STX');
+    NameOfFileToRead := ChangeFileExt(DesiredFilename,'.STX');
 // this optional file consists of a single line with numeric values in a fixed order, separated by spaces
-    if FileExists(InputFilename) then
+    if FileExists(NameOfFileToRead) then
       begin
-        AssignFile(Text_file,InputFilename);
+        AssignFile(Text_file,NameOfFileToRead);
         Reset(Text_file);
         Readln(Text_file,DataLine);
         DataItem := LeadingElement(DataLine,' ');
@@ -597,15 +611,24 @@ function ReadBIL_Header : Boolean;
         CloseFile(Text_file);
       end;
 
+    if ExtractFileName(DesiredFilename)='Apo_near.bil' then
+      begin
+        RefHeightKm := 1738;  // actually Wu 1984 datum which deviates around this mean?
+        NoRawDataValue := -32768;
+      end
+    else if (ExtractFileName(DesiredFilename)='hdrl_dem.bil') or (ExtractFileName(DesiredFilename)='litt_dem.bil') then
+      NoRawDataValue := 0;
+
     Result := True;
   end;  {ReadBIL_Header}
 
 begin {TDemData.SelectFile}
   Result := False;
   FileOpen := False;
+  InputFilename := '';
   ClearStorage;
 
-// the following information is not supplied in the data file and may or may not be correct
+// the following information if not supplied in the data file may or may not be correct
   Mission := Unknown;
   NumHeaderBytes := 0;
   NoRawDataValue := DummyDataValue;
@@ -712,7 +735,7 @@ begin {TDemData.SelectFile}
             Blockread(ByteFile,Stored_DEM_data[LatNum-1,0],NumLons*BytesPerDataItem,NumRead);
             if RawDataToKmMultiplier<>1 then for LonNum := 1 to NumLons do
               begin
-                Stored_DEM_data[LatNum-1,LonNum-1] := RawDataToKmMultiplier*Stored_DEM_data[LatNum-1,LonNum-1];  // convert [m] to [km]
+                Stored_DEM_data[LatNum-1,LonNum-1] := RawDataToKmMultiplier*Stored_DEM_data[LatNum-1,LonNum-1];  // convert to [km]
               end;
           end;
       WordData :
@@ -723,7 +746,7 @@ begin {TDemData.SelectFile}
               Blockread(ByteFile,WordRow[0],NumLons*BytesPerDataItem,NumRead);
               for LonNum := 1 to NumLons do
                 begin
-                  Stored_DEM_data[LatNum-1,LonNum-1] := RawDataToKmMultiplier*WordRow[LonNum-1];  // convert [m] to [km]
+                  Stored_DEM_data[LatNum-1,LonNum-1] := RawDataToKmMultiplier*WordRow[LonNum-1];  // convert to [km]
                 end;
             end;
           SetLength(WordRow,0);
@@ -738,10 +761,27 @@ begin {TDemData.SelectFile}
                 begin
                   TwoByteArray[1] := ReversedSmallIntRow[LonNum-1,2];
                   TwoByteArray[2] := ReversedSmallIntRow[LonNum-1,1];
-                  Stored_DEM_data[LatNum-1,LonNum-1] := RawDataToKmMultiplier*Smallint(TwoByteArray);  // convert [m] to [km]
+                  Stored_DEM_data[LatNum-1,LonNum-1] := RawDataToKmMultiplier*Smallint(TwoByteArray);  // convert to [km]
                 end;
             end;
           SetLength(ReversedSmallIntRow,0);
+        end;
+      ReversedLongIntData :
+        begin
+          SetLength(ReversedLongIntRow,NumLons);
+          for LatNum := 1 to NumLats do
+            begin
+              Blockread(ByteFile,ReversedLongIntRow[0],NumLons*BytesPerDataItem,NumRead);
+              for LonNum := 1 to NumLons do
+                begin
+                  FourByteArray[1] := ReversedLongIntRow[LonNum-1,4];
+                  FourByteArray[2] := ReversedLongIntRow[LonNum-1,3];
+                  FourByteArray[3] := ReversedLongIntRow[LonNum-1,2];
+                  FourByteArray[4] := ReversedLongIntRow[LonNum-1,1];
+                  Stored_DEM_data[LatNum-1,LonNum-1] := RawDataToKmMultiplier*Longint(FourByteArray);  // convert to [km]
+                end;
+            end;
+          SetLength(ReversedLongIntRow,0);
         end;
       ReversedDoubleData :
         begin
@@ -759,7 +799,7 @@ begin {TDemData.SelectFile}
                   EightByteArray[6] := ReversedDoubleRow[LonNum-1,3];
                   EightByteArray[7] := ReversedDoubleRow[LonNum-1,2];
                   EightByteArray[8] := ReversedDoubleRow[LonNum-1,1];
-                  Stored_DEM_data[LatNum-1,LonNum-1] := RawDataToKmMultiplier*Double(EightByteArray);  // convert [m] to [km]
+                  Stored_DEM_data[LatNum-1,LonNum-1] := RawDataToKmMultiplier*Double(EightByteArray);  // convert to [km]
                 end;
             end;
           SetLength(ReversedDoubleRow,0);
@@ -772,7 +812,7 @@ begin {TDemData.SelectFile}
               Blockread(ByteFile,ByteRow[0],NumLons*BytesPerDataItem,NumRead);
               for LonNum := 1 to NumLons do
                 begin
-                  Stored_DEM_data[LatNum-1,LonNum-1] := RawDataToKmMultiplier*ByteRow[LonNum-1];  // convert [m] to [km]
+                  Stored_DEM_data[LatNum-1,LonNum-1] := RawDataToKmMultiplier*ByteRow[LonNum-1];  // convert to [km]
                 end;
             end;
           SetLength(ByteRow,0);
@@ -792,6 +832,7 @@ begin {TDemData.SelectFile}
     LTVT_Form.PopupMemo.Memo.Lines.Add(Format('Time to read DEM : %0.3f sec',[(Now - StartTime)*OneDay]));
 
   FileOpen := True;
+  InputFilename := DesiredFilename;
   Result := True;
 
   ValidNoDataValue := NoRawDataValue<>DummyDataValue;

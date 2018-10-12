@@ -65,6 +65,8 @@ uses LTVT_Unit;
 procedure TDEM_Options_Form.RefreshLabels;
 begin
   DEMFilename_Label.Caption := MinimizeName(TempDEMFilename,DEMFilename_Label.Canvas,DEMFilename_Label.Width);
+  MultipliedDemGammaBoost_LabeledNumericEdit.Visible := MultiplyByAlbedoCheckBox.Checked;
+  MultipliedDemIntensitiesBoost_LabeledNumericEdit.Visible := MultiplyByAlbedoCheckBox.Checked;
 end;
 
 procedure TDEM_Options_Form.FormShow(Sender: TObject);
@@ -122,8 +124,7 @@ end;
 
 procedure TDEM_Options_Form.MultiplyByAlbedoCheckBoxClick(Sender: TObject);
 begin
-  MultipliedDemGammaBoost_LabeledNumericEdit.Visible := MultiplyByAlbedoCheckBox.Checked;
-  MultipliedDemIntensitiesBoost_LabeledNumericEdit.Visible := MultiplyByAlbedoCheckBox.Checked;
+  RefreshLabels;
 end;
 
 procedure TDEM_Options_Form.FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);

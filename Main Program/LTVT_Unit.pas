@@ -709,7 +709,7 @@ uses FileCtrl, H_Terminator_About_Unit, H_Terminator_Goto_Unit, H_Terminator_Set
 {$R *.dfm}
 
 const
-  ProgramVersion = '0.21';
+  ProgramVersion = '0.21.1';
 
 // note: the following constants specify (in degrees) that texture files span
 //   the full lunar globe.  They should not be changed.
