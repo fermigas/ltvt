@@ -8,7 +8,7 @@ This isn't the official site, but the original author Jim Mosher was kind enough
 
 If you want to get the program or code the [LTVT Program Downloads](https://github.com/fermigas/ltvt/wiki/LTVT%20Download) page has you covered.  
 
-Many resources that can enrich your use of the the program [Downloads](https://github.com/fermigas/ltvt/wiki/Downloads) can be found here.  
+Many resources that can enrich your use of the the program can be found here [Downloads](https://github.com/fermigas/ltvt/wiki/Downloads).  
 
 If you want to learn how to use LTVT, you can hardly do better than [LTVT-function-details](https://github.com/fermigas/ltvt/wiki/LTVT-function-details).
 
