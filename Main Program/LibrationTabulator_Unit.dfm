@@ -3,7 +3,8 @@ object LibrationTabulator_Form: TLibrationTabulator_Form
   Top = 35
   Width = 925
   Height = 690
-  Caption = 'Jim'#39's Libration Tabulator v0.0'
+  ActiveControl = Tabulate_Button
+  Caption = 'LTVT Libration Tabulator v0.1'
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -18,7 +19,7 @@ object LibrationTabulator_Form: TLibrationTabulator_Form
   TextHeight = 13
   object Label3: TLabel
     Left = 8
-    Top = 160
+    Top = 168
     Width = 51
     Height = 13
     Hint = 'Begin making predictions on this date'
@@ -26,7 +27,7 @@ object LibrationTabulator_Form: TLibrationTabulator_Form
   end
   object Label4: TLabel
     Left = 176
-    Top = 160
+    Top = 168
     Width = 51
     Height = 13
     Hint = 'Stop making predictions on this date'
@@ -116,7 +117,7 @@ object LibrationTabulator_Form: TLibrationTabulator_Form
       TabOrder = 2
       inherited Item_Label: TLabel
         Width = 78
-        Caption = 'Min. Sun Angle::'
+        Caption = 'Min. Sun Angle :'
       end
       inherited Units_Label: TLabel
         Left = 144
@@ -144,7 +145,7 @@ object LibrationTabulator_Form: TLibrationTabulator_Form
       TabOrder = 3
       inherited Item_Label: TLabel
         Width = 81
-        Caption = 'Max. Sun Angle::'
+        Caption = 'Max. Sun Angle :'
       end
       inherited Units_Label: TLabel
         Left = 144
@@ -182,8 +183,8 @@ object LibrationTabulator_Form: TLibrationTabulator_Form
       AutoSize = True
       TabOrder = 0
       inherited Item_Label: TLabel
-        Width = 77
-        Caption = 'Min. Moon Elev,'
+        Width = 80
+        Caption = 'Min. Moon Elev.:'
       end
       inherited Units_Label: TLabel
         Left = 152
@@ -236,8 +237,8 @@ object LibrationTabulator_Form: TLibrationTabulator_Form
       AutoSize = True
       TabOrder = 2
       inherited Item_Label: TLabel
-        Width = 108
-        Caption = 'Max. Center Distance.:'
+        Width = 105
+        Caption = 'Max. Center Distance:'
       end
       inherited Units_Label: TLabel
         Left = 184
@@ -265,7 +266,7 @@ object LibrationTabulator_Form: TLibrationTabulator_Form
     Font.Style = []
     ParentFont = False
     ScrollBars = ssBoth
-    TabOrder = 8
+    TabOrder = 9
     WordWrap = False
     OnKeyDown = Memo1KeyDown
   end
@@ -276,7 +277,7 @@ object LibrationTabulator_Form: TLibrationTabulator_Form
     Height = 25
     Hint = 'Clear Memo area'
     Caption = 'Clear'
-    TabOrder = 11
+    TabOrder = 12
     OnClick = ClearMemo_ButtonClick
     OnKeyDown = ClearMemo_ButtonKeyDown
   end
@@ -289,13 +290,13 @@ object LibrationTabulator_Form: TLibrationTabulator_Form
       'List date/time and libration for events meeting criteria in requ' +
       'ested range of dates'
     Caption = 'Tabulate'
-    TabOrder = 12
+    TabOrder = 13
     OnClick = Tabulate_ButtonClick
     OnKeyDown = Tabulate_ButtonKeyDown
   end
   object StartDate_DateTimePicker: TDateTimePicker
     Left = 64
-    Top = 160
+    Top = 168
     Width = 89
     Height = 21
     Hint = 'Enter UT date'
@@ -311,7 +312,7 @@ object LibrationTabulator_Form: TLibrationTabulator_Form
   end
   object EndDate_DateTimePicker: TDateTimePicker
     Left = 232
-    Top = 160
+    Top = 168
     Width = 89
     Height = 21
     Hint = 'Enter UT date'
@@ -332,7 +333,7 @@ object LibrationTabulator_Form: TLibrationTabulator_Form
     Height = 25
     Hint = 'Change font used in Memo area'
     Caption = 'Font'
-    TabOrder = 9
+    TabOrder = 10
     OnClick = Font_ButtonClick
     OnKeyDown = Font_ButtonKeyDown
   end
@@ -442,25 +443,25 @@ object LibrationTabulator_Form: TLibrationTabulator_Form
     Height = 25
     Hint = 'Click to halt tabulation '
     Caption = 'Abort'
-    TabOrder = 10
+    TabOrder = 11
     OnClick = Abort_ButtonClick
     OnKeyDown = Abort_ButtonKeyDown
   end
   object ShowAll_CheckBox: TCheckBox
     Left = 776
-    Top = 160
+    Top = 168
     Width = 97
     Height = 17
     Hint = 'List every sample, whether it meets constraints or not'
     Caption = 'Show All'
-    TabOrder = 7
+    TabOrder = 8
     OnKeyDown = ShowAll_CheckBoxKeyDown
   end
   inline SearchTimeStepMin_LabeledNumericEdit: TLabeledNumericEdit
     Left = 337
-    Top = 158
+    Top = 166
     Width = 148
-    Height = 19
+    Height = 21
     Hint = 'Interval between times at which conditions are checked'
     AutoSize = True
     TabOrder = 6
@@ -476,6 +477,16 @@ object LibrationTabulator_Form: TLibrationTabulator_Form
       Left = 64
       Text = '5.0'
     end
+  end
+  object StartEnd_CheckBox: TCheckBox
+    Left = 616
+    Top = 168
+    Width = 97
+    Height = 17
+    Hint = 'Tabulate start and end times of each interval meeting criteria'
+    Caption = 'List start/end '
+    TabOrder = 7
+    OnKeyDown = StartEnd_CheckBoxKeyDown
   end
   object FontDialog1: TFontDialog
     Font.Charset = DEFAULT_CHARSET

@@ -18,7 +18,10 @@ v0.5
   2. Refresh Memo1 area after each output line is printed.  Otherwise output
      can be held making program appear frozen.
 
-                                                          10/27/06}
+v0.6
+  1. Add Abort button and "search completed" messages.
+
+                                                                   3/6/09}
 
 interface
 
@@ -62,6 +65,7 @@ type
     FilterOutput_CheckBox: TCheckBox;
     GeocentricObserver_CheckBox: TCheckBox;
     Label2: TLabel;
+    Abort_Button: TButton;
     procedure CalculateCircumstances_ButtonClick(Sender: TObject);
     procedure ClearMemo_ButtonClick(Sender: TObject);
     procedure Tabulate_ButtonClick(Sender: TObject);
@@ -123,10 +127,15 @@ type
       Sender: TObject; var Key: Word; Shift: TShiftState);
     procedure LibrationTabulator_ButtonKeyDown(Sender: TObject;
       var Key: Word; Shift: TShiftState);
+    procedure Abort_ButtonKeyDown(Sender: TObject; var Key: Word;
+      Shift: TShiftState);
+    procedure Abort_ButtonClick(Sender: TObject);
   private
     { Private declarations }
   public
     { Public declarations }
+    AbortTabulation : Boolean;
+
     MEP_JPL_Filename, MEP_JPL_Path : string;
 
     SubSolarPoint : TPolarCoordinates;
@@ -528,12 +537,13 @@ begin {Tabulate_ButtonClick}
 
       AllowableError := DegToRad(0.00001);
       MJD := StartMJD;
-      while MJD<EndMJD do
+      while (MJD<EndMJD) and (not AbortTabulation) do
         begin
           UpdateCL;
           while Abs(CL_Error)>AllowableError do RefineCL;
           PrintData;
           MJD := MJD+SynodicMonth;
+          Application.ProcessMessages;
         end;
     end
   else {Altitude mode}
@@ -558,7 +568,7 @@ begin {Tabulate_ButtonClick}
 //      Memo1.Lines.Add(Format('Start date Sun angle = %0.3f',[RadToDeg(SunAngle(MJD))]));
 //      Memo1.Lines.Add(Format('Refined date Sun angle = %0.3f',[RadToDeg(SunAngle(MJD))]));
       OldSunAngle := SunAngle(MJD);
-      while MJD<EndMJD do
+      while (MJD<EndMJD) and (not AbortTabulation) do
         begin
           NewSunAngle := SunAngle(MJD+SunAngleMJDStep);
           if ((TargetAngle>=OldSunAngle) and (TargetAngle<=NewSunAngle)) or ((TargetAngle<=OldSunAngle) and (TargetAngle>=NewSunAngle)) then
@@ -569,6 +579,7 @@ begin {Tabulate_ButtonClick}
             end;
           MJD := MJD+SunAngleMJDStep;
           OldSunAngle := NewSunAngle;
+          Application.ProcessMessages;
         end;
     end;
 
@@ -582,14 +593,22 @@ begin {Tabulate_ButtonClick}
           Memo1.Lines.Add(Format('  %s = Azimuth of Sun within %0.2f deg of target (= %0.3f)',[WithinToleranceSymbol,AllowableAzimuthErrorDegrees,RadToDeg(TargetSolarAzimuth)]));
         end
       else
-        Memo1.Lines.Add(Format('  %s = Latitude of Sub-solar Point within %0.2f deg of target (= %0.3f)',[WithinToleranceSymbol,AllowableLatitudeErrorDegrees,RadToDeg(TargetSolarLat)]));
+        Memo1.Lines.Add(Format('  %s = Latitude of sub-solar point within %0.2f deg of target (= %0.3f)',[WithinToleranceSymbol,AllowableLatitudeErrorDegrees,RadToDeg(TargetSolarLat)]));
 
       if not GeocentricSubEarthMode then Memo1.Lines.Add(Format('  %s = Moon above horizon/Sun below horizon',[MoonUpSunDownSymbol]));
+      Memo1.Lines.Add('');
+      if AbortTabulation then
+        Memo1.Lines.Add('                     *** tabulation aborted ***')
+      else
+        Memo1.Lines.Add('                      *** search completed ***');
     end
   else
     begin
       Memo1.Lines.Add('');
-      Memo1.Lines.Add('               *** no events found ***');
+      if AbortTabulation then
+        Memo1.Lines.Add('                     *** tabulation aborted ***')
+      else
+        Memo1.Lines.Add('                      *** no events found ***');
     end;
 
   GeocentricSubEarthMode := OldGeocentricMode; // restore status of calling program
@@ -616,6 +635,11 @@ end;
 procedure TMoonEventPredictor_Form.GeocentricObserver_CheckBoxClick(Sender: TObject);
 begin
   ObserverLocation_GroupBox.Visible := not GeocentricObserver_CheckBox.Checked;
+end;
+
+procedure TMoonEventPredictor_Form.Abort_ButtonClick(Sender: TObject);
+begin
+  AbortTabulation := True;
 end;
 
 procedure TMoonEventPredictor_Form.Date_DateTimePickerKeyDown(
@@ -797,6 +821,12 @@ end;
 
 procedure TMoonEventPredictor_Form.LibrationTabulator_ButtonKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
+begin
+  Terminator_Form.DisplayF1Help(Key,Shift,'MoonEventPredictorForm.htm');
+end;
+
+procedure TMoonEventPredictor_Form.Abort_ButtonKeyDown(Sender: TObject;
+  var Key: Word; Shift: TShiftState);
 begin
   Terminator_Form.DisplayF1Help(Key,Shift,'MoonEventPredictorForm.htm');
 end;

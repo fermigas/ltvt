@@ -897,10 +897,42 @@ v0.19
        Earth and Moon viewing modes. Delete obsolete/erroneous hint saying Mark
        button set reference point.
 
-                                                                      11/25/08 }
+  v0.19.7.1
+    1. 11/28/08: Correct duplicate variable introduced in v0.19.6 which produced
+       erroneous interactive mouseover sun angle readout based on last
+       mouseover computed subsolar point in Earth Viewer.  Corrected lines in
+       both v0.19.6 and v0.19.7 files on LTVT website.
 
-// 11/28/08: correct duplicate variable names for SubEarth and SubSolar points in MouseMove
-// this caused sun angle/azimuth readout in normal lunar views to be non-functional
+  v0.19.8
+    1. Suppress drawing of circles for dot features whose numeric data is an
+       elevation, specifically USGS Codes AT, CN, CN5 and CD.
+    2. Add start/end option to libration tabulator. When checked, the listing
+       gives the start and end times of the intervals meeting the criteria.
+    3. Fix cycling between forms with CTRL-TAB. In old scheme, forms were
+       prioritized and, due to a typo, cycling from the Libration Tabulator to
+       the Main Window returned to the Moon Event Predictor.  Under new scheme,
+       CTRL-TAB in Main Window will always cycle to the last form, if any, from
+       which the Main Window was accessed with CTRL-TAB. If the Main Window has
+       not previously been accessed by CTRL-TAB, it will cycle to the first open
+       form, if any, using the old prioritized list.
+    4. Add checkbox to PhotoSelector form permitting calibrated photos to be
+       listed in order of ascending colongitude instead of descending solar
+       altitude.
+    5. Delete display of word "Clementine" in mouseover display of altimeter
+       data with feature type code "AT", since altimeter results from other
+       missions, such as Kaguya, are becoming available.
+    6. Add an Abort button to the PhotoSesssions and Moon Event Predictor
+       search forms.   
+    7. In Libration Tabulator, hide MinMoon and MaxSun elevation input boxes
+       when geocentric mode is selected; and correct operation so that the
+       calculated geocentric "elevations" of the Moon and Sun are ignored.
+       In previous version, some valid date/times may have been rejected based
+       on meaningless calculations of geocentric elevations.
+    8. Add printout of current constraints in header at top of Libration
+       Tabulator listings.
+
+                                                                     6 Mar 2009}
+
 
 interface
 
@@ -1503,7 +1535,7 @@ uses FileCtrl, H_Terminator_About_Unit, H_Terminator_Goto_Unit, H_Terminator_Set
 {$R *.dfm}
 
 const
-  ProgramVersion = '0.19.7.1';
+  ProgramVersion = '0.19.8';
 
 // note: the following constants specify (in degrees) that texture files span
 //   the full lunar globe.  They should not be changed.
@@ -2297,7 +2329,8 @@ procedure TTerminator_Form.OverlayDots_ButtonClick(Sender: TObject);
                           end;
                       end;
 
-                    if DrawCircles_CheckBox.Checked and (DiamErrorCode=0) and (Diam>0) and (Diam<MaxDiam)and (USGS_Code<>'AT') then
+                    if DrawCircles_CheckBox.Checked and (DiamErrorCode=0) and (Diam>0) and (Diam<MaxDiam)
+                      and (USGS_Code<>'AT') and (USGS_Code<>'CN') and (USGS_Code<>'CN5') and (USGS_Code<>'CD') then
                       DrawCircle(RadToDeg(Lon),RadToDeg(Lat),RadToDeg(Diam/MoonRadius/2),CraterCircleColor);
 
                     if not PositionInCraterInfo(CraterCenterX, CraterCenterY) then
@@ -3476,7 +3509,7 @@ begin {Terminator_Form.JimsGraph1MouseMove}
               else if (USGS_Code='CN') or (USGS_Code='CN5') then
                 FeatureDescription := 'Control pt:  '
               else if USGS_Code='AT' then
-                FeatureDescription := 'Clementine LIDAR elevation:  '
+                FeatureDescription := 'LIDAR elevation:  '
               else
                 FeatureDescription := '';
 
@@ -6870,26 +6903,57 @@ end;   {TTerminator_Form.EphemerisDataAvailable}
 
 procedure TTerminator_Form.DisplayF1Help(const PressedKey : Word; const ShiftState : TShiftState; const HelpFileName : String);
 {launches .chm help on indicated page if PressedKey=F1}
+type
+  TFormList = (PhotoCalibratorForm, SatellitePhotoCalibratorForm, LTO_ViewerForm,
+    MoonEventPredictorForm, LibrationTabulatorForm, PhotosessionSearchForm, Unknown);
+const
+  LastCallingForm : TFormList = Unknown;
 begin
   if PressedKey=VK_F1 then HtmlHelp(0,PChar(Application.HelpFile+'::/Help Topics/'+HelpFileName),HH_DISPLAY_TOPIC, 0);
   if (ssCtrl in ShiftState) and (PressedKey=VK_TAB) then
     begin //  CTRL-Tab pressed
       if not Terminator_Form.Active then
-        Terminator_Form.Show
+        begin
+          if PhotoCalibrator_Form.Active then
+            LastCallingForm := PhotoCalibratorForm
+          else if SatellitePhotoCalibrator_Form.Active then
+            LastCallingForm := SatellitePhotoCalibratorForm
+          else if LTO_Viewer_Form.Active then
+            LastCallingForm := LTO_ViewerForm
+          else if MoonEventPredictor_Form.Active then
+            LastCallingForm := MoonEventPredictorForm
+          else if LibrationTabulator_Form.Active then
+            LastCallingForm := LibrationTabulatorForm
+          else if PhotosessionSearch_Form.Active then
+            LastCallingForm := PhotosessionSearchForm;
+
+          Terminator_Form.Show
+        end
       else // Terminator_Form active
         begin
-          if PhotoCalibrator_Form.Visible then
-            PhotoCalibrator_Form.Show
-          else if SatellitePhotoCalibrator_Form.Visible then
-            SatellitePhotoCalibrator_Form.Show
-          else if LTO_Viewer_Form.Visible then
-            LTO_Viewer_Form.Show
-          else if MoonEventPredictor_Form.Visible then
-            MoonEventPredictor_Form.Show
-          else if LibrationTabulator_Form.Visible then
-            MoonEventPredictor_Form.Show
-          else if PhotosessionSearch_Form.Visible then
-            PhotosessionSearch_Form.Show;
+          case LastCallingForm of
+            PhotoCalibratorForm :    PhotoCalibrator_Form.Show;
+            SatellitePhotoCalibratorForm : SatellitePhotoCalibrator_Form.Show;
+            LTO_ViewerForm :         LTO_Viewer_Form.Show;
+            MoonEventPredictorForm : MoonEventPredictor_Form.Show;
+            LibrationTabulatorForm : LibrationTabulator_Form.Show;
+            PhotosessionSearchForm : PhotosessionSearch_Form.Show;
+            Unknown :
+              begin
+                if PhotoCalibrator_Form.Visible then
+                  PhotoCalibrator_Form.Show
+                else if SatellitePhotoCalibrator_Form.Visible then
+                  SatellitePhotoCalibrator_Form.Show
+                else if LTO_Viewer_Form.Visible then
+                  LTO_Viewer_Form.Show
+                else if MoonEventPredictor_Form.Visible then
+                  MoonEventPredictor_Form.Show
+                else if LibrationTabulator_Form.Visible then
+                  MoonEventPredictor_Form.Show
+                else if PhotosessionSearch_Form.Visible then
+                  PhotosessionSearch_Form.Show;
+              end;
+            end; {case}
         end;
     end;
 end;

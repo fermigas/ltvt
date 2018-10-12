@@ -18,7 +18,10 @@ v0.5
   1. In tabulation an ExtractFilename() is now applied to the File Description
      to make this more compatible with the Photo Calibration data file.
 
-                                                                   11/16/06}
+v0.6
+  1. Add Abort button and "search completed" messages.
+
+                                                                   3/6/09}
 
 interface
 
@@ -59,6 +62,7 @@ type
     ChangeFile_Button: TButton;
     OpenDialog1: TOpenDialog;
     Label2: TLabel;
+    Abort_Button: TButton;
     procedure CalculateCircumstances_ButtonClick(Sender: TObject);
     procedure ClearMemo_ButtonClick(Sender: TObject);
     procedure Tabulate_ButtonClick(Sender: TObject);
@@ -113,10 +117,15 @@ type
     procedure ChangeFile_ButtonClick(Sender: TObject);
     procedure ChangeFile_ButtonKeyDown(Sender: TObject; var Key: Word;
       Shift: TShiftState);
+    procedure Abort_ButtonClick(Sender: TObject);
+    procedure Abort_ButtonKeyDown(Sender: TObject; var Key: Word;
+      Shift: TShiftState);
   private
     { Private declarations }
   public
     { Public declarations }
+    AbortTabulation : Boolean;
+
     PSS_JPL_Filename, PSS_JPL_Path, PhotoSessionsFilename : string;
 
     SubSolarPoint : TPolarCoordinates;
@@ -290,8 +299,6 @@ var
   CraterLonDeg, CraterLatDeg, SunAngleDeg,
   AllowableColongitudeErrorDegrees, AllowableSunElevationErrorDegrees : Extended;
 
-  AbortTabulation : boolean;
-
 procedure ConvertSemicolonsToCommas(var StringToConvert : string);
   var
     SemicolonPos : integer;
@@ -406,7 +413,7 @@ procedure PrintData;
     end
   else // JPL data invalid
     begin
-      if MessageDlg('Abort Tabulation',mtConfirmation,[mbYes,mbNo],0)=mrYes then AbortTabulation := true;
+      if MessageDlg('Ephemris data not found -- abort tabulation?',mtConfirmation,[mbYes,mbNo],0)=mrYes then AbortTabulation := true;
     end;
 
   end;  {PrintData}
@@ -490,6 +497,7 @@ begin {Tabulate_ButtonClick}
                 PrintData;
               end;
           end;
+          Application.ProcessMessages;
         end;
       CloseFile(PhotoFile);
     end;
@@ -502,6 +510,11 @@ begin {Tabulate_ButtonClick}
           Memo1.Lines.Add(Format('  %s = Target feature on visible disk',[TargetVisibleSymbol]));
 
       if not GeocentricSubEarthMode then Memo1.Lines.Add(Format('  %s = Moon above horizon/Sun below horizon',[MoonUpSunDownSymbol]));
+      Memo1.Lines.Add('');
+      if AbortTabulation then
+        Memo1.Lines.Add('                     *** tabulation aborted ***')
+      else
+        Memo1.Lines.Add('                      *** search completed ***');
     end
   else
     begin
@@ -557,6 +570,11 @@ begin
           PhotoFilename_Label.Caption := MinimizeName(PhotoSessionsFilename,PhotoFilename_Label.Canvas,PhotoFilename_Label.Width);
         end;
     end;
+end;
+
+procedure TPhotosessionSearch_Form.Abort_ButtonClick(Sender: TObject);
+begin
+  AbortTabulation := True;
 end;
 
 procedure TPhotosessionSearch_Form.Date_DateTimePickerKeyDown(
@@ -696,6 +714,12 @@ end;
 
 procedure TPhotosessionSearch_Form.ChangeFile_ButtonKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
+begin
+  Terminator_Form.DisplayF1Help(Key,Shift,'PhotosessionsSearchForm.htm');
+end;
+
+procedure TPhotosessionSearch_Form.Abort_ButtonKeyDown(Sender: TObject;
+  var Key: Word; Shift: TShiftState);
 begin
   Terminator_Form.DisplayF1Help(Key,Shift,'PhotosessionsSearchForm.htm');
 end;

@@ -2,7 +2,18 @@ unit LibrationTabulator_Unit;
 {
 v0.0:
   1. Copy from Moon Event Predictor
-                                                          10/13/07}
+
+v0.1:
+  1. Add start/end checkbox. When checked, the listing gives the start and end
+     times of the intervals meeting the criteria (as well as the time of
+     minimum center distance, if different).
+  2. Hide MinMoon and MaxSun elevation input boxes when geocentric mode is
+     selected.
+  3. Correct operation in geocentric mode so "elevations" of Moon and Sun are
+     not checked.
+  4. Add list of constraints to printout.
+
+                                                                      6 Mar 2009}
 
 interface
 
@@ -40,6 +51,7 @@ type
     Abort_Button: TButton;
     ShowAll_CheckBox: TCheckBox;
     SearchTimeStepMin_LabeledNumericEdit: TLabeledNumericEdit;
+    StartEnd_CheckBox: TCheckBox;
     procedure ClearMemo_ButtonClick(Sender: TObject);
     procedure Tabulate_ButtonClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
@@ -87,6 +99,8 @@ type
       Sender: TObject; var Key: Word; Shift: TShiftState);
     procedure MaxSunAngleDeg_LabeledNumericEditNumericEditKeyDown(
       Sender: TObject; var Key: Word; Shift: TShiftState);
+    procedure StartEnd_CheckBoxKeyDown(Sender: TObject; var Key: Word;
+      Shift: TShiftState);
   private
     { Private declarations }
   public
@@ -142,6 +156,8 @@ begin
   DecimalSeparator := '.';
 
   ObserverLocation_GroupBox.Visible := not GeocentricObserver_CheckBox.Checked;
+  MinMoonElevDeg_LabeledNumericEdit.Visible := not GeocentricObserver_CheckBox.Checked;
+  MaxSunElevDeg_LabeledNumericEdit.Visible := not GeocentricObserver_CheckBox.Checked;
 end;
 
 function TLibrationTabulator_Form.JPL_File_Valid(const Desired_MJD : extended) : boolean;
@@ -198,7 +214,8 @@ var
   OldGeocentricMode, CriteriaValid : boolean;
   SubSolarPoint, SubEarthPoint : TPolarCoordinates;
   SunPosition, MoonPosition : PositionResultRecord;
-  StartMJD, EndMJD, MJDStep, CurrentMJD, MinMJD, MinCenterAngle,
+  StartMJD, EndMJD, MJDStep, CurrentMJD, IntervalStartMJD, IntervalEndMJD,
+  MinMJD, MinCenterAngle,
   CraterLat, CraterLon, MinSunAngle, MaxSunAngle, MinMoonElevDeg, MaxSunElevDeg,  // all in radians
   CenterAngle, CenterAngleAz, SunAngle, SunAngleAz, MaxCenterAngle : Extended;
 
@@ -216,9 +233,12 @@ procedure CalculateCircumstances(const MJD: Extended);
 
     CriteriaValid := (SunAngle>=MinSunAngle)
                  and (SunAngle<=MaxSunAngle)
-                 and (MoonPosition.TopocentricAlt>=MinMoonElevDeg)
-                 and (SunPosition.TopocentricAlt<MaxSunElevDeg)
                  and (CenterAngle<=MaxCenterAngle);
+
+    if not GeocentricSubEarthMode then
+      CriteriaValid := CriteriaValid
+                       and (MoonPosition.TopocentricAlt>=MinMoonElevDeg)
+                       and (SunPosition.TopocentricAlt<MaxSunElevDeg);
   end;
 
 procedure PrintHeader;
@@ -247,6 +267,15 @@ function NS_Tag(const Latitude : extended): string;
     Memo1.Lines.Add(Format('Center Distance and Sun Angle calculated for feature at %0.4f %s  %0.4f %s',
       [Abs(RadToDeg(CraterLon)),EW_Tag(RadToDeg(CraterLon)),Abs(RadToDeg(CraterLat)),NS_Tag(RadToDeg(CraterLat))]));
     Memo1.Lines.Add('');
+    Memo1.Lines.Add('Times being searched at interval of '+SearchTimeStepMin_LabeledNumericEdit.NumericEdit.Text+' minutes subject to constraints:');
+    Memo1.Lines.Add('  *  Sun angle at feature >'+MinSunAngleDeg_LabeledNumericEdit.NumericEdit.Text+' deg and <'
+      +MaxSunAngleDeg_LabeledNumericEdit.NumericEdit.Text+' deg');
+    Memo1.Lines.Add('  *  Distance of feature from apparent lunar disk center <'+MaxCenterAngleDeg_LabeledNumericEdit.NumericEdit.Text+' deg');
+    if not GeocentricSubEarthMode then
+       Memo1.Lines.Add('  *  Center of Moon >'+MinMoonElevDeg_LabeledNumericEdit.NumericEdit.Text
+         +' deg and center of Sun <'+MaxSunElevDeg_LabeledNumericEdit.NumericEdit.Text
+         +' deg above observer''s horizon');
+    Memo1.Lines.Add('');
     if GeocentricSubEarthMode then
       begin
         Memo1.Lines.Add('                        Center        Sun Angle          Librations');
@@ -259,12 +288,13 @@ function NS_Tag(const Latitude : extended): string;
       end;
   end;  {PrintHeader}
 
-procedure PrintData;
+procedure PrintData(const PrintMJD : Extended);
   var
     PrintDateTime : TDateTime;
 
   begin {PrintData}
-    PrintDateTime := ModifiedJulianDateToDateTime(MinMJD);
+    PrintDateTime := ModifiedJulianDateToDateTime(PrintMJD);
+    CalculateCircumstances(PrintMJD);
 
     while SubEarthPoint.Longitude>Pi do SubEarthPoint.Longitude := SubEarthPoint.Longitude - TwoPi;
 
@@ -335,8 +365,7 @@ begin {Tabulate_ButtonClick}
 
       if ShowAll_CheckBox.Checked then
         begin
-          MinMJD := CurrentMJD;
-          PrintData;
+          PrintData(CurrentMJD);
           CurrentMJD := CurrentMJD + MJDStep;
         end
       else
@@ -349,6 +378,7 @@ begin {Tabulate_ButtonClick}
 
           if CriteriaValid then
             begin
+              IntervalStartMJD := CurrentMJD;
               MinMJD := CurrentMJD;
               MinCenterAngle := CenterAngle;
               while (CurrentMJD<=EndMJD) and CriteriaValid do
@@ -361,26 +391,46 @@ begin {Tabulate_ButtonClick}
                       MinCenterAngle := CenterAngle;
                     end;
                 end;
-              CalculateCircumstances(MinMJD);
-              if CriteriaValid then PrintData;
+              if StartEnd_CheckBox.Checked then
+                begin
+                  CurrentMJD := CurrentMJD - MJDStep;
+                  CalculateCircumstances(CurrentMJD);
+                  if CriteriaValid then
+                    begin
+                      IntervalEndMJD := CurrentMJD;
+                      PrintData(IntervalStartMJD);
+                      if (MinMJD>IntervalStartMJD) and (MinMJD<IntervalEndMJD)  then
+                        PrintData(MinMJD);
+                      PrintData(IntervalEndMJD);
+                      Memo1.Lines.Add('');
+                    end;
+                  CurrentMJD := CurrentMJD + MJDStep;
+                end
+              else
+                begin
+                  CalculateCircumstances(MinMJD);
+                  if CriteriaValid then PrintData(MinMJD);
+                end;
             end;
         end;
 
       Application.ProcessMessages;   // check for Abort request
     end;
 
-  if LinesPrinted>0 then
-    begin
-      Memo1.Lines.Add('');
-    end
-  else
-    begin
-      Memo1.Lines.Add('');
-      Memo1.Lines.Add('               *** no events found ***');
-    end;
-
   if AbortTabulation then
-      Memo1.Lines.Add('                (tabulation aborted)');
+      Memo1.Lines.Add('                (tabulation aborted)')
+  else
+    if (LinesPrinted>0) then
+      begin
+        if not StartEnd_CheckBox.Checked then Memo1.Lines.Add('');
+        Memo1.Lines.Add('               *** search completed ***');
+      end
+    else
+      begin
+        Memo1.Lines.Add('');
+        Memo1.Lines.Add('               *** no events found ***');
+      end;
+
 
   GeocentricSubEarthMode := OldGeocentricMode; // restore status of calling program
 
@@ -399,6 +449,8 @@ end;
 procedure TLibrationTabulator_Form.GeocentricObserver_CheckBoxClick(Sender: TObject);
 begin
   ObserverLocation_GroupBox.Visible := not GeocentricObserver_CheckBox.Checked;
+  MinMoonElevDeg_LabeledNumericEdit.Visible := not GeocentricObserver_CheckBox.Checked;
+  MaxSunElevDeg_LabeledNumericEdit.Visible := not GeocentricObserver_CheckBox.Checked;
 end;
 
 procedure TLibrationTabulator_Form.GeocentricObserver_CheckBoxKeyDown(
@@ -534,6 +586,12 @@ begin
 end;
 
 procedure TLibrationTabulator_Form.MaxSunAngleDeg_LabeledNumericEditNumericEditKeyDown(
+  Sender: TObject; var Key: Word; Shift: TShiftState);
+begin
+  Terminator_Form.DisplayF1Help(Key,Shift,'LibrationTabulatorForm.htm');
+end;
+
+procedure TLibrationTabulator_Form.StartEnd_CheckBoxKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
   Terminator_Form.DisplayF1Help(Key,Shift,'LibrationTabulatorForm.htm');

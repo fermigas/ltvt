@@ -4,7 +4,7 @@ LTVT Source Code
 
 A. PURPOSE
 
-The accompanying folders contain the complete source code for the Lunar Terminator Visualization Tool (LTVT version 0.19.2).
+The accompanying folders contain the complete source code for the Lunar Terminator Visualization Tool.
 
 This information is being placed online for the benefit of those who may wish to understand more deeply how LTVT works, or to make improvements to the program logic.
 
@@ -34,9 +34,12 @@ Good luck to all those who try to make use of this information!
 
 If you have any questions, I can be contacted at:
 
-jimmosher@yahoo.com
+  jimmosher@yahoo.com
 
+The website for the project is:
+
+  http://ltvt.wikispaces.com/
 
 
 Jim Mosher 
-June 3, 2007
+March 6, 2008

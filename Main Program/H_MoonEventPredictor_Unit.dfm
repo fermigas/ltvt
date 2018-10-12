@@ -3,7 +3,8 @@ object MoonEventPredictor_Form: TMoonEventPredictor_Form
   Top = 37
   Width = 919
   Height = 696
-  Caption = 'Jim'#39's Moon Event Predictor v0.6'
+  ActiveControl = Tabulate_Button
+  Caption = 'Moon Event Predictor v0.7'
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -403,7 +404,7 @@ object MoonEventPredictor_Form: TMoonEventPredictor_Form
     Height = 25
     Hint = 'Clear Memo area'
     Caption = 'Clear'
-    TabOrder = 15
+    TabOrder = 16
     OnClick = ClearMemo_ButtonClick
     OnKeyDown = ClearMemo_ButtonKeyDown
   end
@@ -571,6 +572,17 @@ object MoonEventPredictor_Form: TMoonEventPredictor_Form
     TabOrder = 3
     OnClick = GeocentricObserver_CheckBoxClick
     OnKeyDown = GeocentricObserver_CheckBoxKeyDown
+  end
+  object Abort_Button: TButton
+    Left = 336
+    Top = 627
+    Width = 67
+    Height = 25
+    Hint = 'Click to halt tabulation '
+    Caption = 'Abort'
+    TabOrder = 15
+    OnClick = Abort_ButtonClick
+    OnKeyDown = Abort_ButtonKeyDown
   end
   object FontDialog1: TFontDialog
     Font.Charset = DEFAULT_CHARSET

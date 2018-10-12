@@ -72,6 +72,7 @@ type
     FeaturePos_Label: TLabel;
     Overlay_Image: TImage;
     CopyInfo_Button: TButton;
+    Colongitude_CheckBox: TCheckBox;
     procedure Cancel_ButtonClick(Sender: TObject);
     procedure SelectPhoto_ButtonClick(Sender: TObject);
     procedure ListBox1Click(Sender: TObject);
@@ -122,6 +123,10 @@ type
       Shift: TShiftState);
     procedure ChangeFile_ButtonClick(Sender: TObject);
     procedure CopyInfo_ButtonClick(Sender: TObject);
+    procedure Colongitude_CheckBoxKeyDown(Sender: TObject; var Key: Word;
+      Shift: TShiftState);
+    procedure CopyInfo_ButtonKeyDown(Sender: TObject; var Key: Word;
+      Shift: TShiftState);
   private
     { Private declarations }
   public
@@ -190,7 +195,7 @@ var
   OriginalWidth, OriginalHeight, OriginalXPix, OriginalYPix,
   ThumbnailXPix, ThumbnailYPix, CrossSize : Integer;
   TargetLonDeg, TargetLatDeg, SunAltDeg, SunAzDeg,
-  SunAngle,SunBearing, Ratio, ThumbnailMagnification : Extended;
+  SunAngle,SunBearing, Colongitude, Ratio, ThumbnailMagnification : Extended;
 begin
   SelectedPhotoData := PhotoListData[SortedListIndex[ListBox1.ItemIndex]].PhotoCalData;
   with SelectedPhotoData do
@@ -211,20 +216,33 @@ begin
 
           if FeatureInPhoto(SelectedPhotoData, TargetLonDeg, TargetLatDeg, SunAltDeg, SunAzDeg, OriginalXPix, OriginalYPix) then
             begin
-              ComputeDistanceAndBearing(TargetLonDeg*OneDegree,TargetLatDeg*OneDegree,
-                Terminator_Form.SubSolarPoint.Longitude,Terminator_Form.SubSolarPoint.Latitude,
-                SunAngle,SunBearing);
-              SunAngle := (Pi/2) - SunAngle;
-
               OriginalWidth := IntegerValue(PhotoWidth);
               if OriginalWidth=0 then OriginalWidth := 1;
 
               OriginalHeight := IntegerValue(PhotoHeight);
               if OriginalHeight=0 then OriginalHeight := 1;
 
-              FeaturePos_Label.Caption := Format('In current: Alt= %0.2f, Az= %0.1f;  In selected at: X= %0.2f, Y= %0.2f',
-                [SunAngle/OneDegree, SunBearing/OneDegree,
-                 OriginalXPix/OriginalWidth, OriginalYPix/OriginalHeight]);
+              if Colongitude_CheckBox.Checked then
+                begin
+                  Colongitude := (Pi/2) - Terminator_Form.SubSolarPoint.Longitude;
+                  while Colongitude>TwoPi do Colongitude := Colongitude - TwoPi;
+                  while Colongitude<0 do Colongitude := Colongitude + TwoPi;
+
+                  FeaturePos_Label.Caption := Format('In current: Colon= %0.2f, Lat= %0.2f;   In selected at: X= %0.2f, Y= %0.2f',
+                    [Colongitude/OneDegree, Terminator_Form.SubSolarPoint.Latitude/OneDegree,
+                     OriginalXPix/OriginalWidth, OriginalYPix/OriginalHeight]);
+                end
+              else
+                begin
+                  ComputeDistanceAndBearing(TargetLonDeg*OneDegree,TargetLatDeg*OneDegree,
+                    Terminator_Form.SubSolarPoint.Longitude,Terminator_Form.SubSolarPoint.Latitude,
+                    SunAngle,SunBearing);
+                  SunAngle := (Pi/2) - SunAngle;
+
+                  FeaturePos_Label.Caption := Format('In current: Alt= %0.2f, Az= %0.1f;  In selected at: X= %0.2f, Y= %0.2f',
+                    [SunAngle/OneDegree, SunBearing/OneDegree,
+                     OriginalXPix/OriginalWidth, OriginalYPix/OriginalHeight]);
+                end;
 
               Ratio := Thumbnail_Image.Width/OriginalWidth;
               ThumbnailMagnification := Ratio;
@@ -574,6 +592,7 @@ begin
   LastSelectedPhotoName := '';  // form is not shown unless it contains at least one item
   TargetLon_LabeledNumericEdit.Hide;
   TargetLat_LabeledNumericEdit.Hide;
+//  Colongitude_CheckBox.Hide;
 end;
 
 procedure TCalibratedPhotoLoader_Form.ChangeFile_ButtonClick(Sender: TObject);
@@ -595,7 +614,7 @@ end;
 procedure TCalibratedPhotoLoader_Form.ListPhotos_ButtonClick(Sender: TObject);
 var
   IniFile : TIniFile;
-  i, MaxI, StyleNum, X_pix, Y_pix : Integer;
+  i, MaxI, StyleNum, X_pix, Y_pix, ErrorCode : Integer;
 
   CalFile : TextFile;
   DataLine, DateString, YearString, MonthString, DayString,
@@ -620,7 +639,8 @@ procedure SortSunAltitudes;
     x : Extended;
     y : Integer;
   begin {Sort}
-    i := l; j := r; x := -(PhotoListData[SortedListIndex[(l+r) DIV 2]].SunAlt);   // sort of -SunAngle to get descending list
+    i := l; j := r;
+    x := -(PhotoListData[SortedListIndex[(l+r) DIV 2]].SunAlt);   // sort of -SunAngle to get descending list of altitudes
     repeat
       while -(PhotoListData[SortedListIndex[i]].SunAlt) < x do i := i + 1;
       while x < -(PhotoListData[SortedListIndex[j]].SunAlt) do j := j - 1;
@@ -639,6 +659,34 @@ procedure SortSunAltitudes;
 begin {SortSunAltitudes}
   Sort(Low(SortedListIndex),High(SortedListIndex));
 end;  {SortSunAltitudes}
+
+procedure SortColongitudes;
+  procedure Sort(l, r: Integer);
+  var
+    i, j{, k}: integer;
+    x : Extended;
+    y : Integer;
+  begin {Sort}
+    i := l; j := r;
+    x := (PhotoListData[SortedListIndex[(l+r) DIV 2]].SunAlt);
+    repeat
+      while (PhotoListData[SortedListIndex[i]].SunAlt) < x do i := i + 1;
+      while x < (PhotoListData[SortedListIndex[j]].SunAlt) do j := j - 1;
+      if i <= j then
+      begin
+        y := SortedListIndex[i]; {k := SI[i];}
+        SortedListIndex[i] := SortedListIndex[j]; {SI[i] := SI[j];}
+        SortedListIndex[j] := y;  {SI[j] := k;}
+        i := i + 1; j := j - 1;
+      end;
+    until i > j;
+    if l < j then Sort(l, j);
+    if i < r then Sort(i, r);
+  end; {Sort}
+
+begin {SortColongitudes}
+  Sort(Low(SortedListIndex),High(SortedListIndex));
+end;  {SortColongitudes}
 
 procedure SortFilenames;
   procedure Sort(l, r: Integer);
@@ -670,9 +718,17 @@ end;  {SortFilenames}
 
 begin
   HeaderString := '';
-  if FilterPhotos_CheckBox.Checked then HeaderString := '    Alt.       Azimuth';
+  if FilterPhotos_CheckBox.Checked then
+    begin
+      if Colongitude_CheckBox.Checked then
+        HeaderString := ' Colongitude  Latitude'
+      else
+        HeaderString := '  Altitude     Azimuth';
+    end
+  else if Colongitude_CheckBox.Checked then HeaderString := ' Colongitude  Latitude';
   if ListLibrations_CheckBox.Checked then HeaderString := HeaderString + '       Lon.       Lat.';
-  HeaderString := HeaderString + '        File name';
+  if (not FilterPhotos_CheckBox.Checked) or (Length(HeaderString)<25) then
+    HeaderString := HeaderString + '      File name';
   PhotoListHeaders_Label.Caption := HeaderString;
 
   if FileFound('LTVT user photo calibration data file',Terminator_Form.CalibratedPhotosFilename,TempFilename) then
@@ -764,17 +820,42 @@ begin
                       with PhotoListData[Length(PhotoListData)-1] do
                         begin
                           PhotoCalData := TempPhotoData;
-                          if FilterPhotos_CheckBox.Checked then
+                          if FilterPhotos_CheckBox.Checked or Colongitude_CheckBox.Checked then
                             begin
-                              if PhotoCalData.PhotoObsHt='-999' then
+                              if Colongitude_CheckBox.Checked then
                                 begin
-                                  SunAlt := 90;
-                                  SunAz := 0;
+                                  if PhotoCalData.PhotoObsHt='-999' then
+                                    begin
+                                      SunAlt := -99.99;
+                                      SunAz := 0;
+                                    end
+                                  else
+                                    begin
+                                      Val(TempPhotoData.SubSolLon,SunAlt,ErrorCode);
+                                      if ErrorCode<>0 then
+                                        SunAlt := -99.99
+                                      else
+                                        begin
+                                          SunAlt := 90 - SunAlt;  // colongitude
+                                          while SunAlt>360 do SunAlt := SunAlt - 360;
+                                          while SunAlt<0 do SunAlt := SunAlt + 360;
+                                        end;
+                                      Val(TempPhotoData.SubSolLat,SunAz,ErrorCode);
+                                      if ErrorCode<>0 then SunAz := 0;
+                                    end;
                                 end
                               else
                                 begin
-                                  SunAlt := SunAltDeg;
-                                  SunAz := SunAzDeg;
+                                  if PhotoCalData.PhotoObsHt='-999' then
+                                    begin
+                                      SunAlt := 90;
+                                      SunAz := 0;
+                                    end
+                                  else
+                                    begin
+                                      SunAlt := SunAltDeg;
+                                      SunAz := SunAzDeg;
+                                    end;
                                 end;
                             end
                           else
@@ -795,7 +876,12 @@ begin
       if (Sort_CheckBox.Checked) and (Length(PhotoListData)>1) then
         begin
           if FilterPhotos_CheckBox.Checked then
-            SortSunAltitudes
+            begin
+              if Colongitude_CheckBox.Checked then
+                SortColongitudes
+              else
+                SortSunAltitudes;
+            end
           else
             SortFilenames;
         end;
@@ -804,7 +890,7 @@ begin
 
       for i := 0 to (Length(SortedListIndex)-1) do with PhotoListData[SortedListIndex[i]] do
         begin
-          if FilterPhotos_CheckBox.Checked then
+          if FilterPhotos_CheckBox.Checked or Colongitude_CheckBox.Checked then
             AltAzString := Format('%6.2f %6.1f ',[SunAlt, SunAz])
           else
             AltAzString := '';
@@ -866,12 +952,36 @@ begin
     begin
       TargetLon_LabeledNumericEdit.Show;
       TargetLat_LabeledNumericEdit.Show;
+//      Colongitude_CheckBox.Show;
     end
   else
     begin
       TargetLon_LabeledNumericEdit.Hide;
       TargetLat_LabeledNumericEdit.Hide;
+//      Colongitude_CheckBox.Hide;
     end;
+end;
+
+procedure TCalibratedPhotoLoader_Form.CopyInfo_ButtonClick(
+  Sender: TObject);
+var
+  SavedShortDateFormat, SavedLongTimeFormat : String;
+begin
+  SavedShortDateFormat := ShortDateFormat;
+  SavedLongTimeFormat := LongTimeFormat;
+
+  ShortDateFormat := 'yyyy mmm dd';
+  LongTimeFormat := 'hh:nn';
+
+  with PhotoListData[SortedListIndex[ListBox1.ItemIndex]].PhotoCalData do
+    begin
+      Clipboard.AsText := Format('|| %s || || %s - %s UT ||',
+        [ExtractFileName(PhotoFilename), DateToStr(PhotoDate), TimeToStr(PhotoTime)]);
+    end;
+
+  ShortDateFormat := SavedShortDateFormat;
+  LongTimeFormat := SavedLongTimeFormat;
+
 end;
 
 procedure TCalibratedPhotoLoader_Form.ListBox1KeyDown(Sender: TObject;
@@ -1003,26 +1113,16 @@ begin
   Terminator_Form.DisplayF1Help(Key,Shift,'CalibratedPhotoSelection_Form.htm');
 end;
 
-procedure TCalibratedPhotoLoader_Form.CopyInfo_ButtonClick(
-  Sender: TObject);
-var
-  SavedShortDateFormat, SavedLongTimeFormat : String;
+procedure TCalibratedPhotoLoader_Form.Colongitude_CheckBoxKeyDown(
+  Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  SavedShortDateFormat := ShortDateFormat;
-  SavedLongTimeFormat := LongTimeFormat;
+  Terminator_Form.DisplayF1Help(Key,Shift,'CalibratedPhotoSelection_Form.htm');
+end;
 
-  ShortDateFormat := 'yyyy mmm dd';
-  LongTimeFormat := 'hh:nn';
-
-  with PhotoListData[SortedListIndex[ListBox1.ItemIndex]].PhotoCalData do
-    begin
-      Clipboard.AsText := Format('|| %s || || %s - %s UT ||',
-        [ExtractFileName(PhotoFilename), DateToStr(PhotoDate), TimeToStr(PhotoTime)]);
-    end;
-
-  ShortDateFormat := SavedShortDateFormat;
-  LongTimeFormat := SavedLongTimeFormat;
-
+procedure TCalibratedPhotoLoader_Form.CopyInfo_ButtonKeyDown(
+  Sender: TObject; var Key: Word; Shift: TShiftState);
+begin
+  Terminator_Form.DisplayF1Help(Key,Shift,'CalibratedPhotoSelection_Form.htm');
 end;
 
 end.

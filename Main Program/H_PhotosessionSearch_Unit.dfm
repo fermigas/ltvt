@@ -3,7 +3,8 @@ object PhotosessionSearch_Form: TPhotosessionSearch_Form
   Top = 33
   Width = 904
   Height = 692
-  Caption = 'Jim'#39's PhotoSessions Searcher v0.5'
+  ActiveControl = Tabulate_Button
+  Caption = 'LTVT PhotoSessions Search v0.6'
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -367,7 +368,7 @@ object PhotosessionSearch_Form: TPhotosessionSearch_Form
     Height = 25
     Hint = 'Clear Memo area'
     Caption = 'Clear'
-    TabOrder = 13
+    TabOrder = 14
     OnClick = ClearMemo_ButtonClick
     OnKeyDown = ClearMemo_ButtonKeyDown
   end
@@ -509,6 +510,17 @@ object PhotosessionSearch_Form: TPhotosessionSearch_Form
     TabOrder = 10
     OnClick = ChangeFile_ButtonClick
     OnKeyDown = ChangeFile_ButtonKeyDown
+  end
+  object Abort_Button: TButton
+    Left = 336
+    Top = 627
+    Width = 67
+    Height = 25
+    Hint = 'Click to halt tabulation '
+    Caption = 'Abort'
+    TabOrder = 13
+    OnClick = Abort_ButtonClick
+    OnKeyDown = Abort_ButtonKeyDown
   end
   object FontDialog1: TFontDialog
     Font.Charset = DEFAULT_CHARSET
