@@ -66,6 +66,8 @@ type
     GeocentricObserver_CheckBox: TCheckBox;
     Label2: TLabel;
     Abort_Button: TButton;
+    ObservatoryList_ComboBox: TComboBox;
+    AddLocation_Button: TButton;
     procedure CalculateCircumstances_ButtonClick(Sender: TObject);
     procedure ClearMemo_ButtonClick(Sender: TObject);
     procedure Tabulate_ButtonClick(Sender: TObject);
@@ -130,10 +132,25 @@ type
     procedure Abort_ButtonKeyDown(Sender: TObject; var Key: Word;
       Shift: TShiftState);
     procedure Abort_ButtonClick(Sender: TObject);
+    procedure FormDestroy(Sender: TObject);
+    procedure ObservatoryList_ComboBoxSelect(Sender: TObject);
+    procedure ObserverLongitude_LabeledNumericEditNumericEditChange(
+      Sender: TObject);
+    procedure ObserverLatitude_LabeledNumericEditNumericEditChange(
+      Sender: TObject);
+    procedure ObserverElevation_LabeledNumericEditNumericEditChange(
+      Sender: TObject);
+    procedure ObservatoryList_ComboBoxKeyDown(Sender: TObject;
+      var Key: Word; Shift: TShiftState);
+    procedure AddLocation_ButtonKeyDown(Sender: TObject; var Key: Word;
+      Shift: TShiftState);
+    procedure AddLocation_ButtonClick(Sender: TObject);
   private
     { Private declarations }
   public
     { Public declarations }
+    ObsNameList, ObsLatList, ObsLonList, ObsElevList : TStrings;
+
     AbortTabulation : Boolean;
 
     MEP_JPL_Filename, MEP_JPL_Path : string;
@@ -153,6 +170,8 @@ type
 
     procedure CalculateSolarColongitude(const MJD_for_CL :extended);  {UT MJD}
 
+    procedure RefreshSelection;
+
   end;
 
 var
@@ -160,9 +179,12 @@ var
 
 implementation
 
-uses NumericEdit, LTVT_Unit, LibrationTabulator_Unit, H_Terminator_SetYear_Unit;
+uses Win_Ops, NumericEdit, LTVT_Unit, LibrationTabulator_Unit, H_Terminator_SetYear_Unit;
 
 {$R *.dfm}
+
+var
+  SelectingItem : Boolean;   // flag to avoid refreshing Combo-box selection during a new selection
 
 procedure TMoonEventPredictor_Form.FormCreate(Sender: TObject);
 begin
@@ -186,16 +208,166 @@ begin
   except
   end;
 
+  ObsNameList := TStringList.Create;
+  ObsLatList := TStringList.Create;
+  ObsLonList := TStringList.Create;
+  ObsElevList := TStringList.Create;
+
+  SelectingItem := False;
+end;
+
+procedure TMoonEventPredictor_Form.FormDestroy(Sender: TObject);
+begin
+  ObsNameList.Free;
+  ObsLatList.Free;;
+  ObsLonList.Free;;
+  ObsElevList.Free;;
 end;
 
 procedure TMoonEventPredictor_Form.FormShow(Sender: TObject);
+var
+  ObsListFile : TextFile;
+  DataLine : String;
 begin
 //  ShortDateFormat := 'yyyy/mm/dd';
   LongTimeFormat := 'hh:nn:ss';
   ThousandSeparator := #0;
   DecimalSeparator := '.';
 
+  ObsNameList.Clear;
+  ObsLatList.Clear;
+  ObsLonList.Clear;
+  ObsElevList.Clear;
+  if FileExists(Terminator_Form.ObservatoryListFilename) then
+    begin
+      AssignFile(ObsListFile,Terminator_Form.ObservatoryListFilename);
+      Reset(ObsListFile);
+      while (not EOF(ObsListFile)) {and (Length(FeatureList)<100)} do
+        begin
+          Readln(ObsListFile,DataLine);
+          DataLine := Trim(DataLine);
+          if (DataLine<>'') and (Substring(DataLine,1,1)<>'*') then
+            begin
+              ObsLonList.Add(LeadingElement(DataLine,','));
+              ObsLatList.Add(LeadingElement(DataLine,','));
+              ObsElevList.Add(LeadingElement(DataLine,','));
+              ObsNameList.Add(Trim(DataLine));
+            end;
+        end;
+      CloseFile(ObsListFile);
+    end;
+
+  ObservatoryList_ComboBox.Items.Clear;
+  ObservatoryList_ComboBox.Items.AddStrings(ObsNameList);
+  RefreshSelection;
+
   ObserverLocation_GroupBox.Visible := not GeocentricObserver_CheckBox.Checked;
+end;
+
+procedure TMoonEventPredictor_Form.RefreshSelection;
+var
+  i : Integer;
+begin
+  if ObservatoryList_ComboBox.Visible and not SelectingItem then
+    begin
+      i := 0;
+      while (i<ObsNameList.Count) and
+        (    (ObserverLongitude_LabeledNumericEdit.NumericEdit.Text<>ObsLonList[i])
+          or (ObserverLatitude_LabeledNumericEdit.NumericEdit.Text<>ObsLatList[i])
+          or (ObserverElevation_LabeledNumericEdit.NumericEdit.Text<>ObsElevList[i])
+        ) do Inc(i);
+
+      if i<ObservatoryList_ComboBox.Items.Count then
+        ObservatoryList_ComboBox.ItemIndex := i
+      else
+        begin
+          if FileExists(Terminator_Form.ObservatoryListFilename) then
+            begin
+              ObservatoryList_ComboBox.ItemIndex := -1;
+              ObservatoryList_ComboBox.Text := Terminator_Form.ObservatoryComboBoxDefaultText;
+            end
+          else
+            begin
+              ObservatoryList_ComboBox.ItemIndex := -1;
+              ObservatoryList_ComboBox.Text := Terminator_Form.ObservatoryNoFileText;
+            end
+        end;
+    end;
+end;
+
+procedure TMoonEventPredictor_Form.ObservatoryList_ComboBoxSelect(Sender: TObject);
+begin
+  with ObservatoryList_ComboBox do if ItemIndex>=0 then
+    begin
+      SelectingItem := True;
+      ObserverLongitude_LabeledNumericEdit.NumericEdit.Text := ObsLonList[ItemIndex];
+      ObserverLatitude_LabeledNumericEdit.NumericEdit.Text := ObsLatList[ItemIndex];
+      ObserverElevation_LabeledNumericEdit.NumericEdit.Text := ObsElevList[ItemIndex];
+      SelectingItem := False;
+    end
+  else
+    ShowMessage('Please try again:  you must click on an item in the list');
+end;
+
+procedure TMoonEventPredictor_Form.ObserverLongitude_LabeledNumericEditNumericEditChange(Sender: TObject);
+begin
+  RefreshSelection;
+end;
+
+procedure TMoonEventPredictor_Form.ObserverLatitude_LabeledNumericEditNumericEditChange(Sender: TObject);
+begin
+  RefreshSelection;
+end;
+
+procedure TMoonEventPredictor_Form.ObserverElevation_LabeledNumericEditNumericEditChange(Sender: TObject);
+begin
+  RefreshSelection;
+end;
+
+procedure TMoonEventPredictor_Form.AddLocation_ButtonClick(Sender: TObject);
+var
+  ObsListFile : TextFile;
+begin
+  if (ObservatoryList_ComboBox.Text=Terminator_Form.ObservatoryNoFileText) or
+     (ObservatoryList_ComboBox.Text=Terminator_Form.ObservatoryComboBoxDefaultText) then
+    begin
+      ShowMessage('Please enter a name for the site in the drop-down box');
+      Exit;
+    end;
+
+  AssignFile(ObsListFile,Terminator_Form.ObservatoryListFilename);
+
+  if FileExists(Terminator_Form.ObservatoryListFilename) then
+    begin
+      Append(ObsListFile);
+    end
+  else
+    begin
+      Rewrite(ObsListFile);
+      Writeln(ObsListFile,'* List of observatory locations for LTVT');
+      Writeln(ObsListFile,'*   Important:  use ''.'' (period) for decimal point');
+      Writeln(ObsListFile,'*   (blank lines and lines with ''*'' in first column are ignored)');
+      Writeln(ObsListFile,'*   The observatory name can include any characters, including commas');
+      Writeln(ObsListFile,'');
+      Writeln(ObsListFile,'* List items in this format (using commas to separate items):');
+      Writeln(ObsListFile,'* ObservatoryEastLongitude, ObservatoryNorthLatitude, ObservatoryElevation_meters, ObservatoryName');
+      Writeln(ObsListFile,'');
+    end;
+
+  Writeln(ObsListFile,
+    ObserverLongitude_LabeledNumericEdit.NumericEdit.Text+', '+
+    ObserverLatitude_LabeledNumericEdit.NumericEdit.Text+', '+
+    ObserverElevation_LabeledNumericEdit.NumericEdit.Text+', '+
+    ObservatoryList_ComboBox.Text);
+  CloseFile(ObsListFile);
+
+  ObsLonList.Add(ObserverLongitude_LabeledNumericEdit.NumericEdit.Text);
+  ObsLatList.Add(ObserverLatitude_LabeledNumericEdit.NumericEdit.Text);
+  ObsElevList.Add(ObserverElevation_LabeledNumericEdit.NumericEdit.Text);
+  ObsNameList.Add(Trim(ObservatoryList_ComboBox.Text));
+  ObservatoryList_ComboBox.Items.Add(Trim(ObservatoryList_ComboBox.Text));
+
+  ShowMessage('Location added to '+Terminator_Form.ObservatoryListFilename);
 end;
 
 function TMoonEventPredictor_Form.EW_Tag(const Longitude : extended): string;
@@ -384,20 +556,35 @@ procedure RefineSunAngleDate;
 procedure PrintHeader;
   begin
     if GeocentricSubEarthMode then
-      Memo1.Lines.Add('Librations and Moon/Sun positions calculated for a geocentric observer')
-    else
-      Memo1.Lines.Add(Format('Librations and Moon/Sun positions calculated for observer at %0.4f %s  %0.4f %s  %0.0f m',
-        [Abs(-ObserverLongitude),EW_Tag(-ObserverLongitude),Abs(ObserverLatitude),NS_Tag(ObserverLatitude),ObserverElevation]));
-    Memo1.Lines.Add('');
-    if ColongitudeMode_RadioButton.Checked then
       begin
-        Memo1.Lines.Add('                          Terminators      Sub-Solar Point     Librations      Center of Moon      Center of Sun');
-        Memo1.Lines.Add('   Date      Time UT   Morning   Evening    Colong    Lat.    Long.   Lat.      Alt.     Azi.       Alt.     Azi');
+        Memo1.Lines.Add('Librations, elongation and percent illumination calculated for a geocentric observer');
+        Memo1.Lines.Add('');
+        if ColongitudeMode_RadioButton.Checked then
+          begin
+            Memo1.Lines.Add('                          Terminators      Sub-Solar Point     Librations                Phase   ');
+            Memo1.Lines.Add('   Date      Time UT   Morning   Evening    Colong    Lat.    Long.   Lat.     Elong.   %Illum.    Age');
+          end
+        else
+          begin
+            Memo1.Lines.Add('                           Sun Angle       Sub-Solar Point     Librations                Phase   ');
+            Memo1.Lines.Add('   Date      Time UT   Altitude  Azimuth    Colong    Lat.    Long.   Lat.     Elong.   %Illum.    Age');
+          end;
       end
     else
       begin
-        Memo1.Lines.Add('                           Sun Angle       Sub-Solar Point     Librations      Center of Moon      Center of Sun');
-        Memo1.Lines.Add('   Date      Time UT   Altitude  Azimuth    Colong    Lat.    Long.   Lat.      Alt.     Azi.       Alt.     Azi');
+        Memo1.Lines.Add(Format('Librations and Moon/Sun positions calculated for observer at %0.4f %s  %0.4f %s  %0.0f m',
+          [Abs(-ObserverLongitude),EW_Tag(-ObserverLongitude),Abs(ObserverLatitude),NS_Tag(ObserverLatitude),ObserverElevation]));
+        Memo1.Lines.Add('');
+        if ColongitudeMode_RadioButton.Checked then
+          begin
+            Memo1.Lines.Add('                          Terminators      Sub-Solar Point     Librations      Center of Moon      Center of Sun');
+            Memo1.Lines.Add('   Date      Time UT   Morning   Evening    Colong    Lat.    Long.   Lat.      Alt.     Azi.       Alt.     Azi');
+          end
+        else
+          begin
+            Memo1.Lines.Add('                           Sun Angle       Sub-Solar Point     Librations      Center of Moon      Center of Sun');
+            Memo1.Lines.Add('   Date      Time UT   Altitude  Azimuth    Colong    Lat.    Long.   Lat.      Alt.     Azi.       Alt.     Azi');
+          end;
       end;
   end;
 
@@ -406,8 +593,10 @@ procedure PrintData;
     SunPosition, MoonPosition : PositionResultRecord;
     WithinToleranceCode, MoonUpSunDownCode, TargetVisibleCode : String;
     CraterLat, CraterLon, SunLat, SunLon, AngleToSun, SolarElevation, SolarAzimuth,
-    TargetDistance, TargetAzimuth : Extended;
+    TargetDistance, TargetAzimuth, AzimuthDifferenceDegrees : Extended;
     CL, MT, ET : extended;
+    SunMoonAngle, SunMoonBearing,
+    Lon1, Lat1, Lon2, Lat2, CosTheta : extended;
     PrintDateTime : TDateTime;
     SubEarthPoint : TPolarCoordinates;
 
@@ -435,14 +624,25 @@ procedure PrintData;
 
     if (MoonPosition.TopocentricAlt<0) and not GeocentricSubEarthMode then
       Memo1.SelAttributes.Color := clLtGray
-{
-    else if SunPosition.TopocentricAlt>0 then
-      Memo1.SelAttributes.Color := clDkGray //$00009090
-    else if WithinToleranceCode='+' then
-      Memo1.SelAttributes.Color := clRed //$00009090
-}
     else
       Memo1.SelAttributes.Color := clBlack;
+
+    if GeocentricSubEarthMode then
+      begin
+        Lon1 := SubEarthPoint.Longitude;
+        Lat1 := SubEarthPoint.Latitude;
+        Lon2 := SubSolarPoint.Longitude;
+        Lat2 := SubSolarPoint.Latitude;
+
+        CosTheta := Sin(Lat1)*Sin(Lat2) + Cos(Lat1)*Cos(Lat2)*Cos(Lon2 - Lon1);
+
+        ComputeDistanceAndBearing(MoonPosition.Azimuth*OneDegree,MoonPosition.TopocentricAlt*OneDegree,SunPosition.Azimuth*OneDegree,SunPosition.TopocentricAlt*OneDegree,SunMoonAngle,SunMoonBearing);
+      end
+    else
+      begin
+        CosTheta := 0;   // compiler is insisting this might not be initialized
+        SunMoonAngle := 0;
+      end;
 
     if SunAngleMode_RadioButton.Checked then
       begin
@@ -453,7 +653,11 @@ procedure PrintData;
         ComputeDistanceAndBearing(CraterLon, CraterLat, SunLon, SunLat, AngleToSun, SolarAzimuth);
         SolarElevation := PiByTwo - AngleToSun;
 
-        if Abs(RadToDeg(SolarAzimuth-TargetSolarAzimuth))<AllowableAzimuthErrorDegrees then
+        AzimuthDifferenceDegrees := RadToDeg(SolarAzimuth-TargetSolarAzimuth);
+        while AzimuthDifferenceDegrees>180 do AzimuthDifferenceDegrees := AzimuthDifferenceDegrees - 360;
+        while AzimuthDifferenceDegrees<-180 do AzimuthDifferenceDegrees := AzimuthDifferenceDegrees + 360;
+
+        if Abs(AzimuthDifferenceDegrees)<AllowableAzimuthErrorDegrees then
           WithinToleranceCode := WithinToleranceSymbol
         else
           WithinToleranceCode := ' ';
@@ -467,18 +671,26 @@ procedure PrintData;
 
         if (WithinToleranceCode=WithinToleranceSymbol) or not FilterOutput_CheckBox.Checked then
           begin
-            Memo1.Lines.Add(Format('%10s%10s%10.4f%10.4f%10.3f%8.3f%8.3f%8.3f%10.3f%10.3f%10.3f%10.3f  %1s%1s%1s',
-              [DateToStr(PrintDateTime),TimeToStr(PrintDateTime),RadToDeg(SolarElevation),
-              RadToDeg(SolarAzimuth),CL,RadToDeg(SubSolarPoint.Latitude),
-              RadToDeg(SubEarthPoint.Longitude),RadToDeg(SubEarthPoint.Latitude),
-              MoonPosition.TopocentricAlt,MoonPosition.Azimuth,
-              SunPosition.TopocentricAlt,SunPosition.Azimuth,
-              TargetVisibleCode,WithinToleranceCode,MoonUpSunDownCode]));
+            if GeocentricSubEarthMode then
+              Memo1.Lines.Add(Format('%10s%10s%10.4f%10.4f%10.3f%8.3f%8.3f%8.3f%11.3f%9.3f%9.3f  %1s%1s%1s',
+                [DateToStr(PrintDateTime),TimeToStr(PrintDateTime),RadToDeg(SolarElevation),
+                RadToDeg(SolarAzimuth),CL,RadToDeg(SubSolarPoint.Latitude),
+                RadToDeg(SubEarthPoint.Longitude),RadToDeg(SubEarthPoint.Latitude),
+                SunMoonAngle/OneDegree, 50*(1 + CosTheta), LunarAge(MJD),
+                TargetVisibleCode,WithinToleranceCode,MoonUpSunDownCode]))
+            else
+              Memo1.Lines.Add(Format('%10s%10s%10.4f%10.4f%10.3f%8.3f%8.3f%8.3f%10.3f%10.3f%10.3f%10.3f  %1s%1s%1s',
+                [DateToStr(PrintDateTime),TimeToStr(PrintDateTime),RadToDeg(SolarElevation),
+                RadToDeg(SolarAzimuth),CL,RadToDeg(SubSolarPoint.Latitude),
+                RadToDeg(SubEarthPoint.Longitude),RadToDeg(SubEarthPoint.Latitude),
+                MoonPosition.TopocentricAlt,MoonPosition.Azimuth,
+                SunPosition.TopocentricAlt,SunPosition.Azimuth,
+                TargetVisibleCode,WithinToleranceCode,MoonUpSunDownCode]));
 
             Memo1.Refresh;
           end;
       end
-    else
+    else  // colongitude mode
       begin
         if Abs(RadToDeg(SubSolarPoint.Latitude-TargetSolarLat))<AllowableLatitudeErrorDegrees then
           WithinToleranceCode := WithinToleranceSymbol
@@ -487,19 +699,28 @@ procedure PrintData;
 
         if (WithinToleranceCode=WithinToleranceSymbol) or not FilterOutput_CheckBox.Checked then
           begin
-            Memo1.Lines.Add(Format('%10s%10s%9.3f%1s%9.3f%1s%10.3f%8.3f%8.3f%8.3f%10.3f%10.3f%10.3f%10.3f  %1s%1s',
-              [DateToStr(PrintDateTime),TimeToStr(PrintDateTime),Abs(MT),EW_Tag(MT),Abs(ET),EW_Tag(ET),
-              CL,RadToDeg(SubSolarPoint.Latitude),
-              RadToDeg(SubEarthPoint.Longitude),RadToDeg(SubEarthPoint.Latitude),
-              MoonPosition.TopocentricAlt,MoonPosition.Azimuth,
-              SunPosition.TopocentricAlt,SunPosition.Azimuth,
-              WithinToleranceCode,MoonUpSunDownCode]));
+            if GeocentricSubEarthMode then
+              Memo1.Lines.Add(Format('%10s%10s%9.3f%1s%9.3f%1s%10.3f%8.3f%8.3f%8.3f%11.3f%9.3f%9.3f  %1s%1s',
+                [DateToStr(PrintDateTime),TimeToStr(PrintDateTime),Abs(MT),EW_Tag(MT),Abs(ET),EW_Tag(ET),
+                CL,RadToDeg(SubSolarPoint.Latitude),
+                RadToDeg(SubEarthPoint.Longitude),RadToDeg(SubEarthPoint.Latitude),
+                SunMoonAngle/OneDegree, 50*(1 + CosTheta), LunarAge(MJD),
+                WithinToleranceCode,MoonUpSunDownCode]))
+            else
+              Memo1.Lines.Add(Format('%10s%10s%9.3f%1s%9.3f%1s%10.3f%8.3f%8.3f%8.3f%10.3f%10.3f%10.3f%10.3f  %1s%1s',
+                [DateToStr(PrintDateTime),TimeToStr(PrintDateTime),Abs(MT),EW_Tag(MT),Abs(ET),EW_Tag(ET),
+                CL,RadToDeg(SubSolarPoint.Latitude),
+                RadToDeg(SubEarthPoint.Longitude),RadToDeg(SubEarthPoint.Latitude),
+                MoonPosition.TopocentricAlt,MoonPosition.Azimuth,
+                SunPosition.TopocentricAlt,SunPosition.Azimuth,
+                WithinToleranceCode,MoonUpSunDownCode]));
 
             Memo1.Refresh;
           end;
       end;
 
     Inc(LinesPrinted);
+    Memo1.SelAttributes.Color := clBlack; // restore default
 
   end;  {PrintData}
 
@@ -524,6 +745,7 @@ begin {Tabulate_ButtonClick}
   if not JPL_File_Valid(StartMJD) then exit;
 
   LinesPrinted := 0;
+  AbortTabulation := False;
 
   if ColongitudeMode_RadioButton.Checked then
     begin
@@ -827,6 +1049,18 @@ end;
 
 procedure TMoonEventPredictor_Form.Abort_ButtonKeyDown(Sender: TObject;
   var Key: Word; Shift: TShiftState);
+begin
+  Terminator_Form.DisplayF1Help(Key,Shift,'MoonEventPredictorForm.htm');
+end;
+
+procedure TMoonEventPredictor_Form.ObservatoryList_ComboBoxKeyDown(
+  Sender: TObject; var Key: Word; Shift: TShiftState);
+begin
+  Terminator_Form.DisplayF1Help(Key,Shift,'MoonEventPredictorForm.htm');
+end;
+
+procedure TMoonEventPredictor_Form.AddLocation_ButtonKeyDown(
+  Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
   Terminator_Form.DisplayF1Help(Key,Shift,'MoonEventPredictorForm.htm');
 end;

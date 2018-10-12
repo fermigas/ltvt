@@ -8,6 +8,7 @@ positions.
 {This version stripped down to routines needed for Henrik Bondo H_MoonEventPredictor_Unit. 6/27/06}
 
 {9/13/06 : added ComputeDistanceAndBearing function}
+{3/23/06 : add LunarAge function}
 
 {$J+} {use assignable constants}
 {$H-} {use short strings by default}
@@ -111,10 +112,16 @@ function SubLunarPointOnEarth(const UTC_MJD: extended) : TPolarCoordinates;
 
 function SubSolarPointOnEarth(const UTC_MJD: extended) : TPolarCoordinates;
 
+function LunarAge(const UTC_MJD: extended) : Extended;
+{returns number of days since most recent geocentric New Moon}
+
 implementation
 
 uses Zeroes, TimLib, Trig_fns,
      Win_Ops, SysUtils, H_ClockError, H_NOVAS, H_JPL_Ephemeris, Dialogs;
+
+var
+  EclipticCoordinateSystem : TCoordinateSystem;
 
 procedure ComputeMeanEarthSystemOffsetMatix;
   var
@@ -603,8 +610,71 @@ function SubLunarPointOnEarth(const UTC_MJD: extended) : TPolarCoordinates;
     Result := TerrestrialCoordinates(RayDirection);
   end;  {SubLunarPointOnEarth}
 
+function EclipticCoordinates(const ICRF_Vector: TVector) : TPolarCoordinates;
+  var
+    EclipticVector : TVector;
+  begin {EclipticCoordinates}
+    with EclipticCoordinateSystem do
+      begin
+        EclipticVector[X] := DotProduct(ICRF_Vector,UnitX);
+        EclipticVector[Y] := DotProduct(ICRF_Vector,UnitY);
+        EclipticVector[Z] := DotProduct(ICRF_Vector,UnitZ);
+      end;
+
+    Result.Radius := VectorMagnitude(EclipticVector);
+    Result.Latitude := ASin(EclipticVector[Z]/Result.Radius);
+    Result.Longitude := ATan2(EclipticVector[Y],EclipticVector[X]);
+  {Note: selenographic longitudes are usually expressed in a 0..360 degree system}
+//    if Result.Longitude<0 then Result.Longitude := Result.Longitude + TwoPi;
+  end;  {EclipticCoordinates}
+
+{$F+}function EclipticLonDifference(const TDT : extended): extended;{$F-}
+  var
+    Moon_Data, Sun_Data : TEphemerisOutput;
+    LT, MoonAngle, SunAngle : Extended;
+  begin
+    ReadEphemeris(TDT,Moon,Earth,PositionsOnly,AU_day,Moon_Data);
+    LT := (OneAU*VectorMagnitude(Moon_Data.R)/c)/OneDay;
+    ReadEphemeris(TDT-LT,Moon,Earth,PositionsOnly,AU_day,Moon_Data);
+    MoonAngle := EclipticCoordinates(Moon_Data.R).Longitude;
+
+    ReadEphemeris(TDT,Sun,Earth,PositionsOnly,AU_day,Sun_Data);
+    LT := (OneAU*VectorMagnitude(Sun_Data.R)/c)/OneDay;
+    ReadEphemeris(TDT-LT,Sun,Earth,PositionsOnly,AU_day,Sun_Data);
+    SunAngle := EclipticCoordinates(Sun_Data.R).Longitude;
+
+    Result := MoonAngle - SunAngle;
+    while Result>Pi  do Result := Result - TwoPi;
+    while Result<-Pi do Result := Result + TwoPi;
+
+  end;
+
+function LunarAge(const UTC_MJD: extended) : Extended;
+  var
+    T1, CurrentDifference, T0 : Extended;
+  begin  {LunarAge}
+    T1 :=  MJDOffset + UTC_MJD + TDT_Offset(UTC_MJD)*OneSecond/OneDay; // current ephemeris time
+    CurrentDifference := EclipticLonDifference(T1);
+    while CurrentDifference<0 do CurrentDifference := CurrentDifference + TwoPi;
+
+    T0 := T1 - 29.5*CurrentDifference/TwoPi;  // approx. ephemeris time of most recent New Moon
+
+    FindZero(EclipticLonDifference,T0 - 1/24, T0 + 1/24, (1e-5)/24, T0); // exact ephemeris time of most recent New Moon
+
+    Result := T1 - T0;
+    
+  end;   {LunarAge}
+
 initialization
 
 ComputeMeanEarthSystemOffsetMatix;
+
+with EclipticCoordinateSystem do
+  begin
+    AssignToVector(UnitX,1,0,0);
+    AssignToVector(UnitY,0,1,0);
+    AssignToVector(UnitZ,0,0,1);
+  end;
+RotateCoordinateSystem(EclipticCoordinateSystem,0,23.43928081*OneDegree,0);
 
 END.

@@ -938,7 +938,43 @@ v0.19
        filtered or not.  Sort by: (1) colongitude if that checkbox is checked;
        (2) solar altitude if list is filtered AND colongitude not checked;
        (3) otherwise, by filename.
-                                                                    20 Mar 2009}
+
+  v0.19.10
+    1. In Moon Event Predictor, correct inadvertent error introduced when Abort
+       button was added.  This forced user to exit and restart program to
+       erase the Abort request.
+    2. Also in Moon Event Predictor, when Geocentric Observer box is checked,
+       replace display of Moon and Sun altitude and azimuth (meaningless for
+       such an observer) with traditional estimates of Moon's phase at time of
+       event: elongation, percent illumination and "age" (days since last New
+       Moon).
+    3. Finally, when the Moon Event Predictor button was clicked, the Sun angle
+       and azimuth at the image center point were recalculated based on the date
+       and time displayed in the main window .  They are now determined based on
+       the sub-solar point displayed in the input boxes in the upper right of
+       the main window. These may differ from those corresponding to the currently
+       displayed date and time since they can be altered by manual entry or by
+       loading a calibrated photo.  As before, the current date and time is
+       copied from the main window, which makes it possible (if desired) to
+       update the search data by clicking the "Calculate" button in the Moon Event
+       Predictor form.
+    4. In the Moon Event Predictor, Libration Tabulator and PhotoSessions Search
+       forms, upgrade the user location selection box to include the drop-down list
+       of observatory locations
+    5. Add an "Add" button to each user location selection box.  This will append
+       the current location to the current list on disk (if one exists) or create
+       one with that location (if it does not) using the current text in the drop-
+       down box as the site name. The drop-down box is now present at all times,
+       whether or not a list currently exists on disk.
+    6. Correct longstanding potential error in Moon Event Predictor : when
+       filtering on sun azimuths, similar values near due north, such as 1 deg
+       and 359 deg were being suppressed because of the large absolute difference.
+       Before testing, the difference between the actual and target values is now
+       reduced to an angle in the range +/-180, with a maximum possible absolute
+       error of 180 deg. Also, make sure print color is returned to black after
+       using the gray font.
+ 
+                                                                    24 Mar 2009}
 
 
 interface
@@ -1212,7 +1248,8 @@ type
     CraterFilename, JPL_Filename, JPL_FilePath, LoResFilename,
     HiResFilename, ClementineFilename, NormalPhotoSessionsFilename,
     CalibratedPhotosFilename, ObservatoryListFilename,
-    Tex3MinLonText, Tex3MaxLonText, Tex3MinLatText, Tex3MaxLatText  : string;
+    Tex3MinLonText, Tex3MaxLonText, Tex3MinLatText, Tex3MaxLatText,
+    ObservatoryComboBoxDefaultText, ObservatoryNoFileText  : string;
 
     p1Text, p2Text, tauText : string; // arc-sec Mean Earth System offsets -- read from ini file
     ObserverLongitudeText, ObserverLatitudeText, ObserverElevationText : string; // altered via SelectObserverLocation_Form
@@ -1542,7 +1579,7 @@ uses FileCtrl, H_Terminator_About_Unit, H_Terminator_Goto_Unit, H_Terminator_Set
 {$R *.dfm}
 
 const
-  ProgramVersion = '0.19.9';
+  ProgramVersion = '0.19.10';
 
 // note: the following constants specify (in degrees) that texture files span
 //   the full lunar globe.  They should not be changed.
@@ -1767,6 +1804,8 @@ begin {TTerminator_Form.FormCreate}
   BasePath := ExtractFilePath(Application.ExeName);
 
   ProposedFilename := 'LTVT_Image.bmp';
+  ObservatoryComboBoxDefaultText := '-- to copy information from disk file, use drop-down list --';
+  ObservatoryNoFileText := 'To create a list on disk enter a name here and click Add';
 
   IniFileName := BasePath+'LTVT.ini'; //Note: if full path is not specified, file is assumed in C:\WINDOWS
   IniFile := TIniFile.Create(IniFileName);
@@ -3046,6 +3085,8 @@ begin {EstimateData_ButtonClick}
   CalculatePosition(UT_MJD,Sun, BlankStarDataRecord,SunPosition);
 
 //  with MoonPosition do ShowMessage(Format('MJD=%0.2f: DUT=%0.3f;  EUT=%0.3f',[UT_MJD,DUT,EUT]));
+
+//  ShowMessage(Format('Lunar age = %0.3f days',[LunarAge(UT_MJD)]));
 
   if GeocentricSubEarthMode then
     begin
@@ -5083,7 +5124,7 @@ function TTerminator_Form.FullFilename(const ShortName : string): string;
 
 procedure TTerminator_Form.Predict_ButtonClick(Sender: TObject);
 var
-  ImageCenterLon, ImageCenterLat : extended;
+  ImageCenterLon, ImageCenterLat, AngleToSun, SunAzimuth : extended;
 begin
   if not EphemerisFileLoaded then
     begin
@@ -5125,9 +5166,16 @@ begin
           begin
             Crater_Lon_LabeledNumericEdit.NumericEdit.Text := Format('%0.2f',[RadToDeg(ImageCenterLon)]);
             Crater_Lat_LabeledNumericEdit.NumericEdit.Text := Format('%0.2f',[RadToDeg(ImageCenterLat)]);
+            ComputeDistanceAndBearing(ImageCenterLon, ImageCenterLat,
+              SubSol_Lon_LabeledNumericEdit.NumericEdit.ExtendedValue*OneDegree,
+              SubSol_Lat_LabeledNumericEdit.NumericEdit.ExtendedValue*OneDegree,
+              AngleToSun, SunAzimuth);
+
+            SunAngle_LabeledNumericEdit.NumericEdit.Text := Format('%0.4f',[RadToDeg(PiByTwo - AngleToSun)]);
+            SunAzimuth_LabeledNumericEdit.NumericEdit.Text := Format('%0.4f',[RadToDeg(SunAzimuth)]);
           end;
 
-        CalculateCircumstances_Button.Click;
+//        CalculateCircumstances_Button.Click;
 
         MoonEventPredictor_Form.Show;
       end;

@@ -1,10 +1,10 @@
 object PhotosessionSearch_Form: TPhotosessionSearch_Form
   Left = 29
   Top = 33
-  Width = 904
-  Height = 692
+  Width = 962
+  Height = 696
   ActiveControl = Tabulate_Button
-  Caption = 'LTVT PhotoSessions Search v0.6'
+  Caption = 'LTVT PhotoSessions Search v0.8'
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -14,6 +14,7 @@ object PhotosessionSearch_Form: TPhotosessionSearch_Form
   OldCreateOrder = False
   ShowHint = True
   OnCreate = FormCreate
+  OnDestroy = FormDestroy
   OnShow = FormShow
   PixelsPerInch = 96
   TextHeight = 13
@@ -397,10 +398,10 @@ object PhotosessionSearch_Form: TPhotosessionSearch_Form
     OnKeyDown = Font_ButtonKeyDown
   end
   object ObserverLocation_GroupBox: TGroupBox
-    Left = 680
-    Top = 48
-    Width = 185
-    Height = 121
+    Left = 616
+    Top = 16
+    Width = 313
+    Height = 137
     Hint = 
       'The observer location is used for calculating the Moon'#39's librati' +
       'ons in longitude and latitude (the coordinates of the sub-observ' +
@@ -411,83 +412,112 @@ object PhotosessionSearch_Form: TPhotosessionSearch_Form
     TabOrder = 8
     inline ObserverLongitude_LabeledNumericEdit: TLabeledNumericEdit
       Left = 15
-      Top = 24
-      Width = 146
+      Top = 56
+      Width = 154
       Height = 19
       Hint = 'Observer'#39's longitude in decimal degrees (E=+  W=-)'
       AutoSize = True
-      TabOrder = 0
+      TabOrder = 1
       inherited Item_Label: TLabel
         Width = 50
         Caption = 'Longitude:'
       end
       inherited Units_Label: TLabel
-        Left = 128
+        Left = 136
         Width = 18
         Caption = 'deg'
       end
       inherited NumericEdit: TNumericEdit
-        Width = 65
+        Width = 73
         Height = 19
         Hint = 'Enter value in decimal degrees'
         Text = '11.79127'
+        OnChange = ObserverLongitude_LabeledNumericEditNumericEditChange
         OnKeyDown = ObserverLongitude_LabeledNumericEditNumericEditKeyDown
       end
     end
     inline ObserverLatitude_LabeledNumericEdit: TLabeledNumericEdit
       Left = 23
-      Top = 56
-      Width = 138
+      Top = 80
+      Width = 146
       Height = 19
       Hint = 'Observer'#39's latitude in decimal degrees (N=+  S=-)'
       AutoSize = True
-      TabOrder = 1
+      TabOrder = 2
       inherited Item_Label: TLabel
         Width = 41
         Caption = 'Latitude:'
       end
       inherited Units_Label: TLabel
-        Left = 120
+        Left = 128
         Width = 18
         Caption = 'deg'
       end
       inherited NumericEdit: TNumericEdit
         Left = 48
-        Width = 65
+        Width = 73
         Height = 19
         Hint = 'Enter value in decimal degrees'
         Text = '55.28568'
+        OnChange = ObserverLatitude_LabeledNumericEditNumericEditChange
         OnKeyDown = ObserverLatitude_LabeledNumericEditNumericEditKeyDown
       end
     end
     inline ObserverElevation_LabeledNumericEdit: TLabeledNumericEdit
       Left = 17
-      Top = 86
-      Width = 136
+      Top = 104
+      Width = 144
       Height = 19
       Hint = 'Observer'#39's elevation above sea level (in meters)'
       AutoSize = True
-      TabOrder = 2
+      TabOrder = 3
       inherited Item_Label: TLabel
         Width = 47
         Caption = 'Elevation:'
       end
       inherited Units_Label: TLabel
-        Left = 128
+        Left = 136
         Width = 8
         Caption = 'm'
       end
       inherited NumericEdit: TNumericEdit
-        Width = 63
+        Left = 55
+        Width = 73
         Height = 19
         Text = '0.0'
+        OnChange = ObserverElevation_LabeledNumericEditNumericEditChange
         OnKeyDown = ObserverElevation_LabeledNumericEditNumericEditKeyDown
       end
     end
+    object ObservatoryList_ComboBox: TComboBox
+      Left = 8
+      Top = 24
+      Width = 297
+      Height = 21
+      Hint = 
+        'Click on any item in this list to copy its location from the Obs' +
+        'ervatory List disk file'
+      AutoDropDown = True
+      ItemHeight = 13
+      TabOrder = 0
+      OnKeyDown = ObservatoryList_ComboBoxKeyDown
+      OnSelect = ObservatoryList_ComboBoxSelect
+    end
+    object AddLocation_Button: TButton
+      Left = 200
+      Top = 56
+      Width = 49
+      Height = 25
+      Hint = 'Add current location to end of list on disk'
+      Caption = 'Add'
+      TabOrder = 4
+      OnClick = AddLocation_ButtonClick
+      OnKeyDown = AddLocation_ButtonKeyDown
+    end
   end
   object GeocentricObserver_CheckBox: TCheckBox
-    Left = 664
-    Top = 16
+    Left = 800
+    Top = 120
     Width = 121
     Height = 17
     Hint = 

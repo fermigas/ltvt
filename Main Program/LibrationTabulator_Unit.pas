@@ -45,13 +45,14 @@ type
     TargetParameters_GroupBox: TGroupBox;
     Constraints_GroupBox: TGroupBox;
     GeocentricObserver_CheckBox: TCheckBox;
-    Label2: TLabel;
     MaxCenterAngleDeg_LabeledNumericEdit: TLabeledNumericEdit;
     MaxSunAngleDeg_LabeledNumericEdit: TLabeledNumericEdit;
     Abort_Button: TButton;
     ShowAll_CheckBox: TCheckBox;
     SearchTimeStepMin_LabeledNumericEdit: TLabeledNumericEdit;
     StartEnd_CheckBox: TCheckBox;
+    ObservatoryList_ComboBox: TComboBox;
+    AddLocation_Button: TButton;
     procedure ClearMemo_ButtonClick(Sender: TObject);
     procedure Tabulate_ButtonClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
@@ -101,10 +102,25 @@ type
       Sender: TObject; var Key: Word; Shift: TShiftState);
     procedure StartEnd_CheckBoxKeyDown(Sender: TObject; var Key: Word;
       Shift: TShiftState);
+    procedure ObservatoryList_ComboBoxKeyDown(Sender: TObject;
+      var Key: Word; Shift: TShiftState);
+    procedure ObservatoryList_ComboBoxSelect(Sender: TObject);
+    procedure ObserverLongitude_LabeledNumericEditNumericEditChange(
+      Sender: TObject);
+    procedure ObserverLatitude_LabeledNumericEditNumericEditChange(
+      Sender: TObject);
+    procedure ObserverElevation_LabeledNumericEditNumericEditChange(
+      Sender: TObject);
+    procedure FormDestroy(Sender: TObject);
+    procedure AddLocation_ButtonKeyDown(Sender: TObject; var Key: Word;
+      Shift: TShiftState);
+    procedure AddLocation_ButtonClick(Sender: TObject);
   private
     { Private declarations }
   public
     { Public declarations }
+    ObsNameList, ObsLatList, ObsLonList, ObsElevList : TStrings;
+
     AbortTabulation : Boolean;
 
     MEP_JPL_Filename, MEP_JPL_Path : string;
@@ -113,6 +129,7 @@ type
     {returns true if Desired_MJD falls within range of current ephemeris file;
       if not attempts to load the appropriate file}
 
+    procedure RefreshSelection;
 
   end;
 
@@ -121,9 +138,12 @@ var
 
 implementation
 
-uses NumericEdit, LTVT_Unit, H_Terminator_SetYear_Unit;
+uses Win_Ops, NumericEdit, LTVT_Unit, H_Terminator_SetYear_Unit;
 
 {$R *.dfm}
+
+var
+  SelectingItem : Boolean;   // flag to avoid refreshing Combo-box selection during a new selection
 
 procedure TLibrationTabulator_Form.FormCreate(Sender: TObject);
 begin
@@ -146,18 +166,169 @@ begin
   except
   end;
 
+  ObsNameList := TStringList.Create;
+  ObsLatList := TStringList.Create;
+  ObsLonList := TStringList.Create;
+  ObsElevList := TStringList.Create;
+
+  SelectingItem := False;
+end;
+
+procedure TLibrationTabulator_Form.FormDestroy(Sender: TObject);
+begin
+  ObsNameList.Free;
+  ObsLatList.Free;;
+  ObsLonList.Free;;
+  ObsElevList.Free;;
 end;
 
 procedure TLibrationTabulator_Form.FormShow(Sender: TObject);
+var
+  ObsListFile : TextFile;
+  DataLine : String;
 begin
 //  ShortDateFormat := 'yyyy/mm/dd';
   LongTimeFormat := 'hh:nn:ss';
   ThousandSeparator := #0;
   DecimalSeparator := '.';
 
+  ObsNameList.Clear;
+  ObsLatList.Clear;
+  ObsLonList.Clear;
+  ObsElevList.Clear;
+  if FileExists(Terminator_Form.ObservatoryListFilename) then
+    begin
+      AssignFile(ObsListFile,Terminator_Form.ObservatoryListFilename);
+      Reset(ObsListFile);
+      while (not EOF(ObsListFile)) {and (Length(FeatureList)<100)} do
+        begin
+          Readln(ObsListFile,DataLine);
+          DataLine := Trim(DataLine);
+          if (DataLine<>'') and (Substring(DataLine,1,1)<>'*') then
+            begin
+              ObsLonList.Add(LeadingElement(DataLine,','));
+              ObsLatList.Add(LeadingElement(DataLine,','));
+              ObsElevList.Add(LeadingElement(DataLine,','));
+              ObsNameList.Add(Trim(DataLine));
+            end;
+        end;
+      CloseFile(ObsListFile);
+    end;
+
+  ObservatoryList_ComboBox.Items.Clear;
+  ObservatoryList_ComboBox.Items.AddStrings(ObsNameList);
+  RefreshSelection;
+
   ObserverLocation_GroupBox.Visible := not GeocentricObserver_CheckBox.Checked;
   MinMoonElevDeg_LabeledNumericEdit.Visible := not GeocentricObserver_CheckBox.Checked;
   MaxSunElevDeg_LabeledNumericEdit.Visible := not GeocentricObserver_CheckBox.Checked;
+end;
+
+procedure TLibrationTabulator_Form.RefreshSelection;
+var
+  i : Integer;
+begin
+  if ObservatoryList_ComboBox.Visible and not SelectingItem then
+    begin
+      i := 0;
+      while (i<ObsNameList.Count) and
+        (    (ObserverLongitude_LabeledNumericEdit.NumericEdit.Text<>ObsLonList[i])
+          or (ObserverLatitude_LabeledNumericEdit.NumericEdit.Text<>ObsLatList[i])
+          or (ObserverElevation_LabeledNumericEdit.NumericEdit.Text<>ObsElevList[i])
+        ) do Inc(i);
+
+      if i<ObservatoryList_ComboBox.Items.Count then
+        ObservatoryList_ComboBox.ItemIndex := i
+      else
+        begin
+          if FileExists(Terminator_Form.ObservatoryListFilename) then
+            begin
+              ObservatoryList_ComboBox.ItemIndex := -1;
+              ObservatoryList_ComboBox.Text := Terminator_Form.ObservatoryComboBoxDefaultText;
+            end
+          else
+            begin
+              ObservatoryList_ComboBox.ItemIndex := -1;
+              ObservatoryList_ComboBox.Text := Terminator_Form.ObservatoryNoFileText;
+            end
+        end;
+    end;
+end;
+
+procedure TLibrationTabulator_Form.ObservatoryList_ComboBoxSelect(
+  Sender: TObject);
+begin
+  with ObservatoryList_ComboBox do if ItemIndex>=0 then
+    begin
+      SelectingItem := True;
+      ObserverLongitude_LabeledNumericEdit.NumericEdit.Text := ObsLonList[ItemIndex];
+      ObserverLatitude_LabeledNumericEdit.NumericEdit.Text := ObsLatList[ItemIndex];
+      ObserverElevation_LabeledNumericEdit.NumericEdit.Text := ObsElevList[ItemIndex];
+      SelectingItem := False;
+    end
+  else
+    ShowMessage('Please try again:  you must click on an item in the list');
+end;
+
+procedure TLibrationTabulator_Form.ObserverLongitude_LabeledNumericEditNumericEditChange(Sender: TObject);
+begin
+  RefreshSelection;
+end;
+
+procedure TLibrationTabulator_Form.ObserverLatitude_LabeledNumericEditNumericEditChange(Sender: TObject);
+begin
+  RefreshSelection;
+end;
+
+procedure TLibrationTabulator_Form.ObserverElevation_LabeledNumericEditNumericEditChange(Sender: TObject);
+begin
+  RefreshSelection;
+end;
+
+procedure TLibrationTabulator_Form.AddLocation_ButtonClick(Sender: TObject);
+var
+  ObsListFile : TextFile;
+begin
+  if (ObservatoryList_ComboBox.Text=Terminator_Form.ObservatoryNoFileText) or
+     (ObservatoryList_ComboBox.Text=Terminator_Form.ObservatoryComboBoxDefaultText) then
+    begin
+      ShowMessage('Please enter a name for the site in the drop-down box');
+      Exit;
+    end;
+
+  AssignFile(ObsListFile,Terminator_Form.ObservatoryListFilename);
+
+  if FileExists(Terminator_Form.ObservatoryListFilename) then
+    begin
+      Append(ObsListFile);
+    end
+  else
+    begin
+      Rewrite(ObsListFile);
+      Writeln(ObsListFile,'* List of observatory locations for LTVT');
+      Writeln(ObsListFile,'*   Important:  use ''.'' (period) for decimal point');
+      Writeln(ObsListFile,'*   (blank lines and lines with ''*'' in first column are ignored)');
+      Writeln(ObsListFile,'*   The observatory name can include any characters, including commas');
+      Writeln(ObsListFile,'');
+      Writeln(ObsListFile,'* List items in this format (using commas to separate items):');
+      Writeln(ObsListFile,'* ObservatoryEastLongitude, ObservatoryNorthLatitude, ObservatoryElevation_meters, ObservatoryName');
+      Writeln(ObsListFile,'');
+    end;
+
+  Writeln(ObsListFile,
+    ObserverLongitude_LabeledNumericEdit.NumericEdit.Text+', '+
+    ObserverLatitude_LabeledNumericEdit.NumericEdit.Text+', '+
+    ObserverElevation_LabeledNumericEdit.NumericEdit.Text+', '+
+    ObservatoryList_ComboBox.Text);
+  CloseFile(ObsListFile);
+
+  ObsLonList.Add(ObserverLongitude_LabeledNumericEdit.NumericEdit.Text);
+  ObsLatList.Add(ObserverLatitude_LabeledNumericEdit.NumericEdit.Text);
+  ObsElevList.Add(ObserverElevation_LabeledNumericEdit.NumericEdit.Text);
+  ObsNameList.Add(Trim(ObservatoryList_ComboBox.Text));
+  ObservatoryList_ComboBox.Items.Add(Trim(ObservatoryList_ComboBox.Text));
+
+  ShowMessage('Location added to '+Terminator_Form.ObservatoryListFilename);
 end;
 
 function TLibrationTabulator_Form.JPL_File_Valid(const Desired_MJD : extended) : boolean;
@@ -592,6 +763,18 @@ begin
 end;
 
 procedure TLibrationTabulator_Form.StartEnd_CheckBoxKeyDown(
+  Sender: TObject; var Key: Word; Shift: TShiftState);
+begin
+  Terminator_Form.DisplayF1Help(Key,Shift,'LibrationTabulatorForm.htm');
+end;
+
+procedure TLibrationTabulator_Form.ObservatoryList_ComboBoxKeyDown(
+  Sender: TObject; var Key: Word; Shift: TShiftState);
+begin
+  Terminator_Form.DisplayF1Help(Key,Shift,'LibrationTabulatorForm.htm');
+end;
+
+procedure TLibrationTabulator_Form.AddLocation_ButtonKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
   Terminator_Form.DisplayF1Help(Key,Shift,'LibrationTabulatorForm.htm');

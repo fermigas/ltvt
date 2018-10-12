@@ -4,7 +4,7 @@ object LibrationTabulator_Form: TLibrationTabulator_Form
   Width = 925
   Height = 690
   ActiveControl = Tabulate_Button
-  Caption = 'LTVT Libration Tabulator v0.1'
+  Caption = 'LTVT Libration Tabulator v0.2'
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -14,6 +14,7 @@ object LibrationTabulator_Form: TLibrationTabulator_Form
   OldCreateOrder = False
   ShowHint = True
   OnCreate = FormCreate
+  OnDestroy = FormDestroy
   OnShow = FormShow
   PixelsPerInch = 96
   TextHeight = 13
@@ -32,13 +33,6 @@ object LibrationTabulator_Form: TLibrationTabulator_Form
     Height = 13
     Hint = 'Stop making predictions on this date'
     Caption = 'End Date: '
-  end
-  object Label2: TLabel
-    Left = 512
-    Top = 136
-    Width = 215
-    Height = 13
-    Caption = 'Hint: use CTRL-TAB to return to main window'
   end
   object TargetParameters_GroupBox: TGroupBox
     Left = 8
@@ -282,8 +276,8 @@ object LibrationTabulator_Form: TLibrationTabulator_Form
     OnKeyDown = ClearMemo_ButtonKeyDown
   end
   object Tabulate_Button: TButton
-    Left = 816
-    Top = 104
+    Left = 800
+    Top = 168
     Width = 67
     Height = 25
     Hint = 
@@ -340,8 +334,8 @@ object LibrationTabulator_Form: TLibrationTabulator_Form
   object ObserverLocation_GroupBox: TGroupBox
     Left = 520
     Top = 8
-    Width = 185
-    Height = 121
+    Width = 369
+    Height = 137
     Caption = 'Observer Location'
     Ctl3D = False
     ParentCtl3D = False
@@ -349,83 +343,111 @@ object LibrationTabulator_Form: TLibrationTabulator_Form
     TabStop = True
     inline ObserverLongitude_LabeledNumericEdit: TLabeledNumericEdit
       Left = 15
-      Top = 24
-      Width = 146
+      Top = 56
+      Width = 154
       Height = 19
       Hint = 'Observer'#39's longitude in decimal degrees (E=+  W=-)'
       AutoSize = True
-      TabOrder = 0
+      TabOrder = 1
       inherited Item_Label: TLabel
         Width = 50
         Caption = 'Longitude:'
       end
       inherited Units_Label: TLabel
-        Left = 128
+        Left = 136
         Width = 18
         Caption = 'deg'
       end
       inherited NumericEdit: TNumericEdit
-        Width = 65
+        Width = 73
         Height = 19
         Hint = 'Enter value in decimal degrees'
         Text = '11.79127'
+        OnChange = ObserverLongitude_LabeledNumericEditNumericEditChange
         OnKeyDown = ObserverLongitude_LabeledNumericEditNumericEditKeyDown
       end
     end
     inline ObserverLatitude_LabeledNumericEdit: TLabeledNumericEdit
       Left = 23
-      Top = 56
-      Width = 138
+      Top = 80
+      Width = 146
       Height = 19
       Hint = 'Observer'#39's latitude in decimal degrees (N=+  S=-)'
       AutoSize = True
-      TabOrder = 1
+      TabOrder = 2
       inherited Item_Label: TLabel
         Width = 41
         Caption = 'Latitude:'
       end
       inherited Units_Label: TLabel
-        Left = 120
+        Left = 128
         Width = 18
         Caption = 'deg'
       end
       inherited NumericEdit: TNumericEdit
         Left = 48
-        Width = 65
+        Width = 73
         Height = 19
         Hint = 'Enter value in decimal degrees'
         Text = '55.28568'
+        OnChange = ObserverLatitude_LabeledNumericEditNumericEditChange
         OnKeyDown = ObserverLatitude_LabeledNumericEditNumericEditKeyDown
       end
     end
     inline ObserverElevation_LabeledNumericEdit: TLabeledNumericEdit
-      Left = 17
-      Top = 86
-      Width = 136
+      Left = 16
+      Top = 102
+      Width = 144
       Height = 19
       Hint = 'Observer'#39's elevation above sea level (in meters)'
       AutoSize = True
-      TabOrder = 2
+      TabOrder = 3
       inherited Item_Label: TLabel
         Width = 47
         Caption = 'Elevation:'
       end
       inherited Units_Label: TLabel
-        Left = 128
+        Left = 136
         Width = 8
         Caption = 'm'
       end
       inherited NumericEdit: TNumericEdit
-        Width = 63
+        Width = 71
         Height = 19
         Text = '0.0'
+        OnChange = ObserverElevation_LabeledNumericEditNumericEditChange
         OnKeyDown = ObserverElevation_LabeledNumericEditNumericEditKeyDown
       end
     end
+    object ObservatoryList_ComboBox: TComboBox
+      Left = 8
+      Top = 16
+      Width = 345
+      Height = 21
+      Hint = 
+        'Click on any item in this list to copy its location from the Obs' +
+        'ervatory List disk file'
+      AutoDropDown = True
+      ItemHeight = 13
+      TabOrder = 0
+      OnKeyDown = ObservatoryList_ComboBoxKeyDown
+      OnSelect = ObservatoryList_ComboBoxSelect
+    end
+    object AddLocation_Button: TButton
+      Left = 224
+      Top = 56
+      Width = 49
+      Height = 25
+      Hint = 'Add current location to end of list on disk'
+      Caption = 'Add'
+      TabOrder = 4
+      OnClick = AddLocation_ButtonClick
+      OnKeyDown = AddLocation_ButtonKeyDown
+    end
   end
   object GeocentricObserver_CheckBox: TCheckBox
-    Left = 728
-    Top = 32
+    Left = 744
+    Top = 112
     Width = 121
     Height = 17
     Hint = 
@@ -448,7 +470,7 @@ object LibrationTabulator_Form: TLibrationTabulator_Form
     OnKeyDown = Abort_ButtonKeyDown
   end
   object ShowAll_CheckBox: TCheckBox
-    Left = 776
+    Left = 664
     Top = 168
     Width = 97
     Height = 17
@@ -479,7 +501,7 @@ object LibrationTabulator_Form: TLibrationTabulator_Form
     end
   end
   object StartEnd_CheckBox: TCheckBox
-    Left = 616
+    Left = 536
     Top = 168
     Width = 97
     Height = 17

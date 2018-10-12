@@ -1,8 +1,8 @@
 object SetObserverLocation_Form: TSetObserverLocation_Form
   Left = 163
   Top = 156
-  Width = 445
-  Height = 205
+  Width = 532
+  Height = 219
   Caption = 'Observer Location on Earth'
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -35,7 +35,7 @@ object SetObserverLocation_Form: TSetObserverLocation_Form
   object ObserverLocation_Panel: TPanel
     Left = 16
     Top = 48
-    Width = 417
+    Width = 481
     Height = 73
     BevelOuter = bvNone
     TabOrder = 2
@@ -48,7 +48,7 @@ object SetObserverLocation_Form: TSetObserverLocation_Form
       AutoSize = True
       Color = clBtnFace
       ParentColor = False
-      TabOrder = 0
+      TabOrder = 1
       inherited Item_Label: TLabel
         Width = 27
         Caption = 'Long:'
@@ -72,7 +72,7 @@ object SetObserverLocation_Form: TSetObserverLocation_Form
       Height = 21
       Hint = 'Enter observer'#39's latitude in decimal degrees (N=+  S=-)'
       AutoSize = True
-      TabOrder = 1
+      TabOrder = 2
       inherited Item_Label: TLabel
         Width = 18
         Caption = 'Lat:'
@@ -99,7 +99,7 @@ object SetObserverLocation_Form: TSetObserverLocation_Form
         'Enter observer'#39's elevation (above sea level) in meters in NN.nnn' +
         ' format'
       AutoSize = True
-      TabOrder = 2
+      TabOrder = 3
       inherited Item_Label: TLabel
         Width = 14
         Caption = 'Ht:'
@@ -120,21 +120,33 @@ object SetObserverLocation_Form: TSetObserverLocation_Form
     object ObservatoryList_ComboBox: TComboBox
       Left = 104
       Top = 8
-      Width = 305
+      Width = 377
       Height = 21
       Hint = 
         'Click on any item in this list to copy its location from the Obs' +
         'ervatory List disk file'
+      AutoDropDown = True
       ItemHeight = 13
-      TabOrder = 3
+      TabOrder = 0
       OnKeyDown = ObservatoryList_ComboBoxKeyDown
       OnSelect = ObservatoryList_ComboBoxSelect
+    end
+    object AddLocation_Button: TButton
+      Left = 424
+      Top = 43
+      Width = 49
+      Height = 25
+      Hint = 'Add current location to end of list on disk'
+      Caption = 'Add'
+      TabOrder = 4
+      OnClick = AddLocation_ButtonClick
+      OnKeyDown = AddLocation_ButtonKeyDown
     end
   end
   object UserSpecified_RadioButton: TRadioButton
     Left = 8
     Top = 56
-    Width = 113
+    Width = 105
     Height = 17
     Hint = 'Manually specify the observer'#39's position on earth'
     Caption = 'Use this location:'
