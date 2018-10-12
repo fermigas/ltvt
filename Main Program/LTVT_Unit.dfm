@@ -830,6 +830,10 @@ object Terminator_Form: TTerminator_Form
         Caption = '&Tabulate librations...'
         OnClick = TabulateLibrations_MainMenuItemClick
       end
+      object DrawRuklGrid1: TMenuItem
+        Caption = 'Draw &R'#252'kl grid'
+        OnClick = DrawRuklGrid1Click
+      end
     end
     object Help1: TMenuItem
       Caption = '&Help'
@@ -855,6 +859,7 @@ object Terminator_Form: TTerminator_Form
     end
   end
   object Image_PopupMenu: TPopupMenu
+    OnPopup = Image_PopupMenuPopup
     Left = 376
     Top = 96
     object MouseOptions_RightClickMenuItem: TMenuItem
@@ -899,6 +904,10 @@ object Terminator_Form: TTerminator_Form
     object NearestDotToReferencePoint_RightClickMenuItem: TMenuItem
       Caption = 'Nearest dot --> reference point'
       OnClick = NearestDotToReferencePoint_RightClickMenuItemClick
+    end
+    object Recordshadowmeasurement_RightClickMenuItem: TMenuItem
+      Caption = 'Record shadow measurement'
+      OnClick = Recordshadowmeasurement_RightClickMenuItemClick
     end
     object Help_RightClickMenuItem: TMenuItem
       Caption = 'Help'

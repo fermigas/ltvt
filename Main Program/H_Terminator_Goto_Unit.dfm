@@ -1,8 +1,8 @@
 object H_Terminator_Goto_Form: TH_Terminator_Goto_Form
   Left = 132
   Top = 145
-  Width = 437
-  Height = 256
+  Width = 448
+  Height = 266
   ActiveControl = GoTo_Button
   Caption = 'Mark and/or Re-Center Plot on a Specific Location'
   Color = clBtnFace
@@ -25,7 +25,7 @@ object H_Terminator_Goto_Form: TH_Terminator_Goto_Form
     Height = 81
     Ctl3D = False
     ParentCtl3D = False
-    TabOrder = 3
+    TabOrder = 4
     inline CenterX_LabeledNumericEdit: TLabeledNumericEdit
       Left = 22
       Top = 30
@@ -108,7 +108,7 @@ object H_Terminator_Goto_Form: TH_Terminator_Goto_Form
     Hint = 'Select location by longitude and latitude'
     Ctl3D = False
     ParentCtl3D = False
-    TabOrder = 2
+    TabOrder = 3
     object Label2: TLabel
       Left = 8
       Top = 80
@@ -252,7 +252,7 @@ object H_Terminator_Goto_Form: TH_Terminator_Goto_Form
       'Shift current map X-Y center to specified feature and re-draw;  ' +
       'requested point indicated by a cross'
     Caption = 'Center On'
-    TabOrder = 5
+    TabOrder = 7
     OnClick = GoTo_ButtonClick
     OnKeyDown = GoTo_ButtonKeyDown
   end
@@ -263,7 +263,7 @@ object H_Terminator_Goto_Form: TH_Terminator_Goto_Form
     Height = 25
     Hint = 'Close form without taking any action'
     Caption = 'Cancel'
-    TabOrder = 7
+    TabOrder = 9
     OnClick = Cancel_ButtonClick
     OnKeyDown = Cancel_ButtonKeyDown
   end
@@ -276,7 +276,7 @@ object H_Terminator_Goto_Form: TH_Terminator_Goto_Form
       'Reset sub-observer point to specified location  and re-draw (not' +
       'e: this is NOT an Earth-based view)'
     Caption = 'Aerial View'
-    TabOrder = 6
+    TabOrder = 8
     OnClick = AerialView_ButtonClick
     OnKeyDown = AerialView_ButtonKeyDown
   end
@@ -289,7 +289,7 @@ object H_Terminator_Goto_Form: TH_Terminator_Goto_Form
       'Use a cross to mark specified location on current map -- also se' +
       't Reference Point to this location'
     Caption = 'Mark'
-    TabOrder = 4
+    TabOrder = 6
     OnClick = MarkFeature_ButtonClick
     OnKeyDown = MarkFeature_ButtonKeyDown
   end
@@ -309,9 +309,9 @@ object H_Terminator_Goto_Form: TH_Terminator_Goto_Form
     OnKeyDown = LonLat_RadioButtonKeyDown
   end
   object XY_RadioButton: TRadioButton
-    Left = 264
+    Left = 224
     Top = 8
-    Width = 113
+    Width = 97
     Height = 17
     Hint = 
       'Specify location in X-Y cartesian system with Moon'#39's center at (' +
@@ -320,5 +320,138 @@ object H_Terminator_Goto_Form: TH_Terminator_Goto_Form
     TabOrder = 1
     OnClick = XY_RadioButtonClick
     OnKeyDown = XY_RadioButtonKeyDown
+  end
+  object RuklZone_RadioButton: TRadioButton
+    Left = 328
+    Top = 8
+    Width = 89
+    Height = 17
+    Caption = 'By R'#252'kl zone'
+    TabOrder = 2
+    OnClick = RuklZone_RadioButtonClick
+    OnKeyDown = RuklZone_RadioButtonKeyDown
+  end
+  object RuklZone_GroupBox: TGroupBox
+    Left = 8
+    Top = 32
+    Width = 345
+    Height = 137
+    Hint = 'Select location by longitude and latitude'
+    Ctl3D = False
+    ParentCtl3D = False
+    TabOrder = 5
+    object Label4: TLabel
+      Left = 72
+      Top = 64
+      Width = 52
+      Height = 13
+      Caption = 'Quadrants:'
+    end
+    object NW_RadioButton: TRadioButton
+      Left = 144
+      Top = 64
+      Width = 81
+      Height = 17
+      Hint = 'Position at center of NW quadrant'
+      Caption = 'NorthWest'
+      TabOrder = 3
+      OnKeyDown = NW_RadioButtonKeyDown
+    end
+    object NE_RadioButton: TRadioButton
+      Left = 240
+      Top = 64
+      Width = 81
+      Height = 17
+      Hint = 'Position at center of NE quadrant'
+      Caption = 'NorthEast'
+      TabOrder = 4
+      OnKeyDown = NE_RadioButtonKeyDown
+    end
+    object SW_RadioButton: TRadioButton
+      Left = 144
+      Top = 96
+      Width = 81
+      Height = 17
+      Hint = 'Position at center of SW quadrant'
+      Caption = 'SouthWest'
+      TabOrder = 5
+      OnKeyDown = SW_RadioButtonKeyDown
+    end
+    object SE_RadioButton: TRadioButton
+      Left = 240
+      Top = 96
+      Width = 81
+      Height = 17
+      Hint = 'Position at center of SE quadrant'
+      Caption = 'SouthEast'
+      TabOrder = 6
+      OnKeyDown = SE_RadioButtonKeyDown
+    end
+    inline RuklZone_LabeledNumericEdit: TLabeledNumericEdit
+      Left = 15
+      Top = 17
+      Width = 99
+      Height = 24
+      Hint = 'Select R'#252'kl zone (1..76)'
+      AutoSize = True
+      TabOrder = 0
+      inherited Item_Label: TLabel
+        Top = 5
+        Width = 53
+        Hint = 'Enter desired longitude here'
+        Caption = 'R'#252'kl  Zone'
+      end
+      inherited Units_Label: TLabel
+        Left = 96
+        Top = 0
+        Width = 3
+        Caption = ''
+      end
+      inherited NumericEdit: TNumericEdit
+        Left = 64
+        Top = 5
+        Width = 33
+        Height = 19
+        Text = '1'
+        InputMin = '1'
+        InputMax = '76'
+        InputType = tInteger
+      end
+    end
+    object Center_RadioButton: TRadioButton
+      Left = 144
+      Top = 24
+      Width = 65
+      Height = 17
+      Hint = 'Position at center of zone'
+      Caption = 'Center'
+      Checked = True
+      TabOrder = 1
+      TabStop = True
+      OnKeyDown = Center_RadioButtonKeyDown
+    end
+    object Next_Button: TButton
+      Left = 72
+      Top = 88
+      Width = 49
+      Height = 25
+      Hint = 'Moves selection to next sequential zone'
+      Caption = 'Next'
+      TabOrder = 7
+      OnClick = Next_ButtonClick
+      OnKeyDown = Next_ButtonKeyDown
+    end
+    object AutoLabel_CheckBox: TCheckBox
+      Left = 240
+      Top = 24
+      Width = 81
+      Height = 17
+      Hint = 'Automatically draw Rukl grid and label features'
+      Caption = 'Auto Label'
+      Checked = True
+      State = cbChecked
+      TabOrder = 2
+      OnKeyDown = AutoLabel_CheckBoxKeyDown
+    end
   end
 end

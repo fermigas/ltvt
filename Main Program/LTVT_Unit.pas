@@ -765,7 +765,67 @@ v0.19
        Y-pixel, Longitude, Latitude".  The header comments are for reference
        only and do not affect the operation of the program.
 
-                                                                        6/7/08 }
+  v0.19.3
+    1. In PhotoSelector, artificially set Alt/Ax of Sun to 90/0 for images with
+       observer elevation of "-999".  This puts all maps in a separate category
+       at the top.  Also add option to show librations in longitude and latitude
+       in the selection list (these do not affect the sequence in which the
+       photos will be sorted).
+    2. Slightly reformat the Calibrated Photo Selection menu to give more space
+       for wider borders.  Slightly reduce the height of the list box to permit
+       inserting a header line at the top identifying the column contents. Also,
+       when the "Filter" option is selected, add text after the header line that
+       gives the sun angle at the selected feature using the Subsolar Point in
+       the main window; and the X-Y position of the feature in the currently
+       selected photo.  X is the position expressed as a fraction of the photo
+       width starting from the left.  Y is fraction of the photo height measuring
+       down from the top. The location of the feature is also indicated by a
+       plus mark drawn over the thumbnail image.  The plus mark is drawn with
+       the same style and color as the current reference mark.
+    3. To Tools... add temporary function to superimpose rectangles representing
+       the Rukl map zones using the Grid color. Since the lines are drawn in
+       apparent Xi-Eta, this is accurate only in zero libration views.  Dashed
+       centerlines are added (dividing the zones into subquadrants) depending on
+       the status of the Rukl panel in the GoTo menu.  Dashed lines are added
+       if a quadrant is selected.  They are omitted if "Center" is chosen.  This
+       determines the grid style whether or not a GoTo action has actually been
+       performed.
+    4. In Right Click menu add option to record shadow length measurement.  This
+       option appears only when the Mouse Option is set to Direct or Inverse
+       Shadow Length Measurement. The result is written to a disk file if and
+       only if such a file exists and has been initialized with the Circle Drawing
+       Tool.
+    5. In the Dot/Label Preferences menu add a checkbox requesting that when a
+       shadow measurement is recorded the plotted position will be projected to
+       its position on a constant radius sphere.  This shows the relation between
+       the reference point and the measurement point in a plan view.
+    6. In the Circle Drawing Tool add a button to initialize a file for holding
+       the shadow measurements.  If the file exists and has been initialized
+       since LTVT was started, selecting the Right Click option to record a
+       shadow measurement will both write it on the image and record the result
+       to the disk file.  This includes the distance of the shadow point from
+       the center of the circle at the time the file was initialized. Only one
+       copy of LTVT can use the file properly at a time.
+    7. In the Dot/Label Preferences menu add a checkbox requesting that for
+       satellite feature letters, the value in the horizontal box be used as
+       a radial offset towards the parent feature. The letter is printed in the
+       direction towards the parent feature by the amount in the horizontal
+       offset box plus one-half the font size.  This has no effect except in
+       connection with satellite feature letters where the parent name is omitted.
+    8. In the GoTo menu, add a panel that can Go To the longitude and latitude of
+       the center of a Rukl map zone (or a subquadrant of one).  In a few cases
+       at the limb the latitude and longitude are not defined.  In that case the
+       image is centered on the nominal X-Y position of that zone, which gives
+       a valid result only for zero-libration views in atlas orientation with
+       zero rotation (it /does/ handle left-right and up-down inversions correctly
+       in all cases).  The Rukl zone GoTo has an auto-plot option which (if checked)
+       goes through the steps needed for generating WikiSpaces Rukl maps -- that
+       is, adding the Rukl grid, overlaying and labeling the dots with the
+       current dot and label preferences.
+    9. In the About form, add link to LTVT Wiki web address and automatically
+       update the copyright end date to the current year.
+
+                                                                        11/6/08 }
 
 interface
 
@@ -888,6 +948,8 @@ type
     TabulateLibrations_MainMenuItem: TMenuItem;
     CountDots_RightClickMenuItem: TMenuItem;
     OpenAnLTOchart1: TMenuItem;
+    DrawRuklGrid1: TMenuItem;
+    Recordshadowmeasurement_RightClickMenuItem: TMenuItem;
     procedure DrawDots_ButtonClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure DrawTexture_ButtonClick(Sender: TObject);
@@ -1011,6 +1073,10 @@ type
       Shift: TShiftState);
     procedure TabulateLibrations_MainMenuItemClick(Sender: TObject);
     procedure CountDots_RightClickMenuItemClick(Sender: TObject);
+    procedure DrawRuklGrid1Click(Sender: TObject);
+    procedure Recordshadowmeasurement_RightClickMenuItemClick(
+      Sender: TObject);
+    procedure Image_PopupMenuPopup(Sender: TObject);
   private
     { Private declarations }
   public
@@ -1018,6 +1084,8 @@ type
     IniFileName : string; {file used for saving default parameters}
 
     BasePath : string;  // path to LTVT.exe
+
+    ProposedFilename : String; // for saving file
 
     DefaultCursor : TCursor;
 
@@ -1048,6 +1116,15 @@ type
     MoonRadius : extended;
     Point1Lon, Point1Lat, Point2Lon, Point2Lat : extended;  // set when measuring distance
 
+// set during MouseMove -- used to Record Shadow Measuremt
+    CurrentMouseX, CurrentMouseY, CurrentElevationDifference_m : Extended;
+    ShadowTipVector : Vector;
+// set in FormCreate
+    ShadowProfileFilename : String;
+// set on file initiation with Circle Drawing Tool
+    ShadowProfileCenterVector : Vector; // center of crater being profiled, normalized to unit length
+    SnapShadowPointsToPlanView : Boolean; // set from dot/label preferences form
+
     RefX, RefY, RefPtLon, RefPtLat, RefPtSunAngle, RefPtSunBearing : extended;
 
     CursorType : (UseDefaultCursor, UseCrosshairCursor);
@@ -1057,7 +1134,8 @@ type
     LabelXPix_Offset, LabelYPix_Offset,
     Corrected_LabelXPix_Offset, Corrected_LabelYPix_Offset : Integer; // displacement from dot to label
     // first is as it appears on Label Options form; second is corrected for Font size
-    IncludeFeatureName, FullCraterNames, IncludeFeatureSize, IncludeUnits, IncludeDiscontinuedNames : Boolean;
+    IncludeFeatureName, FullCraterNames, IncludeFeatureSize, IncludeUnits,
+    IncludeDiscontinuedNames, RadialDotOffset : Boolean;
 
     DotSize : integer;
     MediumCraterDiam, LargeCraterDiam : Extended;
@@ -1077,6 +1155,8 @@ type
       it also produces rather grainy full-moon images.  Therefore, although the on-screen images are drawn in
       about the same time, this file is loaded iff specifically requested}
     Clementine_Texture_Loaded : boolean;
+
+    TextureFilename : String; // identifies source of last background image used by Dots or Texture click
 
     LTO_Image : TBitmap;
 
@@ -1100,11 +1180,11 @@ type
     SubSolarPoint : TPolarCoordinates; {set by CalculateGeometry}
     SinSSLat, CosSSLat : extended;
 
-    CraterInfo : array of TCraterInfo;
-    {list of craters represented by dots in current overlay}
+    CraterInfo : array of TCraterInfo; {list of craters represented by dots in current overlay}
+    PrimaryCraterList : array of TCrater; {list of primary craters in list used for current overlay}
 
  // following set when red line is drawn in shadow measuring mode on user photo
-    RefPtVector,   // full vector at MoonRadius in Selenographic
+    RefPtVector,   // full vector at MoonRadius in Selenographic system
     ShadowDirectionVector : Vector;  // unit (1 km) vector parallel or anti-parallel to solar rays, depending on mode
     RefPtUserX, RefPtUserY,   // position of start of red line in X-Y system of original photo
     ShadowDirectionUserDistance : Extended; // amount of travel in photo X-Y system for 1 unit of ShadowDirectionVector
@@ -1324,7 +1404,7 @@ uses FileCtrl, H_Terminator_About_Unit, H_Terminator_Goto_Unit, H_Terminator_Set
 {$R *.dfm}
 
 const
-  ProgramVersion = '0.19.2';
+  ProgramVersion = '0.19.3';
 
 // note: the following constants specify (in degrees) that texture files span
 //   the full lunar globe.  They should not be changed.
@@ -1547,6 +1627,8 @@ begin {TTerminator_Form.FormCreate}
 
   BasePath := ExtractFilePath(Application.ExeName);
 
+  ProposedFilename := 'LTVT_Image.bmp';
+
   IniFileName := BasePath+'LTVT.ini'; //Note: if full path is not specified, file is assumed in C:\WINDOWS
   IniFile := TIniFile.Create(IniFileName);
 
@@ -1621,6 +1703,8 @@ begin {TTerminator_Form.FormCreate}
 
   LTO_RadioButton.Hide;
   LTO_Image := TBitmap.Create;
+
+  ShadowProfileFilename := BasePath+'ShadowProfile.txt';
 
 end;  {TTerminator_Form.FormCreate}
 
@@ -1878,7 +1962,7 @@ begin
           MoveTo(CenterXPixel-CrossSize,CenterYPixel);
           LineTo(CenterXPixel+CrossSize+1,CenterYPixel);
         end;
-    end;    
+    end;
 end;
 
 procedure TTerminator_Form.DrawTerminator;
@@ -1973,7 +2057,8 @@ procedure TTerminator_Form.OverlayDots_ButtonClick(Sender: TObject);
       MaxDiam,   // largest circle to plot
       Diam, MinKm : Extended;
       CurrentCrater : TCrater;
-      LineNum, DotRadius, DotRadiusSqrd, DiamErrorCode  : integer;
+      LineNum, DotRadius, DotRadiusSqrd, DiamErrorCode,
+      PrimaryCraterCount  : integer;
 
     function DecimalValue(StringToConvert: string): extended;
       var
@@ -1999,9 +2084,6 @@ procedure TTerminator_Form.OverlayDots_ButtonClick(Sender: TObject);
       begin {PlotCrater}
         with CurrentCrater do
           begin
-            USGS_Code := LeadingElement(DataLine,',');  // read first element of remainder -- ignore possible comments at end of line
-            Lat  := DegToRad(DecimalValue(LatStr));
-            Lon  := DegToRad(DecimalValue(LonStr));
             PolarToVector(Lat,Lon,1,CraterVector);
             if DotProduct(CraterVector,SubObsvrVector)>=0 then with JimsGraph1 do
               begin {crater is on visible hemisphere, so check its projection to see if it is in viewable area}
@@ -2125,6 +2207,9 @@ procedure TTerminator_Form.OverlayDots_ButtonClick(Sender: TObject);
       DrawCircles_CheckBox.Hide;
       MarkCenter_CheckBox.Hide;
 
+      SetLength(PrimaryCraterList,10000); // max number to store in list
+      PrimaryCraterCount := 0;
+
       while not EOF(CraterFile) do with CurrentCrater do
         begin
           Readln(CraterFile,DataLine);
@@ -2138,8 +2223,19 @@ procedure TTerminator_Form.OverlayDots_ButtonClick(Sender: TObject);
               Name := LeadingElement(DataLine,',');
               LatStr := LeadingElement(DataLine,',');
               LonStr := LeadingElement(DataLine,',');
+              Lat  := DegToRad(DecimalValue(LatStr));
+              Lon  := DegToRad(DecimalValue(LonStr));
               NumericData := LeadingElement(DataLine,',');
               val(NumericData,Diam,DiamErrorCode);
+              USGS_Code := LeadingElement(DataLine,',');  // read first element of remainder -- ignore possible comments at end of line
+
+              if (UpperCaseString(USGS_Code)='AA') and (PrimaryCraterCount<Length(PrimaryCraterList)) then
+                begin
+                  PrimaryCraterList[PrimaryCraterCount] := CurrentCrater;
+                  PrimaryCraterList[PrimaryCraterCount].AdditionalInfo1 := '';
+                  PrimaryCraterList[PrimaryCraterCount].AdditionalInfo2 := '';
+                  Inc(PrimaryCraterCount);
+                end;
 
               if MinKm=0 then
                 begin  // plot all features
@@ -2164,6 +2260,10 @@ procedure TTerminator_Form.OverlayDots_ButtonClick(Sender: TObject);
       DrawingMap_Label.Caption := '';
 
       CloseFile(CraterFile);
+
+      SetLength(PrimaryCraterList,PrimaryCraterCount); // max number to store in list
+//      ShowMessage(IntToStr(PrimaryCraterCount)+' primary names read');
+
     end;  {DrawCraters}
 
 begin {TTerminator_Form.Overlay_ButtonClick}
@@ -2185,6 +2285,8 @@ var
   SkyPixel, SunlightPixel, ShadowPixel : TRGBTriple;
   PointVector : Vector;
 begin
+  TextureFilename := 'none (Dots Mode)';
+
   Screen.Cursor := crHourGlass;
   DrawingMode := DotMode;
   ClearImage;
@@ -2519,17 +2621,35 @@ begin {TTerminator_Form.DrawTexture_ButtonClick}
     end;
 
   if LTO_RadioButton.Checked then
-    MapPtr := @LTO_Image
+    begin
+      MapPtr := @LTO_Image;
+      TextureFilename := LTO_Filename;
+    end
   else if Clementine_RadioButton.Checked and Clementine_Texture_Loaded then
-    MapPtr := @Clementine_TextureMap
+    begin
+      MapPtr := @Clementine_TextureMap;
+      TextureFilename := ClementineFilename
+    end
   else if HiResUSGS_RadioButton.Checked and HiRes_Texture_Loaded then
-    MapPtr := @HiRes_TextureMap
+    begin
+      MapPtr := @HiRes_TextureMap;
+      TextureFilename := HiResFilename;
+    end
   else if UserPhoto_RadioButton.Checked and UserPhotoLoaded then
-    MapPtr := @UserPhoto
+    begin
+      MapPtr := @UserPhoto;
+      TextureFilename := UserPhotoData.PhotoFilename;
+    end
   else if LoRes_Texture_Loaded then
-    MapPtr := @LoRes_TextureMap
+    begin
+      MapPtr := @LoRes_TextureMap;
+      TextureFilename := LoResFilename;
+    end
   else
-    MapPtr := nil;
+    begin
+      MapPtr := nil;
+      TextureFilename := 'unknown';
+    end;
 
   if MapPtr=nil then
     begin
@@ -2937,19 +3057,25 @@ var
           Multiply(MouseDistance/ShadowDirectionUserDistance,S);
           Sum(V1,S,V2);  // move along Sun vector in three dimensions to point seen in projection at mouse point
           MagV2 := Magnitude(V2);
+          ShadowTipVector := V2;  // this is the opposite end from the Ref Pt -- it may be the shadow tip or the shadow-casting point
 
           ACosArg := DotProduct(V1,V2)/(Magnitude(V1)*MagV2);
           if Abs(ACosArg)>1 then ACosArg := 1;  // avoid possible round off error
 
+          CurrentElevationDifference_m := 1000*(MagV2 - MoonRadius);
+
           if MagV2<>0 then
             RefPtDistance_Label.Caption := Format('Shadow length = %0.2f deg; Height difference = %0.0f m',
-              [RadToDeg(ArcCos(ACosArg)),1000*(MagV2 - MoonRadius)])
+              [RadToDeg(ArcCos(ACosArg)),CurrentElevationDifference_m])
           else
             RefPtDistance_Label.Caption := Format('Shadow length = %0.2f deg; Height difference = %0.0f m',
-              [0,1000*MoonRadius*(MagV2 - MoonRadius)]);
+              [0,CurrentElevationDifference_m]);
         end
       else
-        RefPtDistance_Label.Caption := 'Sun direction parallel to line of sight';
+        begin
+          ShadowTipVector := RefPtVector;   //  dummy value -- three dimensional position cannot be evaluated
+          RefPtDistance_Label.Caption := 'Sun direction parallel to line of sight';
+        end;
     end;  {UserPhotoElevationReadout}
 
 begin {Terminator_Form.JimsGraph1MouseMove}
@@ -2958,6 +3084,9 @@ begin {Terminator_Form.JimsGraph1MouseMove}
       ProjectedX := XValue(X);
       ProjectedY := YValue(Y);
     end;
+
+  CurrentMouseX := ProjectedX;
+  CurrentMouseY := ProjectedY;
 
   MousePosition_GroupBox.Caption := format('Mouse Position  ( X = %0.4f  Y = %0.4f )',[ProjectedX,ProjectedY]);
 
@@ -2987,18 +3116,22 @@ begin {Terminator_Form.JimsGraph1MouseMove}
             UserPhotoElevationReadout
           else
             begin
+              PolarToVector(Lat,Lon,MoonRadius,ShadowTipVector);
               ComputeDistanceAndBearing(RefPtLon,RefPtLat,Lon,Lat,RefPtAngle,RefPtBearing);
+              CurrentElevationDifference_m := 1000*MoonRadius*(Cos(RefPtAngle-RefPtSunAngle)/Cos(RefPtSunAngle)-1);
               RefPtDistance_Label.Caption := Format('Shadow length = %0.2f deg; Height difference = %0.0f m',
-                [RadToDeg(RefPtAngle),1000*MoonRadius*(Cos(RefPtAngle-RefPtSunAngle)/Cos(RefPtSunAngle)-1)]);
+                [RadToDeg(RefPtAngle),CurrentElevationDifference_m]);
             end;
         InverseShadowLengthRefPtMode :
           if UserPhoto_RadioButton.Checked then
             UserPhotoElevationReadout
           else
             begin
+              PolarToVector(Lat,Lon,MoonRadius,ShadowTipVector);
               ComputeDistanceAndBearing(RefPtLon,RefPtLat,Lon,Lat,RefPtAngle,RefPtBearing);
+              CurrentElevationDifference_m := 1000*MoonRadius*(Cos(RefPtAngle-SunAngle)/Cos(SunAngle)-1);
               RefPtDistance_Label.Caption := Format('Shadow length = %0.2f deg; Height difference = %0.0f m',
-                [RadToDeg(RefPtAngle),1000*MoonRadius*(Cos(RefPtAngle-SunAngle)/Cos(SunAngle)-1)]);
+                [RadToDeg(RefPtAngle),CurrentElevationDifference_m]);
             end;
         RayHeightsRefPtMode :
           begin
@@ -3210,6 +3343,7 @@ begin
   with TerminatorAbout_Form do
     begin
       Version_Label.Caption := 'Version: '+ProgramVersion;
+      Copyright_Label.Caption := 'Copyright:  Jim Mosher and Henrik Bondo,  2006 - '+IntToStr(YearOf(Now));
       ShowModal;
     end;
 end;
@@ -3321,7 +3455,8 @@ begin
 end;
 
 procedure TTerminator_Form.GoTo_MainMenuItemClick(Sender: TObject);
-
+var
+  Rukl_Xi, Rukl_Eta, Rukl_LonDeg, Rukl_LatDeg : Extended;
 begin
   RefreshGoToList;
   with H_Terminator_Goto_Form do
@@ -3331,8 +3466,45 @@ begin
         begin
           if LonLat_RadioButton.Checked then
             GoToLonLat(SetToLon_LabeledNumericEdit.NumericEdit.ExtendedValue,SetToLat_LabeledNumericEdit.NumericEdit.ExtendedValue)
-          else {X-Y mode}
-            GoToXY(CenterX_LabeledNumericEdit.NumericEdit.ExtendedValue,CenterY_LabeledNumericEdit.NumericEdit.ExtendedValue);;
+          else if XY_RadioButton.Checked then
+            GoToXY(CenterX_LabeledNumericEdit.NumericEdit.ExtendedValue,CenterY_LabeledNumericEdit.NumericEdit.ExtendedValue)
+          else //Rukl mode
+            begin
+              if Center_RadioButton.Checked then
+                ProposedFilename := 'Rukl_'+RuklZone_LabeledNumericEdit.NumericEdit.Text+'_satellites.bmp'
+              else
+                begin
+                  if NW_RadioButton.Checked then
+                    ProposedFilename := 'Rukl_'+RuklZone_LabeledNumericEdit.NumericEdit.Text+'_satellites_NW.bmp'
+                  else
+                    if NE_RadioButton.Checked then
+                      ProposedFilename := 'Rukl_'+RuklZone_LabeledNumericEdit.NumericEdit.Text+'_satellites_NE.bmp'
+                  else
+                    if SW_RadioButton.Checked then
+                      ProposedFilename := 'Rukl_'+RuklZone_LabeledNumericEdit.NumericEdit.Text+'_satellites_SW.bmp'
+                  else
+                    if SE_RadioButton.Checked then
+                      ProposedFilename := 'Rukl_'+RuklZone_LabeledNumericEdit.NumericEdit.Text+'_satellites_SE.bmp';
+                end;
+
+              Rukl_Position(Rukl_Xi, Rukl_Eta, Rukl_LonDeg, Rukl_LatDeg);
+              if (Rukl_LonDeg=-999) or (Rukl_LatDeg=-999) then
+                begin
+                  ShowMessage('Using Xi-Eta : the requested Rukl zone does not have a well defined lunar lon-lat');
+                  GoToXY(Rukl_Xi, Rukl_Eta);
+                end
+              else
+                GoToLonLat(Rukl_LonDeg, Rukl_LatDeg);
+
+              if AutoLabel_CheckBox.Checked then
+                begin
+                  DrawTexture_Button.Click; // erase reference mark at center
+                  DrawRuklGrid1Click(Sender);
+                  OverlayDots_Button.Click;
+                  LabelDots_Button.Click;
+                end;
+
+            end;
         end;
     end;
 end;
@@ -3792,7 +3964,9 @@ procedure TTerminator_Form.SetRefPt_RightClickMenuItemClick(Sender: TObject);
               end
             else // LTVT image is a flattened map, draw great circle towards (or away from) sub-solar point
               begin
-                PolarToVector(MouseLat,MouseLon,1,PointVector);
+                PolarToVector(MouseLat,MouseLon,MoonRadius,RefPtVector);
+                PointVector := RefPtVector;
+                Normalize(PointVector);
                 CrossProduct(PointVector,SubSolarVector,RotationAxis);
                 if RefPtReadoutMode=InverseShadowLengthRefPtMode then
                   AngleStep := +0.01 // radians
@@ -3866,6 +4040,59 @@ begin
     ShowMessage('Unable to find a dot');
 end;
 
+procedure TTerminator_Form.Recordshadowmeasurement_RightClickMenuItemClick(Sender: TObject);
+var
+  PlotVector : Vector;
+  AngleFromCenter, PlotX, PlotY : Extended;
+  PlotXPix, PlotYPix : Integer;
+  ShadowFile : TextFile;
+  ShadowStart, ShadowEnd : TPolarCoordinates;
+begin
+// put mark at shadow measurement point
+  MarkXY(CurrentMouseX,CurrentMouseY,ReferencePointColor);
+
+// also mark projection of measurement point onto constant radius sphere
+  PlotVector := ShadowTipVector;
+  if ModSqr(PlotVector)>0 then Normalize(PlotVector);
+
+  if SnapShadowPointsToPlanView and UserPhoto_RadioButton.Checked then with JimsGraph1 do
+    begin
+      PlotX := DotProduct(PlotVector,XPrime_UnitVector);
+      PlotY := DotProduct(PlotVector,YPrime_UnitVector);
+      MarkXY(PlotX,PlotY,ReferencePointColor);
+
+      PlotXPix := XPix(PlotX);
+      PlotYPix := YPix(PlotY);
+    end
+  else
+    begin
+      PlotXPix := LastMouseClickPosition.X;
+      PlotYPix := LastMouseClickPosition.Y;
+    end;
+
+  with JimsGraph1 do with Canvas do
+    begin
+      TextOut(PlotXPix+Corrected_LabelXPix_Offset,
+        PlotYPix-Corrected_LabelYPix_Offset,Format('%0.0f m',[CurrentElevationDifference_m]));
+    end;
+
+  if FileExists(ShadowProfileFilename) and (Magnitude(ShadowProfileCenterVector)>0) then
+    begin
+      ShadowStart := VectorToPolar(RefPtVector);
+      ShadowEnd   := VectorToPolar(ShadowTipVector);
+      AngleFromCenter := ArcCos(DotProduct(PlotVector,ShadowProfileCenterVector));
+      AssignFile(ShadowFile, ShadowProfileFilename);
+      Append(ShadowFile);
+      Writeln(ShadowFile,Format('%0.3f, %0.3f, %0.3f, %0.3f, %0.3f, %0.3f, %s',
+        [AngleFromCenter*MoonRadius,      CurrentElevationDifference_m/1000,
+         ShadowStart.Longitude/OneDegree, ShadowStart.Latitude/OneDegree,
+         ShadowEnd.Longitude/OneDegree,   ShadowEnd.Latitude/OneDegree,
+         ExtractFileName(TextureFilename)]));
+      CloseFile(ShadowFile);
+    end;
+
+end;
+
 function TTerminator_Form.BooleanToYesNo(const BooleanState: boolean): string;
   begin
     if BooleanState then
@@ -3885,10 +4112,10 @@ var
   LabeledImage : TBitMap;
   ImageStartRow, TextStartRow : integer;
   CenterLon,CenterLat : Extended;
-  DateTimeString, OutString, TextureFilename, DesiredExtension : string;
+  DateTimeString, OutString, DesiredExtension : string;
 //  Answer : Word;
 begin
-  SavePictureDialog1.FileName := 'LTVT_Image.bmp';
+  SavePictureDialog1.FileName := ProposedFilename;
   if SavePictureDialog1.Execute then
     begin
 {
@@ -3945,18 +4172,6 @@ begin
               TextOut(0,16,OutString);
 
               Font.Color := SavedImageLowerLabelsColor;
-
-              if DrawingMode=DotMode then
-                TextureFilename := 'none (Dots Mode)'
-              else
-                begin
-                  if LoResUSGS_RadioButton.Checked  then  TextureFilename := LoResFilename
-                  else if HiResUSGS_RadioButton.Checked  then  TextureFilename := HiResFilename
-                  else if Clementine_RadioButton.Checked then  TextureFilename := ClementineFilename
-                  else if UserPhoto_RadioButton.Checked  then  TextureFilename := UserPhotoData.PhotoFilename
-                  else if LTO_RadioButton.Checked then TextureFilename := LTO_Filename
-                  else TextureFilename := 'unknown';
-                end;
 
               if ImageManual then
                 begin
@@ -4246,13 +4461,104 @@ begin
 end;
 
 procedure TTerminator_Form.LabelDot(const DotInfo : TCraterInfo);
-begin
+var
+  LabelXPix, LabelYPix, PrimaryIndex,
+  FontHeight, FontWidth, RadialPixels : Integer;
+  FeatureVector, ParentVector, DirectionVector : Vector;
+  DiffSqrd, Diff, XMultiplier, YMultiplier : Extended;
+
+function ParentIndex(const FeatureName : String) : Integer;
+// returns index of feature with same primary name in PrimaryFeatureList array
+  var
+    ParentName : String;
+    SpacePos, I : Integer;
+    NameFound : Boolean;
+  begin {ParentIndex}
+    Result := -999;
+
+    ParentName := Trim(FeatureName);
+    SpacePos := Length(ParentName);
+    while (SpacePos>1) and (ParentName[SpacePos]<>' ') do Dec(SpacePos);
+    if ParentName[SpacePos]<>' ' then Exit;   // not a satellite feature name
+
+    ParentName := UpperCase(Trim(Substring(ParentName,1,SpacePos-1)));
+
+    if ParentName='' then Exit;
+
+    NameFound := False;
+
+    I := -1;
+    while (I<(Length(PrimaryCraterList)-2)) and not NameFound do
+      begin
+        Inc(I);
+        NameFound := ParentName=UpperCase(PrimaryCraterList[I].Name);
+      end;
+
+    if NameFound then
+      begin
+        Result := I;
+//        ShowMessage(FeatureName+' --> '+PrimaryCraterList[Result].Name);
+      end
+    else
+      begin
+//        ShowMessage('Primary not found for "'+FeatureName+'"');
+      end;
+  end;  {ParentIndex}
+
+begin {LabelDot}
   with DotInfo do
     begin
-      JimsGraph1.Canvas.TextOut(Dot_X+Corrected_LabelXPix_Offset,Dot_Y-Corrected_LabelYPix_Offset,
+      LabelXPix := Dot_X+Corrected_LabelXPix_Offset;
+      LabelYPix := Dot_Y-Corrected_LabelYPix_Offset;
+
+      if (not FullCraterNames) and RadialDotOffset and (Length(PrimaryCraterList)>0)
+        and (USGS_Code='SF') then
+        begin
+          XMultiplier := 0;  // if parent can't be located plot name over dot
+          YMultiplier := 0;
+
+//          ShowMessage(Name);
+//          PrimaryIndex := ParentIndex('Seeliger A');
+          PrimaryIndex := ParentIndex(Name);
+          if PrimaryIndex<>-999 then
+            begin
+
+              PolarToVector(Lat,Lon,1,FeatureVector);
+              with PrimaryCraterList[PrimaryIndex] do PolarToVector(Lat,Lon,1,ParentVector);
+              Difference(ParentVector,FeatureVector,DirectionVector);   // Vector from Feature to Parent
+
+              XMultiplier := DotProduct(DirectionVector,XPrime_UnitVector);  // Project into X-Y screen plane
+              YMultiplier := DotProduct(DirectionVector,YPrime_UnitVector);
+
+//              ShowMessage(Format('%s -> %s  %0.2f %0.2f',[Name,PrimaryCraterList[PrimaryIndex].Name, Lon,Lat]));
+
+              DiffSqrd := Sqr(XMultiplier) + Sqr(YMultiplier);
+              if DiffSqrd>0 then
+                begin
+                  Diff := Sqrt(DiffSqrd);
+                  XMultiplier := XMultiplier/Diff;     // normalize to 0..1
+                  YMultiplier := YMultiplier/Diff;
+                end;
+
+              if InvertLR then XMultiplier := -XMultiplier;
+              If InvertUD then YMultiplier := -YMultiplier;
+
+            end;
+
+          FontHeight := Abs(JimsGraph1.Canvas.TextHeight('O'));
+          FontWidth  := Abs(JimsGraph1.Canvas.TextWidth('O'));
+//          ShowMessage('Font height = '+IntToStr(FontHeight));
+          RadialPixels := (FontHeight div 2) + LabelXPix_Offset;
+
+          LabelXPix := Dot_X + 2 - (FontWidth  div 2) + Round(XMultiplier*RadialPixels);
+          LabelYPix := Dot_Y - 0 - (FontHeight div 2) - Round(YMultiplier*RadialPixels);
+
+        end;
+
+      JimsGraph1.Canvas.TextOut(LabelXPix,LabelYPix,
         LabelString(DotInfo,IncludeFeatureName,FullCraterNames,IncludeFeatureSize,IncludeUnits,False));
     end;
-end;
+end;  {LabelDot}
 
 procedure TTerminator_Form.LabelDots_ButtonClick(Sender: TObject);
 var
@@ -4686,6 +4992,7 @@ begin
     end;
   IniFile.WriteInteger('LTVT Defaults','Label_XOffset',LabelXPix_Offset);
   IniFile.WriteInteger('LTVT Defaults','Label_YOffset',LabelYPix_Offset);
+  IniFile.WriteString('LTVT Defaults','RadialDotOffset',BooleanToYesNo(RadialDotOffset));
   IniFile.WriteString('LTVT Defaults','IncludeFeatureName',BooleanToYesNo(IncludeFeatureName));
   IniFile.WriteString('LTVT Defaults','UseFullCraterNames',BooleanToYesNo(FullCraterNames));
   IniFile.WriteString('LTVT Defaults','IncludeFeatureSize',BooleanToYesNo(IncludeFeatureSize));
@@ -4700,6 +5007,7 @@ begin
   IniFile.WriteString('LTVT Defaults','LargeCraterDotColor',Format('$%6.6x',[LargeCraterColor]));
   IniFile.WriteString('LTVT Defaults','CraterCircleColor',Format('$%6.6x',[CraterCircleColor]));
   IniFile.WriteString('LTVT Defaults','ReferencePointColor',Format('$%6.6x',[ReferencePointColor]));
+  IniFile.WriteString('LTVT Defaults','SnapShadowPointsToPlanView',BooleanToYesNo(SnapShadowPointsToPlanView));
   IniFile.WriteString('LTVT Defaults','AnnotateSavedImages',BooleanToYesNo(AnnotateSavedImages));
   IniFile.WriteString('LTVT Defaults','SavedImageUpperLabels_Color',Format('$%6.6x',[SavedImageUpperLabelsColor]));
   IniFile.WriteString('LTVT Defaults','SavedImageLowerLabels_Color',Format('$%6.6x',[SavedImageLowerLabelsColor]));
@@ -4737,6 +5045,7 @@ begin
     // TextOut(X,Y) prints with Y = top of text, so need to center it per height
   Corrected_LabelYPix_Offset := LabelYPix_Offset + (Abs(JimsGraph1.Canvas.Font.Height) div 2);
 
+  RadialDotOffset := YesNoToBoolean(IniFile.ReadString('LTVT Defaults','RadialDotOffset','no'));
   IncludeFeatureName := YesNoToBoolean(IniFile.ReadString('LTVT Defaults','IncludeFeatureName','yes'));
   FullCraterNames := YesNoToBoolean(IniFile.ReadString('LTVT Defaults','UseFullCraterNames','no'));
   IncludeFeatureSize := YesNoToBoolean(IniFile.ReadString('LTVT Defaults','IncludeFeatureSize','no'));
@@ -4777,6 +5086,8 @@ begin
     ReferencePointColor := clAqua;
   end;
 
+  SnapShadowPointsToPlanView := YesNoToBoolean(IniFile.ReadString('LTVT Defaults','SnapShadowPointsToPlanView','no'));
+
   AnnotateSavedImages := YesNoToBoolean(IniFile.ReadString('LTVT Defaults','AnnotateSavedImages','yes'));
 
   try
@@ -4801,6 +5112,7 @@ begin
       DesiredFont.Assign(JimsGraph1.Canvas.Font);
       XOffset_LabeledNumericEdit.NumericEdit.Text := IntToStr(LabelXPix_Offset);
       YOffset_LabeledNumericEdit.NumericEdit.Text := IntToStr(LabelYPix_Offset);
+      RadialDotOffset_CheckBox.Checked := RadialDotOffset;
       IncludeName_CheckBox.Checked := IncludeFeatureName;
       FullCraterNames_CheckBox.Checked := FullCraterNames;
       IncludeSize_CheckBox.Checked := IncludeFeatureSize;
@@ -4815,6 +5127,7 @@ begin
       LargeCrater_ColorBox.Selected := LargeCraterColor;
       DotCircle_ColorBox.Selected := CraterCircleColor;
       RefPt_ColorBox.Selected := ReferencePointColor;
+      SnapShadowPoint_CheckBox.Checked := SnapShadowPointsToPlanView;
       AnnotateSavedImages_CheckBox.Checked := AnnotateSavedImages;
       SavedImageUpperLabels_ColorBox.Selected := SavedImageUpperLabelsColor;
       SavedImageLowerLabels_ColorBox.Selected := SavedImageLowerLabelsColor;
@@ -4831,6 +5144,7 @@ begin
       Corrected_LabelXPix_Offset := LabelXPix_Offset;
         // TextOut(X,Y) prints with Y = top of text, so need to center it per height
       Corrected_LabelYPix_Offset := LabelYPix_Offset + (Abs(JimsGraph1.Canvas.Font.Height) div 2);
+      RadialDotOffset := RadialDotOffset_CheckBox.Checked;
       IncludeFeatureName := IncludeName_CheckBox.Checked;
       FullCraterNames := FullCraterNames_CheckBox.Checked;
       IncludeFeatureSize := IncludeSize_CheckBox.Checked;
@@ -4845,6 +5159,7 @@ begin
       LargeCraterColor := LargeCrater_ColorBox.Selected;
       CraterCircleColor := DotCircle_ColorBox.Selected;
       ReferencePointColor := RefPt_ColorBox.Selected;
+      SnapShadowPointsToPlanView := SnapShadowPoint_CheckBox.Checked;
       AnnotateSavedImages := AnnotateSavedImages_CheckBox.Checked;
       SavedImageUpperLabelsColor := SavedImageUpperLabels_ColorBox.Selected;
       SavedImageLowerLabelsColor := SavedImageLowerLabels_ColorBox.Selected;
@@ -5906,6 +6221,77 @@ procedure TTerminator_Form.CountDots_RightClickMenuItemClick(
   Sender: TObject);
 begin
   ShowMessage('Number of dots in current display: '+IntToStr(Length(CraterInfo)));
+end;
+
+procedure TTerminator_Form.DrawRuklGrid1Click(Sender: TObject);
+{note: this is a simplified routine that works only for a zero libration view}
+const
+  NumRuklRows = 8;
+  NumRuklCols = 11;
+  RuklXStep = 2/NumRuklCols;
+  RuklYStep = 2/NumRuklRows;
+var
+  I : Integer;
+  X, Y : Extended;
+  WantRuklSubgrid : Boolean;
+begin
+  WantRuklSubgrid := not H_Terminator_Goto_Form.Center_RadioButton.Checked; // assume subgrid is wanted only after a GoTo to a quadrant
+
+  with JimsGraph1 do
+    begin
+      with Canvas do
+        begin
+          Pen.Color := clWhite;
+
+          X := -1;
+          for I := 1 to (NumRuklCols+1) do
+            begin
+              Pen.Style := psSolid;
+              MoveTo(XPix(X),YPix(1));
+              LineTo(XPix(X),YPix(-1));    // note: LineTo stops short of destination by 1 pixel
+
+              if WantRuklSubgrid then
+                begin
+                  X := X + RuklXStep/2;
+                  Pen.Style := psDashDot;
+                  MoveTo(XPix(X),YPix(1));
+                  LineTo(XPix(X),YPix(-1));    // note: LineTo stops short of destination by 1 pixel
+                  X := X + RuklXStep/2;
+                end
+              else
+                X := X + RuklXStep;
+
+            end;
+
+          Y := 1;
+          for I := 1 to (NumRuklCols+1) do
+            begin
+              Pen.Style := psSolid;
+              MoveTo(XPix(-1),YPix(Y));
+              LineTo(XPix(1),YPix(Y));    // note: LineTo stops short of destination by 1 pixel
+
+              if WantRuklSubgrid then
+                begin
+                  Y := Y - RuklYStep/2;
+                  Pen.Style := psDashDot;
+                  MoveTo(XPix(-1),YPix(Y));
+                  LineTo(XPix(1),YPix(Y));    // note: LineTo stops short of destination by 1 pixel
+                  Y := Y - RuklYStep/2;
+                end
+              else
+                  Y := Y - RuklYStep;
+            end;
+
+          Pen.Style := psSolid; // probably not necessary if other routines set desired style
+
+        end;
+    end;
+end;
+
+procedure TTerminator_Form.Image_PopupMenuPopup(Sender: TObject);
+begin
+  Recordshadowmeasurement_RightClickMenuItem.Visible :=
+    (RefPtReadoutMode=ShadowLengthRefPtMode) or (RefPtReadoutMode=InverseShadowLengthRefPtMode);
 end;
 
 end.

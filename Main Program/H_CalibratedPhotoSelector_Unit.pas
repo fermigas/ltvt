@@ -33,7 +33,7 @@ type
 type
   TCalibratedPhotoLoader_Form = class(TForm)
     ListBox1: TListBox;
-    Image1: TImage;
+    Thumbnail_Image: TImage;
     SelectPhoto_Button: TButton;
     Cancel_Button: TButton;
     Label2: TLabel;
@@ -67,6 +67,10 @@ type
     Sort_CheckBox: TCheckBox;
     Label3: TLabel;
     SunAngleOnly_RadioButton: TRadioButton;
+    ListLibrations_CheckBox: TCheckBox;
+    PhotoListHeaders_Label: TLabel;
+    FeaturePos_Label: TLabel;
+    Overlay_Image: TImage;
     procedure Cancel_ButtonClick(Sender: TObject);
     procedure SelectPhoto_ButtonClick(Sender: TObject);
     procedure ListBox1Click(Sender: TObject);
@@ -131,7 +135,7 @@ type
     SelectedPhotoData : TPhotoCalData;
 
     function FeatureInPhoto(const CurrentPhotoData : TPhotoCalData; const LonDeg, LatDeg : Extended;
-      var SunAltDeg, SunAzDeg : Extended) : Boolean;
+      var SunAltDeg, SunAzDeg : Extended; var FeatureXPix, FeatureYPix : Integer) : Boolean;
     {determines if stated feature would be on visible disk and at a pixel position within limits of calibrated image}
   end;
 
@@ -140,7 +144,7 @@ var
 
 implementation
 
-uses LTVT_Unit, MoonPosition, Win_Ops, FileCtrl, Math, MVectors, IniFiles;
+uses Constnts, LTVT_Unit, MoonPosition, Win_Ops, FileCtrl, Math, MVectors, IniFiles;
 
 {$R *.dfm}
 
@@ -179,16 +183,72 @@ begin
 end;
 
 procedure TCalibratedPhotoLoader_Form.ListBox1Click(Sender: TObject);
+var
+  OriginalWidth, OriginalHeight, OriginalXPix, OriginalYPix,
+  ThumbnailXPix, ThumbnailYPix, CrossSize : Integer;
+  TargetLonDeg, TargetLatDeg, SunAltDeg, SunAzDeg,
+  SunAngle,SunBearing, Ratio, ThumbnailMagnification : Extended;
 begin
   SelectedPhotoData := PhotoListData[SortedListIndex[ListBox1.ItemIndex]].PhotoCalData;
   with SelectedPhotoData do
     begin
       try
-        Image1.Picture.LoadFromFile(PhotoFilename);
+        Thumbnail_Image.Picture.LoadFromFile(PhotoFilename);
       except
         ShowMessage('Unable to load "'+PhotoFilename+'"');
         Exit;
       end;
+
+      FeaturePos_Label.Caption := '';
+
+      if (FilterPhotos_CheckBox.Checked) then
+        begin
+          TargetLonDeg := TargetLon_LabeledNumericEdit.NumericEdit.ExtendedValue;
+          TargetLatDeg := TargetLat_LabeledNumericEdit.NumericEdit.ExtendedValue;
+
+          if FeatureInPhoto(SelectedPhotoData, TargetLonDeg, TargetLatDeg, SunAltDeg, SunAzDeg, OriginalXPix, OriginalYPix) then
+            begin
+              ComputeDistanceAndBearing(TargetLonDeg*OneDegree,TargetLatDeg*OneDegree,
+                Terminator_Form.SubSolarPoint.Longitude,Terminator_Form.SubSolarPoint.Latitude,
+                SunAngle,SunBearing);
+              SunAngle := (Pi/2) - SunAngle;
+
+              OriginalWidth := IntegerValue(PhotoWidth);
+              if OriginalWidth=0 then OriginalWidth := 1;
+
+              OriginalHeight := IntegerValue(PhotoHeight);
+              if OriginalHeight=0 then OriginalHeight := 1;
+
+              FeaturePos_Label.Caption := Format('In current: Alt= %0.2f, Az= %0.1f;  In selected at: X= %0.2f, Y= %0.2f',
+                [SunAngle/OneDegree, SunBearing/OneDegree,
+                 OriginalXPix/OriginalWidth, OriginalYPix/OriginalHeight]);
+
+              Ratio := Thumbnail_Image.Width/OriginalWidth;
+              ThumbnailMagnification := Ratio;
+              Ratio := Thumbnail_Image.Height/OriginalHeight;
+              if Ratio<ThumbnailMagnification then ThumbnailMagnification := Ratio;
+
+              ThumbnailXPix := Round(ThumbnailMagnification*OriginalXPix);
+              ThumbnailYPix := Round(ThumbnailMagnification*OriginalYPix);
+
+              with Overlay_Image.Canvas do   // note: Overlay_Image is transparent
+                begin
+                  FillRect(ClipRect);  // clear previous image
+                  Pen.Color := Terminator_Form.ReferencePointColor;
+                  CrossSize := Terminator_Form.DotSize + 1;
+                  MoveTo(ThumbnailXPix-CrossSize,ThumbnailYPix);
+                  LineTo(ThumbnailXPix+CrossSize+1,ThumbnailYPix);
+                  MoveTo(ThumbnailXPix,ThumbnailYPix-CrossSize);
+                  LineTo(ThumbnailXPix,ThumbnailYPix+CrossSize+1);
+                end;
+
+              Overlay_Image.Show;
+            end;
+        end
+      else
+        begin
+          Overlay_Image.Hide;
+        end;
 
       ImageFilename_Label.Caption := 'Current image at:  '+
         MinimizeName(PhotoFilename,ImageFilename_Label.Canvas,ImageFilename_Label.Width);
@@ -230,7 +290,7 @@ begin
 end;
 
 function TCalibratedPhotoLoader_Form.FeatureInPhoto(const CurrentPhotoData : TPhotoCalData; const LonDeg, LatDeg : Extended;
-  var SunAltDeg, SunAzDeg : Extended) : Boolean;
+      var SunAltDeg, SunAzDeg : Extended; var FeatureXPix, FeatureYPix : Integer) : Boolean;
 var
   UserPhotoType : (EarthBased, Satellite);
 
@@ -253,8 +313,6 @@ var
   SatelliteNLatDeg, SatelliteELonDeg, SatelliteElevKm : Extended;
   GroundPointVector : Vector;
   ReadSuccessful : Boolean;
-
-  FeatureXPix, FeatureYPix : Integer;
 
   SunAlt, SunAz : Extended;
 
@@ -534,15 +592,15 @@ end;
 procedure TCalibratedPhotoLoader_Form.ListPhotos_ButtonClick(Sender: TObject);
 var
   IniFile : TIniFile;
-  i, MaxI, StyleNum : Integer;
+  i, MaxI, StyleNum, X_pix, Y_pix : Integer;
 
   CalFile : TextFile;
   DataLine, DateString, YearString, MonthString, DayString,
   TimeString, TempFilename, CalCode : String;
   TempPhotoData : TPhotoCalData;
 
-  TargetLonDeg, TargetLatDeg, SunAltDeg, SunAzDeg : Extended;
-  AltAzString : String;
+  TargetLonDeg, TargetLatDeg, SunAltDeg, SunAzDeg, LibrationLonDeg : Extended;
+  AltAzString, LibrationString, HeaderString : String;
 
 function GreaterThan(const ItemIndex1, ItemIndex2 : Integer) : Boolean;
   begin
@@ -608,6 +666,12 @@ end;  {SortFilenames}
 
 
 begin
+  HeaderString := '';
+  if FilterPhotos_CheckBox.Checked then HeaderString := '    Alt.       Azimuth';
+  if ListLibrations_CheckBox.Checked then HeaderString := HeaderString + '       Lon.       Lat.';
+  HeaderString := HeaderString + '        File name';
+  PhotoListHeaders_Label.Caption := HeaderString;
+
   if FileFound('LTVT user photo calibration data file',Terminator_Form.CalibratedPhotosFilename,TempFilename) then
     begin
       Screen.Cursor := crHourGlass;
@@ -691,7 +755,7 @@ begin
                       PhotoFilename  := Trim(DataLine);
                     end;
 
-                  if (not FilterPhotos_CheckBox.Checked) or FeatureInPhoto(TempPhotoData, TargetLonDeg, TargetLatDeg, SunAltDeg, SunAzDeg) then
+                  if (not FilterPhotos_CheckBox.Checked) or FeatureInPhoto(TempPhotoData, TargetLonDeg, TargetLatDeg, SunAltDeg, SunAzDeg, X_pix, Y_pix) then
                     begin
                       SetLength(PhotoListData,Length(PhotoListData)+1);
                       with PhotoListData[Length(PhotoListData)-1] do
@@ -699,8 +763,16 @@ begin
                           PhotoCalData := TempPhotoData;
                           if FilterPhotos_CheckBox.Checked then
                             begin
-                              SunAlt := SunAltDeg;
-                              SunAz := SunAzDeg;
+                              if PhotoCalData.PhotoObsHt='-999' then
+                                begin
+                                  SunAlt := 90;
+                                  SunAz := 0;
+                                end
+                              else
+                                begin
+                                  SunAlt := SunAltDeg;
+                                  SunAz := SunAzDeg;
+                                end;
                             end
                           else
                             begin
@@ -730,14 +802,22 @@ begin
       for i := 0 to (Length(SortedListIndex)-1) do with PhotoListData[SortedListIndex[i]] do
         begin
           if FilterPhotos_CheckBox.Checked then
+            AltAzString := Format('%6.2f %6.1f ',[SunAlt, SunAz])
+          else
+            AltAzString := '';
+
+          if ListLibrations_CheckBox.Checked then
             begin
-              AltAzString := Format('%6.2f %7.2f  ',[SunAlt, SunAz]);
+              LibrationLonDeg := ExtendedValue(PhotoCalData.SubObsLon);
+              while LibrationLonDeg<-180 do LibrationLonDeg := LibrationLonDeg + 360;
+              while LibrationLonDeg>180  do LibrationLonDeg := LibrationLonDeg - 360;
+              LibrationString := Format('%6.1f %5.1f ',
+                [LibrationLonDeg, ExtendedValue(PhotoCalData.SubObsLat)])
             end
           else
-            begin
-              AltAzString := '';
-            end;
-          ListBox1.Items.Add(AltAzString+ExtractFileName(PhotoCalData.PhotoFilename));
+            LibrationString := '';
+
+          ListBox1.Items.Add(AltAzString+LibrationString+ExtractFileName(PhotoCalData.PhotoFilename));
         end;
 
       Filename_Label.Caption := MinimizeName(Terminator_Form.BriefName(Terminator_Form.CalibratedPhotosFilename),Filename_Label.Canvas,Filename_Label.Width);

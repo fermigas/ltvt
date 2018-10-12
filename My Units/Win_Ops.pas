@@ -413,8 +413,11 @@ function UpperCaseString(S: string) : string;
       if ErrorCode=0 then
         IntegerValue := MyResult
       else
-        HaltForError('Unable to convert string "'+StringToConvert
-         +'" to integer, ErrorCode = '+Int2str(ErrorCode,0),'Win_Ops');
+        begin
+          IntegerValue := 0;
+          HaltForError('Unable to convert string "'+StringToConvert
+           +'" to integer, ErrorCode = '+Int2str(ErrorCode,0),'Win_Ops');
+        end;
     end;
 
   function LongIntValue(StringToConvert: string): longint;
@@ -427,8 +430,11 @@ function UpperCaseString(S: string) : string;
       if ErrorCode=0 then
         LongIntValue := MyResult
       else
-        HaltForError('Unable to convert string "'+StringToConvert
-         +'" to integer, ErrorCode = '+Int2str(ErrorCode,0),'Win_Ops');
+        begin
+          LongIntValue := 0;
+          HaltForError('Unable to convert string "'+StringToConvert
+           +'" to integer, ErrorCode = '+Int2str(ErrorCode,0),'Win_Ops');
+        end;
     end;
 
   function ExtendedValue(StringToConvert: string): extended;
@@ -452,8 +458,11 @@ function UpperCaseString(S: string) : string;
       if ErrorCode=0 then
         ExtendedValue := MyResult
       else
-        HaltForError('Unable to convert string "'+StringToConvert
-         +'" to extended, ErrorCode = '+Int2str(ErrorCode,0),'Win_Ops');
+        begin
+          ExtendedValue := 0;
+          HaltForError('Unable to convert string "'+StringToConvert
+           +'" to extended, ErrorCode = '+Int2str(ErrorCode,0),'Win_Ops');
+        end;
     end;
 
   function ExtendedToReal(const V: extended): real;
@@ -467,8 +476,11 @@ function UpperCaseString(S: string) : string;
       if ErrorCode=0 then
         ExtendedToReal := MyResult
       else
-        HaltForError('Unable to convert string "'+S
-         +'" to real, ErrorCode = '+Int2str(ErrorCode,0),'Win_Ops');
+        begin
+          ExtendedToReal := 0;
+          HaltForError('Unable to convert string "'+S
+           +'" to real, ErrorCode = '+Int2str(ErrorCode,0),'Win_Ops');
+        end;
     end;
 
   function ExtendedToSingle(const V: extended): single;
@@ -482,8 +494,11 @@ function UpperCaseString(S: string) : string;
       if ErrorCode=0 then
         ExtendedToSingle := MyResult
       else
-        HaltForError('Unable to convert string "'+S
-         +'" to single, ErrorCode = '+Int2str(ErrorCode,0),'Win_Ops');
+        begin
+          ExtendedToSingle := 0;
+          HaltForError('Unable to convert string "'+S
+           +'" to single, ErrorCode = '+Int2str(ErrorCode,0),'Win_Ops');
+        end;
     end;
 
 function FileFound(const Description, TrialFilename : string; var CorrectFilename : string): boolean;
@@ -569,7 +584,7 @@ function PictureFileFound(const Description, TrialFilename : string; var Correct
     LastDirectory : string = '';
   var
     OpenDialog : TOpenPictureDialog;
-    ExpectedFilename, ExpectedPath, ExpectedExtension : string;
+    ExpectedFilename, ExpectedPath{, ExpectedExtension} : string;
   begin
     CorrectFilename := TrialFilename;
 //    ShowMessage('Looking for "'+TrialFilename+'"');

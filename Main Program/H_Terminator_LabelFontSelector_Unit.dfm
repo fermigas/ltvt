@@ -53,6 +53,13 @@ object LabelFontSelector_Form: TLabelFontSelector_Form
         'right'
       Caption = 'Main:'
     end
+    object Label12: TLabel
+      Left = 232
+      Top = 64
+      Width = 74
+      Height = 13
+      Caption = 'Include in label:'
+    end
     object FontSample_Label: TLabel
       Left = 152
       Top = 18
@@ -73,26 +80,31 @@ object LabelFontSelector_Form: TLabelFontSelector_Form
         '"'
       Caption = 'Ptolemaeus B'
     end
-    object Label12: TLabel
-      Left = 192
-      Top = 64
-      Width = 74
-      Height = 13
-      Caption = 'Include in label:'
+    object RadialDotOffset_CheckBox: TCheckBox
+      Left = 96
+      Top = 58
+      Width = 89
+      Height = 17
+      Hint = 
+        'Place satellite letters on side towards parent feature by amount' +
+        ' in horizontal offset box'
+      Caption = 'Radial offset'
+      TabOrder = 1
+      OnKeyDown = RadialDotOffset_CheckBoxKeyDown
     end
     object IncludeSize_CheckBox: TCheckBox
-      Left = 376
+      Left = 392
       Top = 82
       Width = 81
       Height = 17
       Hint = 'Include the feature size (a numeric value) in the label'
       Caption = 'Feature size'
-      TabOrder = 4
+      TabOrder = 5
       OnClick = IncludeSize_CheckBoxClick
       OnKeyDown = IncludeSize_CheckBoxKeyDown
     end
     object FullCraterNames_CheckBox: TCheckBox
-      Left = 248
+      Left = 264
       Top = 106
       Width = 105
       Height = 17
@@ -101,29 +113,32 @@ object LabelFontSelector_Form: TLabelFontSelector_Form
         'parent crater for lettered craters;  if not checked, only the le' +
         'tter is shown'
       Caption = 'Parent name'
-      TabOrder = 3
+      TabOrder = 6
       OnClick = FullCraterNames_CheckBoxClick
       OnKeyDown = FullCraterNames_CheckBoxKeyDown
     end
     inline XOffset_LabeledNumericEdit: TLabeledNumericEdit
-      Left = 32
+      Left = 16
       Top = 82
-      Width = 138
+      Width = 130
       Height = 19
       Hint = 
         'Start of label text will be this number of pixels (+ = right;  -' +
         ' = left) from the dot'
       AutoSize = True
-      TabOrder = 1
+      TabOrder = 2
       inherited Item_Label: TLabel
         Width = 50
+        Height = 17
         Caption = 'Horizontal:'
       end
       inherited Units_Label: TLabel
+        Left = 104
         Width = 26
         Caption = 'pixels'
       end
       inherited NumericEdit: TNumericEdit
+        Width = 41
         Height = 19
         Text = '7'
         OnKeyDown = XOffset_LabeledNumericEditNumericEditKeyDown
@@ -131,24 +146,26 @@ object LabelFontSelector_Form: TLabelFontSelector_Form
       end
     end
     inline YOffset_LabeledNumericEdit: TLabeledNumericEdit
-      Left = 32
+      Left = 16
       Top = 106
-      Width = 138
+      Width = 130
       Height = 19
       Hint = 
         'Center of label text will be this number of pixelsfrom the dot (' +
         '+ = above;  - = below)'
       AutoSize = True
-      TabOrder = 2
+      TabOrder = 3
       inherited Item_Label: TLabel
         Width = 38
         Caption = 'Vertical:'
       end
       inherited Units_Label: TLabel
+        Left = 104
         Width = 26
         Caption = 'pixels'
       end
       inherited NumericEdit: TNumericEdit
+        Width = 41
         Height = 19
         OnKeyDown = YOffset_LabeledNumericEditNumericEditKeyDown
         InputType = tInteger
@@ -168,7 +185,7 @@ object LabelFontSelector_Form: TLabelFontSelector_Form
       OnKeyDown = ChangeFont_ButtonKeyDown
     end
     object IncludeUnits_CheckBox: TCheckBox
-      Left = 376
+      Left = 392
       Top = 104
       Width = 57
       Height = 17
@@ -176,18 +193,18 @@ object LabelFontSelector_Form: TLabelFontSelector_Form
         'Include the units of the feature dimension (e.g., km for crater ' +
         'diameters)'
       Caption = 'Units'
-      TabOrder = 5
+      TabOrder = 7
       OnClick = IncludeUnits_CheckBoxClick
       OnKeyDown = IncludeUnits_CheckBoxKeyDown
     end
     object IncludeName_CheckBox: TCheckBox
-      Left = 248
+      Left = 264
       Top = 80
       Width = 97
       Height = 17
       Hint = 'Include the feature name in the label'
       Caption = 'Feature name'
-      TabOrder = 6
+      TabOrder = 4
       OnClick = IncludeName_CheckBoxClick
       OnKeyDown = IncludeName_CheckBoxKeyDown
     end
@@ -296,7 +313,7 @@ object LabelFontSelector_Form: TLabelFontSelector_Form
     end
     object Label14: TLabel
       Left = 232
-      Top = 172
+      Top = 164
       Width = 105
       Height = 13
       Caption = 'Reference mark color:'
@@ -310,7 +327,7 @@ object LabelFontSelector_Form: TLabelFontSelector_Form
         'Dots are drawn as boxes with this height and width; also control' +
         's length of reference (plus) mark arms'
       AutoSize = True
-      TabOrder = 6
+      TabOrder = 7
       inherited Item_Label: TLabel
         Width = 127
         Caption = 'Dot diameter/ref mark size:'
@@ -389,7 +406,7 @@ object LabelFontSelector_Form: TLabelFontSelector_Form
         'tures'
       Style = [cbStandardColors, cbExtendedColors, cbCustomColor, cbPrettyNames]
       ItemHeight = 16
-      TabOrder = 7
+      TabOrder = 6
       OnKeyDown = NonCrater_ColorBoxKeyDown
     end
     object SmallCrater_ColorBox: TColorBox
@@ -430,7 +447,7 @@ object LabelFontSelector_Form: TLabelFontSelector_Form
     end
     object RefPt_ColorBox: TColorBox
       Left = 352
-      Top = 171
+      Top = 163
       Width = 97
       Height = 22
       Hint = 
@@ -440,6 +457,16 @@ object LabelFontSelector_Form: TLabelFontSelector_Form
       ItemHeight = 16
       TabOrder = 9
       OnKeyDown = RefPt_ColorBoxKeyDown
+    end
+    object SnapShadowPoint_CheckBox: TCheckBox
+      Left = 248
+      Top = 192
+      Width = 193
+      Height = 17
+      Hint = 'Show shadow measurement click points in plan view'
+      Caption = 'Snap shadow points to plan view'
+      TabOrder = 10
+      OnKeyDown = SnapShadowPoint_CheckBoxKeyDown
     end
   end
   object SavedImage_GroupBox: TGroupBox

@@ -2,6 +2,8 @@ unit JimsGraph;
 {Provides procedures for drawing a scaled graph in the usual scientific
 coordinate system with +X to the left and +Y up. }
 
+{10/29/08: considered changing Width to Picture.Width, but changed mind. }
+
 interface
 
 uses

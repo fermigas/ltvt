@@ -1,8 +1,8 @@
 object TerminatorAbout_Form: TTerminatorAbout_Form
   Left = 192
   Top = 108
-  Width = 408
-  Height = 199
+  Width = 425
+  Height = 235
   ActiveControl = OK_Button
   Caption = 'About LTVT'
   Color = clBtnFace
@@ -36,23 +36,23 @@ object TerminatorAbout_Form: TTerminatorAbout_Form
     Height = 13
     Caption = 'Version:  3.0'
   end
-  object Label3: TLabel
+  object Copyright_Label: TLabel
     Left = 8
     Top = 56
     Width = 228
     Height = 13
-    Caption = 'Copyright:  Jim Mosher and Henrik Bondo,  2007'
+    Caption = 'Copyright:  Jim Mosher and Henrik Bondo,  2006'
   end
   object Label4: TLabel
     Left = 8
-    Top = 136
+    Top = 160
     Width = 43
     Height = 13
     Caption = 'Contact: '
   end
   object Email_Label: TLabel
     Left = 56
-    Top = 136
+    Top = 160
     Width = 109
     Height = 13
     Hint = 'Click to send e-mail'
@@ -69,17 +69,17 @@ object TerminatorAbout_Form: TTerminatorAbout_Form
   end
   object Label2: TLabel
     Left = 8
-    Top = 80
+    Top = 104
     Width = 90
     Height = 13
     Caption = 'About the authors: '
   end
   object JimWebAddress_Label: TLabel
     Left = 40
-    Top = 104
+    Top = 128
     Width = 123
     Height = 13
-    Hint = 'Click to send e-mail'
+    Hint = 'Click to open in web browser'
     Caption = 'www.pacifier.com/~tpope'
     Font.Charset = DEFAULT_CHARSET
     Font.Color = clBlue
@@ -93,24 +93,24 @@ object TerminatorAbout_Form: TTerminatorAbout_Form
   end
   object Label5: TLabel
     Left = 16
-    Top = 104
+    Top = 128
     Width = 18
     Height = 13
     Caption = 'Jim:'
   end
   object Label6: TLabel
     Left = 200
-    Top = 104
+    Top = 128
     Width = 34
     Height = 13
     Caption = 'Henrik:'
   end
   object HenrikWebAddress_Label: TLabel
     Left = 240
-    Top = 104
+    Top = 128
     Width = 106
     Height = 13
-    Hint = 'Click to send e-mail'
+    Hint = 'Click to open in web browser'
     Caption = 'www.HenriksUCLA.dk'
     Font.Charset = DEFAULT_CHARSET
     Font.Color = clBlue
@@ -122,9 +122,33 @@ object TerminatorAbout_Form: TTerminatorAbout_Form
     OnMouseEnter = Email_LabelMouseEnter
     OnMouseLeave = Email_LabelMouseLeave
   end
+  object Label3: TLabel
+    Left = 8
+    Top = 80
+    Width = 96
+    Height = 13
+    Caption = 'Website/download: '
+  end
+  object LTVT_WikiWebAddress_Label: TLabel
+    Left = 112
+    Top = 80
+    Width = 92
+    Height = 13
+    Hint = 'Click to open in web browser'
+    Caption = 'ltvt.wikispaces.com'
+    Font.Charset = DEFAULT_CHARSET
+    Font.Color = clBlue
+    Font.Height = -11
+    Font.Name = 'MS Sans Serif'
+    Font.Style = [fsUnderline]
+    ParentFont = False
+    OnClick = LTVT_WikiWebAddress_LabelClick
+    OnMouseEnter = Email_LabelMouseEnter
+    OnMouseLeave = Email_LabelMouseLeave
+  end
   object OK_Button: TButton
     Left = 328
-    Top = 136
+    Top = 160
     Width = 57
     Height = 25
     Hint = 'Close this form'
@@ -135,7 +159,7 @@ object TerminatorAbout_Form: TTerminatorAbout_Form
   end
   object More_Button: TButton
     Left = 200
-    Top = 136
+    Top = 160
     Width = 65
     Height = 25
     Hint = 'Click for more information'

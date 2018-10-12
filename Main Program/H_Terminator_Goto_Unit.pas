@@ -28,6 +28,17 @@ type
     RuklZone_Label: TLabel;
     MinimizeGotoList_CheckBox: TCheckBox;
     XY_Redraw_Button: TButton;
+    RuklZone_RadioButton: TRadioButton;
+    RuklZone_GroupBox: TGroupBox;
+    Label4: TLabel;
+    NW_RadioButton: TRadioButton;
+    NE_RadioButton: TRadioButton;
+    SW_RadioButton: TRadioButton;
+    SE_RadioButton: TRadioButton;
+    RuklZone_LabeledNumericEdit: TLabeledNumericEdit;
+    Center_RadioButton: TRadioButton;
+    Next_Button: TButton;
+    AutoLabel_CheckBox: TCheckBox;
     procedure FormShow(Sender: TObject);
     procedure Cancel_ButtonClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
@@ -73,6 +84,26 @@ type
     procedure XY_Redraw_ButtonKeyDown(Sender: TObject; var Key: Word;
       Shift: TShiftState);
     procedure XY_Redraw_ButtonClick(Sender: TObject);
+    procedure RuklZone_RadioButtonKeyDown(Sender: TObject; var Key: Word;
+      Shift: TShiftState);
+    procedure LabeledNumericEdit2NumericEditKeyDown(Sender: TObject;
+      var Key: Word; Shift: TShiftState);
+    procedure Center_RadioButtonKeyDown(Sender: TObject; var Key: Word;
+      Shift: TShiftState);
+    procedure NW_RadioButtonKeyDown(Sender: TObject; var Key: Word;
+      Shift: TShiftState);
+    procedure NE_RadioButtonKeyDown(Sender: TObject; var Key: Word;
+      Shift: TShiftState);
+    procedure SW_RadioButtonKeyDown(Sender: TObject; var Key: Word;
+      Shift: TShiftState);
+    procedure SE_RadioButtonKeyDown(Sender: TObject; var Key: Word;
+      Shift: TShiftState);
+    procedure RuklZone_RadioButtonClick(Sender: TObject);
+    procedure Next_ButtonClick(Sender: TObject);
+    procedure Next_ButtonKeyDown(Sender: TObject; var Key: Word;
+      Shift: TShiftState);
+    procedure AutoLabel_CheckBoxKeyDown(Sender: TObject; var Key: Word;
+      Shift: TShiftState);
   private
     { Private declarations }
   public
@@ -81,6 +112,8 @@ type
 // following items are to be populated by calling program, for use in FeatureNames_ComboBox
     FeatureNameList, FeatureLatStringList, FeatureLonStringList : TStrings;
     LastItemSelected : integer;
+
+    procedure Rukl_Position(var Xi, Eta, LonDeg, LatDeg : Extended);  // determines Xi and Eta values of current Rukl zone
 
     procedure SelectCurrentItem;
     procedure UpdateMapZone;
@@ -94,6 +127,14 @@ implementation
 uses LTVT_Unit, MVectors, Math, Win_Ops, JimsGraph;
 
 {$R *.dfm}
+
+const
+  NumRuklRows = 8;  // Rukl divides Y = +1 to -1 into 8 rows
+  NumRuklCols = 11; // and X = -1 to +1 into 11 columns
+  RuklRowLength : array[1..NumRuklRows] of Integer = (7, 9, 11, 11, 11, 11, 9, 7);  // Number of zones in each row
+  RuklCenterCol : array[1..NumRuklRows] of Integer = (4, 12, 22, 33, 44, 55, 65, 73);  // Map number at center of row
+  RuklXiStep  = 2/NumRuklCols;
+  RuklEtaStep = 2/NumRuklRows;
 
 procedure TH_Terminator_Goto_Form.FormCreate(Sender: TObject);
 begin
@@ -119,6 +160,7 @@ begin
 
   LonLat_GroupBox.Visible := LonLat_RadioButton.Checked;
   XY_GroupBox.Visible := XY_RadioButton.Checked;
+  RuklZone_GroupBox.Visible := RuklZone_RadioButton.Checked;
   UpdateMapZone;
 end;
 
@@ -174,20 +216,90 @@ procedure TH_Terminator_Goto_Form.LonLat_RadioButtonClick(Sender: TObject);
 begin
   LonLat_GroupBox.Visible := True;
   XY_GroupBox.Visible := False;
+  RuklZone_GroupBox.Visible := False;
 end;
 
 procedure TH_Terminator_Goto_Form.XY_RadioButtonClick(Sender: TObject);
 begin
   LonLat_GroupBox.Visible := False;
   XY_GroupBox.Visible := True;
+  RuklZone_GroupBox.Visible := False;
+end;
+
+procedure TH_Terminator_Goto_Form.RuklZone_RadioButtonClick(
+  Sender: TObject);
+begin
+  LonLat_GroupBox.Visible := False;
+  XY_GroupBox.Visible := False;
+  RuklZone_GroupBox.Visible := True;
+end;
+
+procedure TH_Terminator_Goto_Form.Rukl_Position(var Xi, Eta, LonDeg, LatDeg : Extended);
+// determines Xi and Eta values of current Rukl zone
+var
+  RuklZone, RuklRow, RuklCount : Integer;
+  CenterX, CenterY, X_offset, Y_Offset, RSqrd, Zeta : Extended;
+begin
+  RuklZone := RuklZone_LabeledNumericEdit.NumericEdit.IntegerValue;
+  RuklRow := 1;
+  RuklCount := RuklRowLength[RuklRow];
+  while (RuklZone>RuklCount) and (RuklRow<NumRuklRows) do
+    begin
+      Inc(RuklRow);
+      RuklCount := RuklCount + RuklRowLength[RuklRow];
+    end;
+
+  CenterX := RuklXiStep*(RuklZone - RuklCenterCol[RuklRow]);
+  CenterY := -RuklEtaStep*(RuklRow - (NumRuklRows/2 + 0.5));
+
+  if NW_RadioButton.Checked then
+    begin
+      X_offset := -RuklXiStep/4;
+      Y_offset := RuklEtaStep/4;
+    end
+  else
+  if NE_RadioButton.Checked then
+    begin
+      X_offset := RuklXiStep/4;
+      Y_offset := RuklEtaStep/4;
+    end
+  else
+  if SW_RadioButton.Checked then
+    begin
+      X_offset := -RuklXiStep/4;
+      Y_offset := -RuklEtaStep/4;
+    end
+  else
+  if SE_RadioButton.Checked then
+    begin
+      X_offset := RuklXiStep/4;
+      Y_offset := -RuklEtaStep/4;
+    end
+  else
+    begin
+      X_offset := 0;
+      Y_offset := 0;
+    end;
+
+  Xi  := CenterX + X_offset;
+  Eta := CenterY + Y_offset;
+
+  RSqrd := Sqr(Xi) + Sqr(Eta);
+  if RSqrd>=1 then
+    begin
+      LonDeg := -999;
+      LatDeg := -999;
+    end
+  else
+    begin
+      Zeta := Sqrt(1 - RSqrd);
+      LonDeg := RadToDeg(ArcTan2(Xi,Zeta));
+      LatDeg := RadToDeg(ArcSin(Eta));
+    end;
 end;
 
 procedure TH_Terminator_Goto_Form.UpdateMapZone;
 const
-  NumRuklRows = 8;  // Rukl divides Y = +1 to -1 into 8 rows
-  NumRuklCols = 11; // and X = -1 to +1 into 11 columns
-  RuklCenterCol : array[1..NumRuklRows] of Integer = (4, 12, 22, 33, 44, 55, 65, 73);  // Map number at start of row
-
   LTOStartCol : array[1..12] of Integer = (1, 2, 10, 22, 37, 55, 73, 91, 109, 124, 136, 144);  // Map number at start of row
   LTOStartLon : array[1..12] of Integer = (0, -80, -80, -86, -90, -90, -90, -90, -86, -80, -80, 0); // longitude at left edge of LTOStartCol
   LTOWidth : array[1..12] of Integer = (360, 45, 30, 24, 20, 20, 20, 20, 24, 30, 45, 360); // width of each block in row
@@ -490,6 +602,47 @@ begin
 
 end;
 
+procedure TH_Terminator_Goto_Form.Next_ButtonClick(Sender: TObject);
+  procedure IncrementZone;
+    var
+      CurrentZone : Integer;
+    begin
+      CurrentZone := RuklZone_LabeledNumericEdit.NumericEdit.IntegerValue;
+      if CurrentZone<76 then
+        begin
+          Inc(CurrentZone);
+          RuklZone_LabeledNumericEdit.NumericEdit.Text := IntToStr(CurrentZone);
+        end;
+    end;
+begin
+  if Center_RadioButton.Checked then
+    IncrementZone
+  else if NW_RadioButton.Checked then
+    NE_RadioButton.Checked := True
+  else if NE_RadioButton.Checked then
+    SE_RadioButton.Checked := True
+  else if SE_RadioButton.Checked then
+    SW_RadioButton.Checked := True
+  else if SW_RadioButton.Checked then
+    begin
+      IncrementZone;
+      NW_RadioButton.Checked := True;
+    end;
+end;
+
+procedure TH_Terminator_Goto_Form.MinimizeGotoList_CheckBoxClick(
+  Sender: TObject);
+begin
+  Terminator_Form.RefreshGoToList;
+end;
+
+procedure TH_Terminator_Goto_Form.XY_Redraw_ButtonClick(Sender: TObject);
+begin
+  GoToState := Center;
+  Terminator_Form.GoToXY(CenterX_LabeledNumericEdit.NumericEdit.ExtendedValue,CenterY_LabeledNumericEdit.NumericEdit.ExtendedValue);;
+  GoToState := Cancel; // without this, closing form may cause another redraw
+end;
+
 procedure TH_Terminator_Goto_Form.FeatureNames_ComboBoxKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
@@ -545,17 +698,10 @@ begin
   Terminator_Form.DisplayF1Help(Key,Shift,'GotoForm.htm');
 end;
 
-
 procedure TH_Terminator_Goto_Form.MinimizeGotoList_CheckBoxKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
   Terminator_Form.DisplayF1Help(Key,Shift,'GotoForm.htm');
-end;
-
-procedure TH_Terminator_Goto_Form.MinimizeGotoList_CheckBoxClick(
-  Sender: TObject);
-begin
-  Terminator_Form.RefreshGoToList;
 end;
 
 procedure TH_Terminator_Goto_Form.XY_Redraw_ButtonKeyDown(Sender: TObject;
@@ -564,11 +710,58 @@ begin
   Terminator_Form.DisplayF1Help(Key,Shift,'GotoForm.htm');
 end;
 
-procedure TH_Terminator_Goto_Form.XY_Redraw_ButtonClick(Sender: TObject);
+procedure TH_Terminator_Goto_Form.RuklZone_RadioButtonKeyDown(
+  Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  GoToState := Center;
-  Terminator_Form.GoToXY(CenterX_LabeledNumericEdit.NumericEdit.ExtendedValue,CenterY_LabeledNumericEdit.NumericEdit.ExtendedValue);;
-  GoToState := Cancel; // without this, closing form may cause another redraw
+  Terminator_Form.DisplayF1Help(Key,Shift,'GotoForm.htm');
+end;
+
+procedure TH_Terminator_Goto_Form.LabeledNumericEdit2NumericEditKeyDown(
+  Sender: TObject; var Key: Word; Shift: TShiftState);
+begin
+  Terminator_Form.DisplayF1Help(Key,Shift,'GotoForm.htm');
+end;
+
+procedure TH_Terminator_Goto_Form.Center_RadioButtonKeyDown(
+  Sender: TObject; var Key: Word; Shift: TShiftState);
+begin
+  Terminator_Form.DisplayF1Help(Key,Shift,'GotoForm.htm');
+end;
+
+procedure TH_Terminator_Goto_Form.NW_RadioButtonKeyDown(Sender: TObject;
+  var Key: Word; Shift: TShiftState);
+begin
+  Terminator_Form.DisplayF1Help(Key,Shift,'GotoForm.htm');
+end;
+
+procedure TH_Terminator_Goto_Form.NE_RadioButtonKeyDown(Sender: TObject;
+  var Key: Word; Shift: TShiftState);
+begin
+  Terminator_Form.DisplayF1Help(Key,Shift,'GotoForm.htm');
+end;
+
+procedure TH_Terminator_Goto_Form.SW_RadioButtonKeyDown(
+  Sender: TObject; var Key: Word; Shift: TShiftState);
+begin
+  Terminator_Form.DisplayF1Help(Key,Shift,'GotoForm.htm');
+end;
+
+procedure TH_Terminator_Goto_Form.SE_RadioButtonKeyDown(Sender: TObject;
+  var Key: Word; Shift: TShiftState);
+begin
+  Terminator_Form.DisplayF1Help(Key,Shift,'GotoForm.htm');
+end;
+
+procedure TH_Terminator_Goto_Form.Next_ButtonKeyDown(Sender: TObject;
+  var Key: Word; Shift: TShiftState);
+begin
+  Terminator_Form.DisplayF1Help(Key,Shift,'GotoForm.htm');
+end;
+
+procedure TH_Terminator_Goto_Form.AutoLabel_CheckBoxKeyDown(
+  Sender: TObject; var Key: Word; Shift: TShiftState);
+begin
+  Terminator_Form.DisplayF1Help(Key,Shift,'GotoForm.htm');
 end;
 
 end.

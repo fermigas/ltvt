@@ -11,7 +11,7 @@ type
     OK_Button: TButton;
     Label1: TLabel;
     Version_Label: TLabel;
-    Label3: TLabel;
+    Copyright_Label: TLabel;
     Label4: TLabel;
     Email_Label: TLabel;
     Label2: TLabel;
@@ -20,6 +20,8 @@ type
     Label6: TLabel;
     HenrikWebAddress_Label: TLabel;
     More_Button: TButton;
+    Label3: TLabel;
+    LTVT_WikiWebAddress_Label: TLabel;
     procedure OK_ButtonClick(Sender: TObject);
     procedure Email_LabelClick(Sender: TObject);
     procedure Email_LabelMouseEnter(Sender: TObject);
@@ -32,6 +34,7 @@ type
     procedure More_ButtonClick(Sender: TObject);
     procedure More_ButtonKeyDown(Sender: TObject; var Key: Word;
       Shift: TShiftState);
+    procedure LTVT_WikiWebAddress_LabelClick(Sender: TObject);
   private
     { Private declarations }
   public
@@ -67,6 +70,12 @@ end;
 procedure TTerminatorAbout_Form.Email_LabelMouseLeave(Sender: TObject);
 begin
   Screen.Cursor := DefaultCursor;
+end;
+
+procedure TTerminatorAbout_Form.LTVT_WikiWebAddress_LabelClick(
+  Sender: TObject);
+begin
+  ShellExecute(0,'open',pchar('http://'+LTVT_WikiWebAddress_Label.Caption),'','',sw_ShowNormal)
 end;
 
 procedure TTerminatorAbout_Form.JimWebAddress_LabelClick(Sender: TObject);

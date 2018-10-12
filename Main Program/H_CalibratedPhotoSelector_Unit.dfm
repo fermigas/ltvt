@@ -1,8 +1,8 @@
 object CalibratedPhotoLoader_Form: TCalibratedPhotoLoader_Form
-  Left = 136
-  Top = 17
-  Width = 815
-  Height = 718
+  Left = 137
+  Top = 9
+  Width = 827
+  Height = 727
   Caption = 'Calibrated Photo Selector  v0.5'
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -15,7 +15,7 @@ object CalibratedPhotoLoader_Form: TCalibratedPhotoLoader_Form
   OnCreate = FormCreate
   PixelsPerInch = 96
   TextHeight = 13
-  object Image1: TImage
+  object Thumbnail_Image: TImage
     Left = 536
     Top = 48
     Width = 265
@@ -111,11 +111,39 @@ object CalibratedPhotoLoader_Form: TCalibratedPhotoLoader_Form
     Height = 13
     Caption = 'Image list:'
   end
+  object PhotoListHeaders_Label: TLabel
+    Left = 32
+    Top = 80
+    Width = 116
+    Height = 13
+    Hint = 'Identity of columns in list box'
+    Caption = 'PhotoListHeaders_Label'
+  end
+  object FeaturePos_Label: TLabel
+    Left = 216
+    Top = 80
+    Width = 86
+    Height = 13
+    Hint = 
+      'Sun angle in current photo and where feature is in requested pho' +
+      'to as fraction of width (from left) and height (from top)'
+    Caption = 'FeaturePos_Label'
+  end
+  object Overlay_Image: TImage
+    Left = 536
+    Top = 48
+    Width = 265
+    Height = 153
+    Hint = 'This is a preview of the currently selected image'
+    IncrementalDisplay = True
+    Proportional = True
+    Transparent = True
+  end
   object ListBox1: TListBox
     Left = 24
-    Top = 80
+    Top = 96
     Width = 497
-    Height = 609
+    Height = 585
     Hint = 'Click on a photo name or use keyboard to move through list'
     Font.Charset = DEFAULT_CHARSET
     Font.Color = clWindowText
@@ -433,50 +461,26 @@ object CalibratedPhotoLoader_Form: TCalibratedPhotoLoader_Form
     TabOrder = 21
     OnKeyDown = OverwriteAll_RadioButtonKeyDown
   end
-  inline TargetLon_LabeledNumericEdit: TLabeledNumericEdit
-    Left = 286
-    Top = 52
-    Width = 99
-    Height = 21
-    Hint = 'Selenographic longitude in decimal degrees (E=+  W=-)'
-    AutoSize = True
-    TabOrder = 4
-    inherited Item_Label: TLabel
-      Width = 21
-      Caption = 'Lon:'
-    end
-    inherited Units_Label: TLabel
-      Left = 96
-      Width = 3
-      Caption = ''
-    end
-    inherited NumericEdit: TNumericEdit
-      Left = 32
-      Width = 65
-      Text = '0.000'
-      OnKeyDown = TargetLon_LabeledNumericEditNumericEditKeyDown
-    end
-  end
   inline TargetLat_LabeledNumericEdit: TLabeledNumericEdit
-    Left = 398
+    Left = 342
     Top = 52
     Width = 99
     Height = 21
     Hint = 'Selenographic latitude in decimal degrees (N=+  S=-)'
     AutoSize = True
     TabOrder = 5
-    inherited Item_Label: TLabel
-      Width = 18
-      Caption = 'Lat:'
-    end
-    inherited Units_Label: TLabel
+    inherited Units_Label: TLabel [0]
       Left = 96
       Width = 3
       Caption = ''
     end
+    inherited Item_Label: TLabel [1]
+      Width = 18
+      Caption = 'Lat:'
+    end
     inherited NumericEdit: TNumericEdit
       Left = 32
-      Width = 65
+      Width = 41
       Text = '0.000'
       OnKeyDown = TargetLat_LabeledNumericEditNumericEditKeyDown
       InputMin = '-90'
@@ -495,7 +499,7 @@ object CalibratedPhotoLoader_Form: TCalibratedPhotoLoader_Form
     OnKeyDown = ListPhotos_ButtonKeyDown
   end
   object FilterPhotos_CheckBox: TCheckBox
-    Left = 200
+    Left = 168
     Top = 52
     Width = 73
     Height = 17
@@ -542,6 +546,41 @@ object CalibratedPhotoLoader_Form: TCalibratedPhotoLoader_Form
     Checked = True
     TabOrder = 22
     TabStop = True
+  end
+  object ListLibrations_CheckBox: TCheckBox
+    Left = 440
+    Top = 52
+    Width = 89
+    Height = 17
+    Hint = 
+      'List the longitude and latitude of the Sub-Observer point of eac' +
+      'h photo in selection list'
+    Caption = 'List Librations'
+    TabOrder = 23
+  end
+  inline TargetLon_LabeledNumericEdit: TLabeledNumericEdit
+    Left = 238
+    Top = 52
+    Width = 99
+    Height = 21
+    Hint = 'Selenographic longitude in decimal degrees (E=+  W=-)'
+    AutoSize = True
+    TabOrder = 4
+    inherited Item_Label: TLabel
+      Width = 21
+      Caption = 'Lon:'
+    end
+    inherited Units_Label: TLabel
+      Left = 96
+      Width = 3
+      Caption = ''
+    end
+    inherited NumericEdit: TNumericEdit
+      Left = 32
+      Width = 49
+      Text = '0.000'
+      OnKeyDown = TargetLon_LabeledNumericEditNumericEditKeyDown
+    end
   end
   object OpenDialog1: TOpenDialog
     Left = 184

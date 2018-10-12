@@ -52,6 +52,8 @@ type
     DotCircle_ColorBox: TColorBox;
     Label14: TLabel;
     RefPt_ColorBox: TColorBox;
+    SnapShadowPoint_CheckBox: TCheckBox;
+    RadialDotOffset_CheckBox: TCheckBox;
     procedure ChangeFont_ButtonClick(Sender: TObject);
     procedure FormShow(Sender: TObject);
     procedure OK_ButtonClick(Sender: TObject);
@@ -114,6 +116,10 @@ type
       var Key: Word; Shift: TShiftState);
     procedure TransparentDots_CheckBoxKeyDown(Sender: TObject;
       var Key: Word; Shift: TShiftState);
+    procedure SnapShadowPoint_CheckBoxKeyDown(Sender: TObject;
+      var Key: Word; Shift: TShiftState);
+    procedure RadialDotOffset_CheckBoxKeyDown(Sender: TObject;
+      var Key: Word; Shift: TShiftState);
   private
     { Private declarations }
   public
@@ -172,6 +178,7 @@ begin
 
   FullCraterNames_CheckBox.Visible := IncludeName_CheckBox.Checked;
   IncludeUnits_CheckBox.Visible := IncludeSize_CheckBox.Checked;
+  RadialDotOffset_CheckBox.Visible := (FullCraterNames_CheckBox.Visible) and not (FullCraterNames_CheckBox.Checked);
 end;
 
 procedure TLabelFontSelector_Form.ChangeFont_ButtonClick(Sender: TObject);
@@ -388,6 +395,18 @@ begin
 end;
 
 procedure TLabelFontSelector_Form.TransparentDots_CheckBoxKeyDown(
+  Sender: TObject; var Key: Word; Shift: TShiftState);
+begin
+  Terminator_Form.DisplayF1Help(Key,Shift,'ModifyLabels.htm');
+end;
+
+procedure TLabelFontSelector_Form.SnapShadowPoint_CheckBoxKeyDown(
+  Sender: TObject; var Key: Word; Shift: TShiftState);
+begin
+  Terminator_Form.DisplayF1Help(Key,Shift,'ModifyLabels.htm');
+end;
+
+procedure TLabelFontSelector_Form.RadialDotOffset_CheckBoxKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
   Terminator_Form.DisplayF1Help(Key,Shift,'ModifyLabels.htm');

@@ -1,8 +1,8 @@
 object CircleDrawing_Form: TCircleDrawing_Form
   Left = 486
   Top = 116
-  Width = 339
-  Height = 175
+  Width = 386
+  Height = 207
   Caption = 'Circle Drawing Tool'
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -17,8 +17,8 @@ object CircleDrawing_Form: TCircleDrawing_Form
   PixelsPerInch = 96
   TextHeight = 13
   object Label1: TLabel
-    Left = 192
-    Top = 75
+    Left = 272
+    Top = 83
     Width = 84
     Height = 13
     Caption = '(press F1 for help)'
@@ -122,43 +122,43 @@ object CircleDrawing_Form: TCircleDrawing_Form
     OnKeyDown = Circle_ColorBoxKeyDown
   end
   object DrawCircle_Button: TButton
-    Left = 24
-    Top = 104
+    Left = 16
+    Top = 128
     Width = 57
     Height = 25
     Hint = 'Draw circle on present map'
     Caption = 'Draw'
-    TabOrder = 5
+    TabOrder = 6
     OnClick = DrawCircle_ButtonClick
     OnKeyDown = DrawCircle_ButtonKeyDown
   end
   object ClearCircle_Button: TButton
-    Left = 104
-    Top = 104
+    Left = 88
+    Top = 128
     Width = 57
     Height = 25
     Hint = 
       'Erase circle(s) by reverting to state of map when dialog was inv' +
       'oked'
     Caption = 'Clear'
-    TabOrder = 6
+    TabOrder = 7
     OnClick = ClearCircle_ButtonClick
     OnKeyDown = ClearCircle_ButtonKeyDown
   end
   object Close_Button: TButton
-    Left = 280
-    Top = 104
+    Left = 304
+    Top = 128
     Width = 51
     Height = 25
     Hint = 'Close tool leaving image in current state'
     Caption = 'Close'
-    TabOrder = 7
+    TabOrder = 9
     OnClick = Close_ButtonClick
     OnKeyDown = Close_ButtonKeyDown
   end
   object ShowCenter_CheckBox: TCheckBox
     Left = 16
-    Top = 72
+    Top = 80
     Width = 89
     Height = 17
     Hint = 
@@ -168,14 +168,25 @@ object CircleDrawing_Form: TCircleDrawing_Form
     TabOrder = 4
   end
   object Record_Button: TButton
-    Left = 192
-    Top = 104
-    Width = 59
+    Left = 184
+    Top = 128
+    Width = 81
     Height = 25
     Hint = 'Write current point to "CircleList.txt"'
-    Caption = 'Record'
+    Caption = 'Record circle'
     TabOrder = 8
     OnClick = Record_ButtonClick
     OnKeyDown = Record_ButtonKeyDown
+  end
+  object InitiateShadowFile_Button: TButton
+    Left = 136
+    Top = 80
+    Width = 121
+    Height = 25
+    Hint = 'Use this point and diameter to create a shadow profile file'
+    Caption = 'Create shadow pts file'
+    TabOrder = 5
+    OnClick = InitiateShadowFile_ButtonClick
+    OnKeyDown = InitiateShadowFile_ButtonKeyDown
   end
 end

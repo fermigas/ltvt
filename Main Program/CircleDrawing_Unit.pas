@@ -18,6 +18,7 @@ type
     ShowCenter_CheckBox: TCheckBox;
     Label1: TLabel;
     Record_Button: TButton;
+    InitiateShadowFile_Button: TButton;
     procedure DrawCircle_ButtonClick(Sender: TObject);
     procedure FormShow(Sender: TObject);
     procedure ClearCircle_ButtonClick(Sender: TObject);
@@ -41,6 +42,9 @@ type
     procedure Record_ButtonClick(Sender: TObject);
     procedure Record_ButtonKeyDown(Sender: TObject; var Key: Word;
       Shift: TShiftState);
+    procedure InitiateShadowFile_ButtonClick(Sender: TObject);
+    procedure InitiateShadowFile_ButtonKeyDown(Sender: TObject;
+      var Key: Word; Shift: TShiftState);
   private
     { Private declarations }
   public
@@ -323,6 +327,40 @@ procedure TCircleDrawing_Form.Record_ButtonKeyDown(Sender: TObject;
   var Key: Word; Shift: TShiftState);
 begin
   ProcessKeyStroke(Key,Shift,'CircleDrawingTool.htm#Record_Button');
+end;
+
+procedure TCircleDrawing_Form.InitiateShadowFile_ButtonKeyDown(
+  Sender: TObject; var Key: Word; Shift: TShiftState);
+begin
+  ProcessKeyStroke(Key,Shift,'CircleDrawingTool.htm#Record_Button');
+end;
+
+procedure TCircleDrawing_Form.InitiateShadowFile_ButtonClick(Sender: TObject);
+var
+  ShadowFile : TextFile;
+begin
+  if FileExists(Terminator_Form.ShadowProfileFilename) and
+    (mrNO=MessageDlg('Overwrite existing shadow profile?',mtConfirmation,[mbYes,mbNo],0)) then Exit;
+
+  Terminator_Form.PolarToVector(DegToRad(LatDeg_LabeledNumericEdit.NumericEdit.ExtendedValue),
+    DegToRad(LonDeg_LabeledNumericEdit.NumericEdit.ExtendedValue), 1, Terminator_Form.ShadowProfileCenterVector);
+
+  AssignFile(ShadowFile, Terminator_Form.ShadowProfileFilename);
+  Rewrite(ShadowFile);
+
+  Writeln(ShadowFile,'* Crater profile -- distances referenced to point at');
+  Writeln(ShadowFile,'*  Lon : '+LonDeg_LabeledNumericEdit.NumericEdit.Text+
+    '  Lat : '+LatDeg_LabeledNumericEdit.NumericEdit.Text);
+  Writeln(ShadowFile,'');
+  Writeln(ShadowFile,Format('Crater radius = %0.3f',[Diam_LabeledNumericEdit.NumericEdit.ExtendedValue/2]));
+  Writeln(ShadowFile,'');
+  Writeln(ShadowFile,'* Distance, Elev. Difference, Start Lon, Start Lat, End Lon, End Lat, PhotoID ');
+  Writeln(ShadowFile,Format('%0.3f, 0',[Diam_LabeledNumericEdit.NumericEdit.ExtendedValue/2]));
+
+  CloseFile(ShadowFile);
+
+  ShowMessage('Ready to record shadow data in file : '+Terminator_Form.ShadowProfileFilename);
+
 end;
 
 end.
