@@ -90,7 +90,7 @@ object LTVT_Form: TLTVT_Form
       Caption = 'Sub-observer Point'
     end
     object SubSolPtHeading_Label: TLabel
-      Left = 178
+      Left = 194
       Top = 104
       Width = 71
       Height = 13
@@ -255,6 +255,16 @@ object LTVT_Form: TLTVT_Form
         InputMin = '-90'
         InputMax = '90'
       end
+    end
+    object IlluminationMode_CheckBox: TCheckBox
+      Left = 168
+      Top = 104
+      Width = 17
+      Height = 17
+      Hint = 'Check to specify constant sun angle over whole disk'
+      TabOrder = 4
+      OnClick = IlluminationMode_CheckBoxClick
+      OnKeyDown = FormKeyDown
     end
   end
   object MousePosition_GroupBox: TGroupBox

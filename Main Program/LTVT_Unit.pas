@@ -150,6 +150,7 @@ type
     ColonIdentifier_Label: TLabel;
     NearestDotAdditionalInfo_RightClickMenuItem: TMenuItem;
     ExportTexture_MainMenuItem: TMenuItem;
+    IlluminationMode_CheckBox: TCheckBox;
     procedure DrawDots_ButtonClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure DrawTexture_ButtonClick(Sender: TObject);
@@ -293,6 +294,7 @@ type
     procedure ChangeTargetPlanet_MainMenuItemClick(Sender: TObject);
     procedure NearestDotAdditionalInfo_RightClickMenuItemClick(Sender: TObject);
     procedure ExportTexture_MainMenuItemClick(Sender: TObject);
+    procedure IlluminationMode_CheckBoxClick(Sender: TObject);
   private
     { Private declarations }
     fXScale, fXOffset,
@@ -449,6 +451,7 @@ type
 // The following are used for labeling saved images:
     DrawingMode : (DotMode, TextureMode, EarthView, DEM_2D, DEM_3D); // for last texture drawn
     ManualMode : boolean;  // current status of geometry labels
+    IlluminationMode : (Actual, Constant);
 
 // Set by clicking EstimateData button
     ImageDate, ImageTime : TDateTime;
@@ -716,7 +719,7 @@ uses FileCtrl, H_Terminator_About_Unit, H_Terminator_Goto_Unit, H_Terminator_Set
 {$R *.dfm}
 
 const
-  ProgramVersion = '0.21.3.1';
+  ProgramVersion = '0.21.3.1MC';
 
 // note: the following constants specify (in degrees) that texture files span
 //   the full lunar globe.  They should not be changed.
@@ -1266,6 +1269,11 @@ begin {TLTVT_Form.CalculateGeometry}
   Result := False;
 
   ImageManual := ManualMode;  // current geometry was computed using manual settings
+
+  if ((DrawingMode=DEM_2D) or (DrawingMode=DEM_3D)) and IlluminationMode_CheckBox.Checked then
+    IlluminationMode := Constant
+  else
+    IlluminationMode := Actual;
 
   ImageGamma := Gamma_LabeledNumericEdit.NumericEdit.ExtendedValue;
 
@@ -1873,6 +1881,7 @@ var
   RotationAxis, TestVector : TVector;
   GunCount : Integer;
   StartTime, ElapsedTime : TDateTime;
+  SunZenithDistanceRad, SunAzimuthRad, // for constant illumination
   XProj, YProj,
   MaxProjection, AngleStep, DotProd,
   MaxR, ProjectionSqrd,
@@ -1997,6 +2006,14 @@ procedure EvaluateBrigthness;
      BkgRow[i] := NoDataPixel
    else
      begin
+       if IlluminationMode=Constant then
+         begin
+           CrossProduct(PointVector,Uy,RotationAxis);
+           if VectorMagnitude(RotationAxis)=0 then RotationAxis := Uz;
+           RotateVector(RotationAxis,-SunAzimuthRad,PointVector);
+           SubSolarVector := PointVector;
+           RotateVector(SubSolarVector,SunZenithDistanceRad,RotationAxis);
+         end;
 
        U0 := DotProduct(SubSolarVector,SurfaceNormal);
 
@@ -2074,8 +2091,13 @@ procedure EvaluateBrigthness;
              begin
                ShadowFound := False;
                CrossProduct(PointVector,SubSolarVector,RotationAxis);
+               if VectorMagnitude(RotationAxis)=0 then RotationAxis := PointVector; //arbitrary fix??
 //                       ShowMessage(VectorString(RotationAxis,3));
                DotProd := DotProduct(SubSolarVector,PointVector);
+               if DotProd>1 then
+                 DotProd := 1
+               else if DotProd<-1 then
+                 DotProd := -1;
                Theta1 := ArcCos(DotProd);
                with PointCoords do
                  begin
@@ -2120,6 +2142,9 @@ begin  {TLTVT_Form.DrawDEM_ButtonClick}
     DrawingMode := DEM_2D;
 
   if not CalculateGeometry then Exit;
+
+  SunZenithDistanceRad := (90 - SubSol_Lat_LabeledNumericEdit.NumericEdit.ExtendedValue)*OneDegree;
+  SunAzimuthRad := SubSol_Lon_LabeledNumericEdit.NumericEdit.ExtendedValue*OneDegree;
 
   if MultiplyDemByTexture3 then
     begin
@@ -2857,6 +2882,8 @@ var
 begin {EstimateData_ButtonClick}
 //  FocusControl(MousePosition_GroupBox); // need to remove focus or button will remain pictured in a depressed state
 
+  IlluminationMode_CheckBox.Checked := False;
+  
   Screen.Cursor := crHourGlass;
 
   ObserverLongitude := -ExtendedValue(ObserverLongitudeText); {Note: reversing positive West to negative West longitude}
@@ -4491,17 +4518,35 @@ begin
                 end
               else
                 begin
-                  if not ConvertXYtoLonLat(ImageCenterX,ImageCenterY,CenterLon,CenterLat) then
-                    TextOut(0,1,Format(' Sub-solar Pt = %s/%s  Sub-Earth Pt = %s/%s  XY-Center = (%0.4f,%0.4f)  Zoom = %0.3f',
-                      [PlanetaryLongitudeString(RadToDeg(ImageSubSolLon),3), LatitudeString(RadToDeg(ImageSubSolLat),3),
-                       PlanetaryLongitudeString(RadToDeg(ImageSubObsLon),3), LatitudeString(RadToDeg(ImageSubObsLat),3),
-                       ImageCenterX, ImageCenterY, ImageZoom]))
+                  if IlluminationMode=Constant then
+                    begin
+                      if not ConvertXYtoLonLat(ImageCenterX,ImageCenterY,CenterLon,CenterLat) then
+                        TextOut(0,1,Format(' Sun = %0.3f° alt/%0.3f° az  Sub-Earth Pt = %s/%s  XY-Center = (%0.4f,%0.4f)  Zoom = %0.3f',
+                          [RadToDeg(ImageSubSolLat), RadToDeg(ImageSubSolLon),
+                           PlanetaryLongitudeString(RadToDeg(ImageSubObsLon),3), LatitudeString(RadToDeg(ImageSubObsLat),3),
+                           ImageCenterX, ImageCenterY, ImageZoom]))
+                      else
+                        begin
+                          TextOut(0,1,Format(' Sun = %0.3f° alt/%0.3f° az  Sub-Earth Pt = %s/%s  Center = %s/%s  Zoom = %0.3f',
+                          [RadToDeg(ImageSubSolLat), RadToDeg(ImageSubSolLon),
+                             PlanetaryLongitudeString(RadToDeg(ImageSubObsLon),3), LatitudeString(RadToDeg(ImageSubObsLat),3),
+                             PlanetaryLongitudeString(RadToDeg(CenterLon),3), LatitudeString(RadToDeg(CenterLat),3), ImageZoom]));
+                        end;
+                    end
                   else
                     begin
-                      TextOut(0,1,Format(' Sub-solar Pt = %s/%s  Sub-Earth Pt = %s/%s  Center = %s/%s  Zoom = %0.3f',
-                        [PlanetaryLongitudeString(RadToDeg(ImageSubSolLon),3), LatitudeString(RadToDeg(ImageSubSolLat),3),
-                         PlanetaryLongitudeString(RadToDeg(ImageSubObsLon),3), LatitudeString(RadToDeg(ImageSubObsLat),3),
-                         PlanetaryLongitudeString(RadToDeg(CenterLon),3), LatitudeString(RadToDeg(CenterLat),3), ImageZoom]));
+                      if not ConvertXYtoLonLat(ImageCenterX,ImageCenterY,CenterLon,CenterLat) then
+                        TextOut(0,1,Format(' Sub-solar Pt = %s/%s  Sub-Earth Pt = %s/%s  XY-Center = (%0.4f,%0.4f)  Zoom = %0.3f',
+                          [PlanetaryLongitudeString(RadToDeg(ImageSubSolLon),3), LatitudeString(RadToDeg(ImageSubSolLat),3),
+                           PlanetaryLongitudeString(RadToDeg(ImageSubObsLon),3), LatitudeString(RadToDeg(ImageSubObsLat),3),
+                           ImageCenterX, ImageCenterY, ImageZoom]))
+                      else
+                        begin
+                          TextOut(0,1,Format(' Sub-solar Pt = %s/%s  Sub-Earth Pt = %s/%s  Center = %s/%s  Zoom = %0.3f',
+                            [PlanetaryLongitudeString(RadToDeg(ImageSubSolLon),3), LatitudeString(RadToDeg(ImageSubSolLat),3),
+                             PlanetaryLongitudeString(RadToDeg(ImageSubObsLon),3), LatitudeString(RadToDeg(ImageSubObsLat),3),
+                             PlanetaryLongitudeString(RadToDeg(CenterLon),3), LatitudeString(RadToDeg(CenterLat),3), ImageZoom]));
+                        end;
                     end;
 
                   OutString := ' Vertical axis : ';
@@ -7186,15 +7231,31 @@ begin
 
       if CurrentTargetPlanet=Moon then
         begin
-          SubObs_Lat_LabeledNumericEdit.Hint := 'Selenographic latitude of sub-observer point in decimal degrees (N=+  S=-)';
-          SubSol_Lat_LabeledNumericEdit.Hint := 'Selenographic latitude of sub-solar point in decimal degrees (N=+  S=-)';
+          if IlluminationMode_CheckBox.Checked then
+            begin
+              SubObs_Lat_LabeledNumericEdit.Hint := '';
+              SubSol_Lat_LabeledNumericEdit.Hint := '';
+            end
+          else
+            begin
+              SubObs_Lat_LabeledNumericEdit.Hint := 'Selenographic latitude of sub-observer point in decimal degrees (N=+  S=-)';
+              SubSol_Lat_LabeledNumericEdit.Hint := 'Selenographic latitude of sub-solar point in decimal degrees (N=+  S=-)';
+            end;
           Colongitude_Label.Hint := '90° - Selenographic longitude of Subsolar Point';
           MousePosition_GroupBox.Hint := 'Information related to current mouse position; in top caption, "Map" is IAU format LTO zone number; "Rnn" is Rükl sheet number';
         end
       else
         begin
-          SubObs_Lat_LabeledNumericEdit.Hint := 'Planetocentric latitude of sub-observer point in decimal degrees (N=+  S=-)';
-          SubSol_Lat_LabeledNumericEdit.Hint := 'Planetocentric latitude of sub-solar point in decimal degrees (N=+  S=-)';
+          if IlluminationMode_CheckBox.Checked then
+            begin
+              SubObs_Lat_LabeledNumericEdit.Hint := '';
+              SubSol_Lat_LabeledNumericEdit.Hint := '';
+            end
+          else
+            begin
+              SubObs_Lat_LabeledNumericEdit.Hint := 'Planetocentric latitude of sub-observer point in decimal degrees (N=+  S=-)';
+              SubSol_Lat_LabeledNumericEdit.Hint := 'Planetocentric latitude of sub-solar point in decimal degrees (N=+  S=-)';
+            end;
           Colongitude_Label.Hint := 'Longitude of Central Meridian';
           MousePosition_GroupBox.Hint := 'Information related to current mouse position';
         end;
@@ -7208,6 +7269,30 @@ begin
       PlanetSelected := False;
       ShowModal;
       if PlanetSelected then ChangeLTVT_TargetPlanet(SelectedPlanet);
+    end;
+end;
+
+procedure TLTVT_Form.IlluminationMode_CheckBoxClick(Sender: TObject);
+begin
+  if IlluminationMode_CheckBox.Checked then
+    begin
+      SubSol_Lon_LabeledNumericEdit.Item_Label.Caption := 'Azimuth:';
+      SubSol_Lon_LabeledNumericEdit.Item_Label.Hint := 'Angle to Sun direction measured CW in decimal degrees from lunar north:';
+      SubSol_Lon_LabeledNumericEdit.Hint := 'Angle to Sun direction measured CW in decimal degrees from lunar north:';
+      SubSolPtHeading_Label.Caption := 'Constant sun angle';
+      SubSol_Lat_LabeledNumericEdit.Item_Label.Caption := 'Elevation:';
+      SubSol_Lat_LabeledNumericEdit.Item_Label.Hint := 'Altitude of Sun relative to local horizontal in decimal degrees (above=+ below=-):';
+      SubSol_Lat_LabeledNumericEdit.Hint := 'Altitude of Sun relative to local horizontal in decimal degrees (above=+ below=-):';
+    end
+  else
+    begin
+      SubSolPtHeading_Label.Caption := 'Sub-solar Point';
+      SubSol_Lon_LabeledNumericEdit.Item_Label.Caption := 'Longitude:';
+      SubSol_Lon_LabeledNumericEdit.Item_Label.Hint := 'Longitude of sub-solar point in decimal degrees (E=+  W=-):';
+      SubSol_Lon_LabeledNumericEdit.Hint := 'Longitude of sub-solar point in decimal degrees (E=+  W=-):';
+      SubSol_Lat_LabeledNumericEdit.Item_Label.Caption := 'Latitude:';
+      SubSol_Lat_LabeledNumericEdit.Item_Label.Hint := 'Latitude (on sphere) of sub-solar point in decimal degrees (N=+  S=-):';
+      SubSol_Lat_LabeledNumericEdit.Hint := 'Latitude (on sphere) of sub-solar point in decimal degrees (N=+  S=-):';
     end;
 end;
 
