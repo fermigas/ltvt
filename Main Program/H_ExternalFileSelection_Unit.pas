@@ -52,6 +52,10 @@ type
     Tex3MaxLon_LabeledNumericEdit: TLabeledNumericEdit;
     Tex3MinLat_LabeledNumericEdit: TLabeledNumericEdit;
     Tex3MaxLat_LabeledNumericEdit: TLabeledNumericEdit;
+    Label6: TLabel;
+    Label10: TLabel;
+    EarthTextureFilename_Label: TLabel;
+    ChangeEarthTexture_Button: TButton;
     procedure FormShow(Sender: TObject);
     procedure OK_ButtonClick(Sender: TObject);
     procedure Cancel_ButtonClick(Sender: TObject);
@@ -110,6 +114,9 @@ type
       Sender: TObject; var Key: Word; Shift: TShiftState);
     procedure Tex3MinLat_LabeledNumericEditNumericEditKeyDown(
       Sender: TObject; var Key: Word; Shift: TShiftState);
+    procedure ChangeEarthTexture_ButtonKeyDown(Sender: TObject;
+      var Key: Word; Shift: TShiftState);
+    procedure ChangeEarthTexture_ButtonClick(Sender: TObject);
   private
     { Private declarations }
   public
@@ -117,7 +124,7 @@ type
 // Set if a change is requested
     ChangeFileNames : boolean;
 
-    TempTexture1Name, TempTexture2Name, TempTexture3Name,
+    TempTexture1Name, TempTexture2Name, TempTexture3Name, TempEarthTextureName,
 //    TempTex3MinLonText, TempTex3MaxLonText, TempTex3MinLatText, TempTex3MaxLatText,
     TempEphemerisFilename, TempDotFilename, TempTAIFilename,
     TempNormalPhotoSessionsFilename, TempCalibratedPhotosFilename,
@@ -141,6 +148,7 @@ begin
   Texture1Filename_Label.Caption := MinimizeName(TempTexture1Name,Texture1Filename_Label.Canvas,Texture1Filename_Label.Width);
   Texture2Filename_Label.Caption := MinimizeName(TempTexture2Name,Texture2Filename_Label.Canvas,Texture2Filename_Label.Width);
   Texture3Filename_Label.Caption := MinimizeName(TempTexture3Name,Texture3Filename_Label.Canvas,Texture3Filename_Label.Width);
+  EarthTextureFilename_Label.Caption := MinimizeName(TempEarthTextureName,EarthTextureFilename_Label.Canvas,EarthTextureFilename_Label.Width);
 
   DotFilename_Label.Caption := MinimizeName(TempDotFilename,DotFilename_Label.Canvas,DotFilename_Label.Width);
   PhotoSessionsFilename_Label.Caption := MinimizeName(TempNormalPhotoSessionsFilename,PhotoSessionsFilename_Label.Canvas,PhotoSessionsFilename_Label.Width);
@@ -241,6 +249,31 @@ begin
         begin
           TempTexture3Name := FileName;
           Texture3Filename_Label.Caption := MinimizeName(TempTexture3Name,Texture3Filename_Label.Canvas,Texture3Filename_Label.Width);
+        end;
+    end;
+end;
+
+procedure TExternalFileSelection_Form.ChangeEarthTexture_ButtonClick(Sender: TObject);
+begin
+  if GraphicalBrowser_CheckBox.Checked then with OpenPictureDialog1 do
+    begin
+      Title := 'Select Earth Texture reference image';
+      FileName := TempEarthTextureName;
+      if Execute then
+        begin
+          TempEarthTextureName := FileName;
+          EarthTextureFilename_Label.Caption := MinimizeName(TempEarthTextureName,EarthTextureFilename_Label.Canvas,EarthTextureFilename_Label.Width);
+        end;
+    end
+  else with OpenDialog1 do
+    begin
+      Title := 'Select Earth Texture reference image';
+      FileName := TempEarthTextureName;
+      Filter := OpenPictureDialog1.Filter;
+      if Execute then
+        begin
+          TempEarthTextureName := FileName;
+          EarthTextureFilename_Label.Caption := MinimizeName(TempEarthTextureName,EarthTextureFilename_Label.Canvas,EarthTextureFilename_Label.Width);
         end;
     end;
 end;
@@ -489,5 +522,12 @@ procedure TExternalFileSelection_Form.Tex3MinLat_LabeledNumericEditNumericEditKe
 begin
   Terminator_Form.DisplayF1Help(Key,Shift,'ChangingFilenames.htm');
 end;
+
+procedure TExternalFileSelection_Form.ChangeEarthTexture_ButtonKeyDown(
+  Sender: TObject; var Key: Word; Shift: TShiftState);
+begin
+  Terminator_Form.DisplayF1Help(Key,Shift,'ChangingFilenames.htm');
+end;
+
 
 end.

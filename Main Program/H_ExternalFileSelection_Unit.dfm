@@ -1,8 +1,8 @@
 object ExternalFileSelection_Form: TExternalFileSelection_Form
-  Left = 142
-  Top = 29
+  Left = 139
+  Top = 12
   Width = 777
-  Height = 677
+  Height = 715
   Caption = 'LTVT External File Selector'
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -17,7 +17,7 @@ object ExternalFileSelection_Form: TExternalFileSelection_Form
   TextHeight = 13
   object OK_Button: TButton
     Left = 592
-    Top = 616
+    Top = 648
     Width = 49
     Height = 25
     Hint = 'Exit form setting file names as shown'
@@ -28,7 +28,7 @@ object ExternalFileSelection_Form: TExternalFileSelection_Form
   end
   object Cancel_Button: TButton
     Left = 656
-    Top = 616
+    Top = 648
     Width = 59
     Height = 25
     Hint = 'Exit form without saving changes'
@@ -41,7 +41,7 @@ object ExternalFileSelection_Form: TExternalFileSelection_Form
     Left = 8
     Top = 8
     Width = 721
-    Height = 289
+    Height = 329
     Caption = 'Textures'
     Ctl3D = False
     ParentCtl3D = False
@@ -163,6 +163,38 @@ object ExternalFileSelection_Form: TExternalFileSelection_Form
       Font.Style = [fsBold]
       ParentFont = False
     end
+    object Label6: TLabel
+      Left = 8
+      Top = 272
+      Width = 78
+      Height = 13
+      Hint = 
+        'Texture 1 file will be used when you ask for a Texture map with ' +
+        'the first radio button selected on the main form'
+      Caption = 'Earth Texture'
+      Font.Charset = DEFAULT_CHARSET
+      Font.Color = clWindowText
+      Font.Height = -11
+      Font.Name = 'MS Sans Serif'
+      Font.Style = [fsBold]
+      ParentFont = False
+    end
+    object Label10: TLabel
+      Left = 96
+      Top = 300
+      Width = 19
+      Height = 13
+      Caption = 'File:'
+    end
+    object EarthTextureFilename_Label: TLabel
+      Left = 128
+      Top = 300
+      Width = 585
+      Height = 13
+      Hint = 'Choose a new file by clicking "Change"'
+      AutoSize = False
+      Caption = 'EarthTextureFilename_Label'
+    end
     object Texture1Description_Edit: TEdit
       Left = 168
       Top = 56
@@ -258,7 +290,7 @@ object ExternalFileSelection_Form: TExternalFileSelection_Form
     end
     inline Tex3MinLon_LabeledNumericEdit: TLabeledNumericEdit
       Left = 32
-      Top = 256
+      Top = 248
       Width = 130
       Height = 19
       Hint = 'Enter lunar longitude along left margin of Texture 3 map'
@@ -280,7 +312,7 @@ object ExternalFileSelection_Form: TExternalFileSelection_Form
     end
     inline Tex3MaxLon_LabeledNumericEdit: TLabeledNumericEdit
       Left = 192
-      Top = 256
+      Top = 248
       Width = 138
       Height = 19
       Hint = 'Enter lunar longitude along right margin of Texture 3 map'
@@ -304,7 +336,7 @@ object ExternalFileSelection_Form: TExternalFileSelection_Form
     end
     inline Tex3MinLat_LabeledNumericEdit: TLabeledNumericEdit
       Left = 544
-      Top = 256
+      Top = 248
       Width = 138
       Height = 19
       Hint = 'Enter lunar laitude along bottom margin of Texture 3 map'
@@ -328,7 +360,7 @@ object ExternalFileSelection_Form: TExternalFileSelection_Form
     end
     inline Tex3MaxLat_LabeledNumericEdit: TLabeledNumericEdit
       Left = 384
-      Top = 256
+      Top = 248
       Width = 130
       Height = 19
       Hint = 'Enter lunar laitude along bottom margin of Texture 3 map'
@@ -348,10 +380,23 @@ object ExternalFileSelection_Form: TExternalFileSelection_Form
         OnKeyDown = Tex3MaxLat_LabeledNumericEditNumericEditKeyDown
       end
     end
+    object ChangeEarthTexture_Button: TButton
+      Left = 24
+      Top = 296
+      Width = 57
+      Height = 25
+      Hint = 
+        'Associate a new reference map with the third simulation texture ' +
+        'radio button'
+      Caption = 'Change'
+      TabOrder = 12
+      OnClick = ChangeEarthTexture_ButtonClick
+      OnKeyDown = ChangeEarthTexture_ButtonKeyDown
+    end
   end
   object Others_GroupBox: TGroupBox
     Left = 8
-    Top = 320
+    Top = 352
     Width = 721
     Height = 281
     Caption = 'Other External Files'
@@ -497,7 +542,7 @@ object ExternalFileSelection_Form: TExternalFileSelection_Form
   end
   object Save_Button: TButton
     Left = 24
-    Top = 617
+    Top = 649
     Width = 89
     Height = 25
     Hint = 'Save these settings as the new defaults'
@@ -508,7 +553,7 @@ object ExternalFileSelection_Form: TExternalFileSelection_Form
   end
   object Restore_Button: TButton
     Left = 120
-    Top = 617
+    Top = 649
     Width = 89
     Height = 25
     Hint = 'Restore the last saved settings'

@@ -814,7 +814,7 @@ object Terminator_Form: TTerminator_Form
         OnClick = DrawCircle_MainMenuItemClick
       end
       object Changelabelpreferences_MainMenuItem: TMenuItem
-        Caption = 'Change &dot/label preferences...'
+        Caption = 'Change dot/label &preferences...'
         Hint = 'Change font or positioning of labels'
         OnClick = Changelabelpreferences_MainMenuItemClick
       end
@@ -829,6 +829,10 @@ object Terminator_Form: TTerminator_Form
       object TabulateLibrations_MainMenuItem: TMenuItem
         Caption = '&Tabulate librations...'
         OnClick = TabulateLibrations_MainMenuItemClick
+      end
+      object ShowEarth_MainMenuItem: TMenuItem
+        Caption = 'Show &Earth viewed from Moon'
+        OnClick = ShowEarth_MainMenuItemClick
       end
       object DrawRuklGrid1: TMenuItem
         Caption = 'Draw &R'#252'kl grid'

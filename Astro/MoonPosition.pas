@@ -68,6 +68,8 @@ var
 
   SelenographicCoordinateSystem : TCoordinateSystem;  {set by SetSelenographicSystem;
     used by SelenographicCoordinates}
+  TerrestrialCoordinateSystem : TCoordinateSystem;  {set by SetTerrestrialSystem;
+    used by TerrestrialCoordinates}
 
   MoonToSunAU : extended;  // from center of Moon to center of Sun at moment of observation -- set by SubSolarPointOnMoon
   ObserverToMoonAU : extended;  // from observer to center of Moon at moment of observation -- set by SubEarthPointOnMoon
@@ -97,6 +99,17 @@ in MP_Defs.}
 function SubEarthPointOnMoon(const UTC_MJD: extended) : TPolarCoordinates;
 
 function SubSolarPointOnMoon(const UTC_MJD: extended) : TPolarCoordinates;
+
+{the following are positions on a spherical Earth}
+
+procedure SetTerrestrialSystem(const TDB: extended);
+{note: this previously took as input the UT_MJD}
+
+function TerrestrialCoordinates(const ICRF_Vector: TVector) : TPolarCoordinates;
+
+function SubLunarPointOnEarth(const UTC_MJD: extended) : TPolarCoordinates;
+
+function SubSolarPointOnEarth(const UTC_MJD: extended) : TPolarCoordinates;
 
 implementation
 
@@ -505,6 +518,90 @@ function SubEarthPointOnMoon(const UTC_MJD: extended) : TPolarCoordinates;
     Result := SelenographicCoordinates(MoonObserverVector);
   end;  {SubEarthPointOnMoon}
 *)
+
+procedure SetTerrestrialSystem(const TDB: extended);
+{note: this previously took as input the UT_MJD}
+  var
+    GAST : Extended;
+  begin {SetTerrestrialSystem}
+    sidtim(TDB,0,1,GAST);
+    with TerrestrialCoordinateSystem do
+      begin
+        pnsw(TDB,GAST,0,0,Uz,UnitZ);
+        pnsw(TDB,GAST,0,0,Ux,UnitX);
+        CrossProduct(UnitZ,UnitX,UnitY);
+      end;
+  end;  {SetTerrestrialSystem}
+
+function TerrestrialCoordinates(const ICRF_Vector: TVector) : TPolarCoordinates;
+  var
+    TerrestrialVector : TVector;
+  begin {TerrestrialCoordinates}
+    with TerrestrialCoordinateSystem do
+      begin
+        TerrestrialVector[X] := DotProduct(ICRF_Vector,UnitX);
+        TerrestrialVector[Y] := DotProduct(ICRF_Vector,UnitY);
+        TerrestrialVector[Z] := DotProduct(ICRF_Vector,UnitZ);
+      end;
+
+    Result.Radius := VectorMagnitude(TerrestrialVector);
+    Result.Latitude := ASin(TerrestrialVector[Z]/Result.Radius);
+    Result.Longitude := ATan2(TerrestrialVector[Y],TerrestrialVector[X]);
+  {Note: selenographic longitudes are usually expressed in a 0..360 degree system}
+//    if Result.Longitude<0 then Result.Longitude := Result.Longitude + TwoPi;
+  end;  {TerrestrialCoordinates}
+
+function SubSolarPointOnEarth(const UTC_MJD: extended) : TPolarCoordinates;
+  var
+    Earth_Data, Sun_Data : TEphemerisOutput;
+    T0, T1, LT1, T2, LT2 : extended;
+    RayDirection : TVector;
+  begin {SubSolarPointOnEarth}
+    T0 := MJDOffset + UTC_MJD + TDT_Offset(UTC_MJD)*OneSecond/OneDay; {correct from UTC or UT1 to Ephemeris Time JD}
+
+    ReadEphemeris(T0,Earth,Moon,PositionsOnly,AU_day,Earth_Data);
+    LT1 := (OneAU*VectorMagnitude(Earth_Data.R)/c)/OneDay;
+    T1 := T0 - LT1;  {observer on Moon sees Earth where and as it was at this moment}
+
+
+    ReadEphemeris(T1,Sun,Earth,PositionsOnly,AU_day,Sun_Data);
+    LT2 := (OneAU*VectorMagnitude(Sun_Data.R)/c)/OneDay;
+    T2 := T1 - LT2;  {at T1 the Earth was illuminated by light radiated from the Sun at T2}
+
+
+    ReadEphemeris(T2,Earth,SolarSystemBarycenter,PositionsOnly,AU_day,Earth_Data);
+    ReadEphemeris(T2,Sun,SolarSystemBarycenter,PositionsOnly,AU_day,Sun_Data);
+
+    VectorDifference(Sun_Data.R,Earth_Data.R,RayDirection);
+
+    SetTerrestrialSystem(T1);
+    Result := TerrestrialCoordinates(RayDirection);
+  end;  {SubSolarPointOnEarth}
+
+function SubLunarPointOnEarth(const UTC_MJD: extended) : TPolarCoordinates;
+  var
+    Moon_Data, Earth_Data : TEphemerisOutput;
+    T0, T1, T2, LT1, LT2 : extended;
+    RayDirection : TVector;
+  begin {SubLunarPointOnEarth}
+    T0 :=  MJDOffset + UTC_MJD + TDT_Offset(UTC_MJD)*OneSecond/OneDay;
+
+    ReadEphemeris(T0,Moon,Earth,PositionsOnly,AU_day,Moon_Data);
+    LT1 := (OneAU*VectorMagnitude(Moon_Data.R)/c)/OneDay;
+    T1 := T0 - LT1;  {observer on Moon sees Earth where and as it was at this moment}
+
+    ReadEphemeris(T1,Earth,Moon,PositionsOnly,AU_day,Earth_Data);
+    LT2 := (OneAU*VectorMagnitude(Earth_Data.R)/c)/OneDay;
+    T2 := T1 - LT2;  {at T1 an observer on the Moon saw light radiated from the Earth at T2}
+
+    ReadEphemeris(T2,Moon,SolarSystemBarycenter,PositionsOnly,AU_day,Moon_Data);
+    ReadEphemeris(T2,Earth,SolarSystemBarycenter,PositionsOnly,AU_day,Earth_Data);
+
+    VectorDifference(Moon_Data.R,Earth_Data.R,RayDirection);
+
+    SetTerrestrialSystem(T1);
+    Result := TerrestrialCoordinates(RayDirection);
+  end;  {SubLunarPointOnEarth}
 
 initialization
 

@@ -856,7 +856,23 @@ v0.19
        the subsolar point data from current photo calibration info to the
        boxes in the Main Screen and redraw the texture.
 
-                                                                      11/20/08 }
+  v0.19.6
+    1. To Tools, add "Show Earth viewed from Moon".  This shows, in the main
+       window, a north-up image of the Earth centered on the point from which
+       the Moon is at the zenith.  The gamma can be adjusted, but not the zoom,
+       rotation, centering or orientation.  Most of the Right-click Menu items
+       are hidden, as are the "Center On" and "Aerial Image" buttons in the GoTo
+       box.
+    2. Add Earth texture to External File Associations menu.
+    3. Revise labeling of Saved Images to be sure to give date and/or location
+       on which Equatorial and Alt-Az orientations are based.
+    4. Change default sky color to "Navy" (dark blue).
+
+                                                                      11/22/08 }
+
+// 11/28/08: correct duplicate variable names for SubEarth and SubSolar points in MouseMove
+// this caused sun angle/azimuth readout in normal lunar views to be non-functional                                                                      
+                                                                      
 
 interface
 
@@ -980,6 +996,7 @@ type
     DrawRuklGrid1: TMenuItem;
     Recordshadowmeasurement_RightClickMenuItem: TMenuItem;
     LabelFeatureAndSatellites_RightClickMenuItem: TMenuItem;
+    ShowEarth_MainMenuItem: TMenuItem;
     procedure DrawDots_ButtonClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure DrawTexture_ButtonClick(Sender: TObject);
@@ -1109,6 +1126,7 @@ type
     procedure Image_PopupMenuPopup(Sender: TObject);
     procedure LabelFeatureAndSatellites_RightClickMenuItemClick(
       Sender: TObject);
+    procedure ShowEarth_MainMenuItemClick(Sender: TObject);
   private
     { Private declarations }
   public
@@ -1121,6 +1139,7 @@ type
 
     DefaultCursor : TCursor;
 
+    EarthTextureFilename,
     CraterFilename, JPL_Filename, JPL_FilePath, LoResFilename,
     HiResFilename, ClementineFilename, NormalPhotoSessionsFilename,
     CalibratedPhotosFilename, ObservatoryListFilename,
@@ -1130,6 +1149,7 @@ type
     ObserverLongitudeText, ObserverLatitudeText, ObserverElevationText : string; // altered via SelectObserverLocation_Form
 
     DrawingMode : (DotMode, TextureMode);
+    ShowingEarth : Boolean;
 
     LastMouseClickPosition : TPoint;
 
@@ -1188,6 +1208,9 @@ type
       about the same time, this file is loaded iff specifically requested}
     Clementine_Texture_Loaded : boolean;
 
+    Earth_TextureMap : TBitmap;
+    Earth_Texture_Loaded : boolean;
+
     TextureFilename : String; // identifies source of last background image used by Dots or Texture click
 
     LTO_Image : TBitmap;
@@ -1199,7 +1222,7 @@ type
 
   {the following are set by CalculateGeometry}
     SubObsvrVector, SubSolarVector : TVector; {in Selenographic coordinates, based on NumericInput boxes}
-    CosTheta,                        {angle from projected center to sub-solar point}
+//    CosTheta,                        {angle from projected center to sub-solar point}
     Solar_X_Projection : extended;   {projected x-coordinate of sub-solar point}
     XPrime_UnitVector, YPrime_UnitVector, ZPrime_UnitVector : TVector; {basis vectors for projected image
       where z' = towards observer;  y' = towards north terminator cusp;  x' = y' Cross z' = to right ("East")}
@@ -1265,6 +1288,7 @@ type
      : Extended;
 
 
+    function EphemerisDataAvailable(const MJD : Extended) : Boolean;
 
     function CorrectedDateTimeToStr(const DateTimeToPrint : TDateTime) : String;
     {corrects negative DateTimes (prior to 1/1/1900) so they will print properly
@@ -1449,7 +1473,7 @@ uses FileCtrl, H_Terminator_About_Unit, H_Terminator_Goto_Unit, H_Terminator_Set
 {$R *.dfm}
 
 const
-  ProgramVersion = '0.19.5';
+  ProgramVersion = '0.19.6.1';
 
 // note: the following constants specify (in degrees) that texture files span
 //   the full lunar globe.  They should not be changed.
@@ -1834,6 +1858,7 @@ function TTerminator_Form.CalculateGeometry : Boolean;
 var
   LeftRight_Factor, UpDown_Factor : Integer;
   Lat1, Lon1, Lat2, Lon2, Colong, RotationAngle,
+  CosTheta,  {angle from projected center to sub-solar point}
   CenterX, CenterY, ZoomFactor : Extended;
   InversionTag : String;
 
@@ -2336,6 +2361,7 @@ begin
 
   Screen.Cursor := crHourGlass;
   DrawingMode := DotMode;
+  ShowingEarth := False;
   ClearImage;
 
 //--- draw background pattern of light and shadow ---
@@ -2449,6 +2475,7 @@ begin {TTerminator_Form.DrawTexture_ButtonClick}
   if not CalculateGeometry then Exit;
 
   DrawingMode := TextureMode;
+  ShowingEarth := False;
 
   Gamma := Gamma_LabeledNumericEdit.NumericEdit.ExtendedValue;
   if Gamma<>0 then
@@ -2889,52 +2916,12 @@ function TTerminator_Form.PosNegDegrees(const Angle : extended) : extended;
 
 function  TTerminator_Form.CalculateSubPoints(const MJD, ObsLon, ObsLat, ObsElev : extended; var SubObsPt, SubSunPt : TPolarCoordinates) : Boolean;
 var
-  SavedObsLon, SavedObsLat, SavedObsElev,
-  JED : Extended;
-
-  procedure LookForJPLFile;
-    var
-      JPL_Year : integer;
-    begin  // try to silently load another file
-      JPL_Year := Round(YearOf(Date_DateTimePicker.Date));
-      FindAndLoadJPL_File(JPL_FilePath+'UNXP'+IntToStr(50*(JPL_Year div 50))+'.405');
-      if EphemerisFileLoaded then
-        begin
-          JPL_Filename := EphemerisFilname;
-          JPL_FilePath := ExtractFilePath(EphemerisFilname);
-        end;
-    end;
+  SavedObsLon, SavedObsLat, SavedObsElev : Extended;
 
   begin
     Result := False;
 
-    JED := MJD + MJDOffset;
-
-    if not EphemerisFileLoaded then
-      begin
-        FindAndLoadJPL_File(JPL_Filename);  // load default file if it has not yet been done
-        if EphemerisFileLoaded then
-          begin
-            JPL_Filename := EphemerisFilname;
-            JPL_FilePath := ExtractFilePath(EphemerisFilname);
-          end;
-      end;
-
-    if EphemerisFileLoaded and ((JED<SS[1]) or (JED>SS[2])) then
-    {JED = requested Julian date;  SS[1] = start date of file; SS[2] = end date of file}
-      LookForJPLFile;
-
-    if EphemerisFileLoaded and ((JED<SS[1]) or (JED>SS[2])) then
-      begin // ask for assistance only if necessary
-        if MessageDlg(format('Unable to estimate geometry: requested date is not within ephemeris file limits of %0s to %0s',
-          [DateToStr(JulianDateToDateTime(SS[1])),DateToStr(JulianDateToDateTime(SS[2]))])
-          +' Load a different JPL file?',mtConfirmation,mbOKCancel,0)=mrOK then
-          LookForJPLFile
-        else
-          Exit;
-      end;
-
-    if (not EphemerisFileLoaded) or ((JED<SS[1]) or (JED>SS[2])) then
+    if not EphemerisDataAvailable(MJD) then
       begin
         ShowMessage('Cannot estimate geometry -- ephemeris file not loaded');
         Exit;
@@ -2970,7 +2957,7 @@ begin {EstimateData_ButtonClick}
 
   Screen.Cursor := crHourGlass;
 
-  ObserverLongitude := -ExtendedValue(ObserverLongitudeText); {Note: reversing positive East to negative West longitude}
+  ObserverLongitude := -ExtendedValue(ObserverLongitudeText); {Note: reversing positive West to negative West longitude}
   ObserverLatitude := ExtendedValue(ObserverLatitudeText);
   ObserverElevation := ExtendedValue(ObserverElevationText);
   ImageObsLon := -ObserverLongitude;
@@ -3212,12 +3199,16 @@ end;
 procedure TTerminator_Form.JimsGraph1MouseMove(Sender: TObject; Shift: TShiftState; X, Y: Integer);
 {Note: the X, Y returned to this routine are the positions within JimsGraph1 relative to upper left corner}
 var
-  ProjectedX, ProjectedY, Lon, Lat,
+  ProjectedX, ProjectedY, Lon, Lat, UT_MJD,
   SunAngle, SunBearing, RefPtAngle, RefPtBearing,
-  MagV2, ACosArg : extended;
+  MagV2, ACosArg,
+  Lon1, Lat1, Lon2, Lat2, CosTheta : extended;
   i, MinI, RSqrd, MinRsqrd : integer;
   FeatureDescription : string;
   V1, V2, S : TVector;
+  SavedGeocentricMode : Boolean;
+  SunPosition, MoonPosition : PositionResultRecord;
+  EarthViewerSubEarthPoint, EarthViewerSubSolarPoint : TPolarCoordinates;
 
   function RayHeight(const A, B :extended) : extended;
   {A = sun angle [rad] at source of light;  B = distance [rad] for source pt to target pt;
@@ -3301,100 +3292,144 @@ begin {Terminator_Form.JimsGraph1MouseMove}
       MouseLonLat_Label.Caption := format('Longitude = %0s   Latitude = %0s',
         [LongitudeString(RadToDeg(Lon),2),LatitudeString(RadToDeg(Lat),2)]);
 
-      ComputeDistanceAndBearing(Lon,Lat,SubSolarPoint.Longitude,SubSolarPoint.Latitude,SunAngle,SunBearing);
-
-      SunAngle := (Pi/2) - SunAngle;
-
-      SunAngle_Label.Caption := format('Sun is at = %0.2f deg altitude and %0.2f deg azimuth',
-        [SunAngle/OneDegree, SunBearing/OneDegree]);
-
-      case RefPtReadoutMode of
-        DistanceAndBearingRefPtMode :
-          begin
-            ComputeDistanceAndBearing(RefPtLon,RefPtLat,Lon,Lat,RefPtAngle,RefPtBearing);
-            RefPtDistance_Label.Caption := Format('From ref. pt. = %0.2f km  (%0.2f deg at %0.2f deg az)',
-              [MoonRadius*RefPtAngle,RadToDeg(RefPtAngle),RadToDeg(RefPtBearing)]);
-          end;
-        ShadowLengthRefPtMode :
-          if UserPhoto_RadioButton.Checked then
-            UserPhotoElevationReadout
-          else
-            begin
-              PolarToVector(Lat,Lon,MoonRadius,ShadowTipVector);
-              ComputeDistanceAndBearing(RefPtLon,RefPtLat,Lon,Lat,RefPtAngle,RefPtBearing);
-              CurrentElevationDifference_m := 1000*MoonRadius*(Cos(RefPtAngle-RefPtSunAngle)/Cos(RefPtSunAngle)-1);
-              RefPtDistance_Label.Caption := Format('Shadow length = %0.2f deg; Height difference = %0.0f m',
-                [RadToDeg(RefPtAngle),CurrentElevationDifference_m]);
-            end;
-        InverseShadowLengthRefPtMode :
-          if UserPhoto_RadioButton.Checked then
-            UserPhotoElevationReadout
-          else
-            begin
-              PolarToVector(Lat,Lon,MoonRadius,ShadowTipVector);
-              ComputeDistanceAndBearing(RefPtLon,RefPtLat,Lon,Lat,RefPtAngle,RefPtBearing);
-              CurrentElevationDifference_m := 1000*MoonRadius*(Cos(RefPtAngle-SunAngle)/Cos(SunAngle)-1);
-              RefPtDistance_Label.Caption := Format('Shadow length = %0.2f deg; Height difference = %0.0f m',
-                [RadToDeg(RefPtAngle),CurrentElevationDifference_m]);
-            end;
-        RayHeightsRefPtMode :
-          begin
-            ComputeDistanceAndBearing(RefPtLon,RefPtLat,Lon,Lat,RefPtAngle,RefPtBearing);
-            RefPtDistance_Label.Caption := Format('Distance = %0.2f deg; Min. ray = %0.0f m; Max. = %0.0f m',
-              [RadToDeg(RefPtAngle),RayHeight(RefPtSunAngle+SunRad,RefPtAngle),RayHeight(RefPtSunAngle-SunRad,RefPtAngle)]);
-          end;
-        else
-          begin
-            RefPtDistance_Label.Caption := '';
-          end;
-        end;
-
-      MinI := 0;
-      MinRsqrd := MaxInt;
-
-      for i := 0 to (Length(CraterInfo)-1) do with CraterInfo[i] do
+      if ShowingEarth then
         begin
-          RSqrd := (X - Dot_X)*(X - Dot_X) + (Y - Dot_Y)*(Y - Dot_Y);
-          if RSqrd<MinRsqrd then
+          SavedGeocentricMode := GeocentricSubEarthMode;
+
+          GeocentricSubEarthMode := False;
+
+          ObserverLongitude := -RadToDeg(Lon); {Note: reversing positive West to negative West longitude}
+          ObserverLatitude := RadToDeg(Lat);
+          ObserverElevation := 0;
+
+          UT_MJD := DateTimeToModifiedJulianDate(ImageDate + ImageTime);
+
+          CalculatePosition(UT_MJD,Moon,BlankStarDataRecord,MoonPosition);
+          CalculatePosition(UT_MJD,Sun, BlankStarDataRecord,SunPosition);
+
+          SunAngle_Label.Caption :=      Format('Sun is at :  %0.2f deg altitude and %0.2f deg azimuth',
+            [SunPosition.TopocentricAlt,SunPosition.Azimuth]);
+          RefPtDistance_Label.Caption := Format('Moon is at : %0.2f deg altitude and %0.2f deg azimuth',
+            [MoonPosition.TopocentricAlt,MoonPosition.Azimuth]);
+
+       {Note: need to correct reversal of positive West to negative West longitude}
+          if not CalculateSubPoints(UT_MJD,-ObserverLongitude,ObserverLatitude,0,EarthViewerSubEarthPoint,EarthViewerSubSolarPoint) then
+            CraterName_Label.Caption := ''
+          else
             begin
-              MinRsqrd := RSqrd;
-              MinI := i;
+              Lon1 := EarthViewerSubEarthPoint.Longitude;
+              Lat1 := EarthViewerSubEarthPoint.Latitude;
+              Lon2 := EarthViewerSubSolarPoint.Longitude;
+              Lat2 := EarthViewerSubSolarPoint.Latitude;
+
+              CosTheta := Sin(Lat1)*Sin(Lat2) + Cos(Lat1)*Cos(Lat2)*Cos(Lon2 - Lon1);
+
+              ComputeDistanceAndBearing(MoonPosition.Azimuth*OneDegree,MoonPosition.TopocentricAlt*OneDegree,SunPosition.Azimuth*OneDegree,SunPosition.TopocentricAlt*OneDegree,SunAngle,SunBearing);
+
+              CraterName_Label.Caption := format('Elon = %0.2f deg;  Illum = %0.3f%s;  Diam = %0.1f arc-sec',
+                [SunAngle/OneDegree, 50*(1 + CosTheta), '%', 7200*RadToDeg(ArcSin(1737.4*OneKm/OneAU/ObserverToMoonAU))]);
             end;
-        end;
 
-  // display name iff mouse pointer is within 5 pixel radius of a dot
-      if MinRsqrd<Sqr(5) then with CraterInfo[MinI].CraterData do
-        begin
-          if (USGS_Code='AA') or (USGS_Code='SF') then
-            FeatureDescription := 'Crater:  '
-          else if USGS_Code='GD' then
-            FeatureDescription := 'GLR dome list:  '
-          else if USGS_Code='CD' then
-            FeatureDescription := 'Crater depth:  '
-          else if USGS_Code='LF' then
-            FeatureDescription := 'Landing site:  '
-          else if (USGS_Code='CN') or (USGS_Code='CN5') then
-            FeatureDescription := 'Control pt:  '
-          else if USGS_Code='AT' then
-            FeatureDescription := 'Clementine LIDAR elevation:  '
-          else
-            FeatureDescription := '';
+          GeocentricSubEarthMode := SavedGeocentricMode;
 
-          CraterName_Label.Caption  := FeatureDescription+LabelString(CraterInfo[MinI],True,True,True,True,True);
-{
-          if (USGS_Code='CN') or (USGS_Code='CN5') then
-            CraterName_Label.Caption  := Format('%s%s (%s km elev)',[FeatureDescription,Name,NumericData]) // "Diam" is actually Radial Distance
-          else if USGS_Code='CD' then
-            CraterName_Label.Caption  := Format('%s%s (%s km)',[FeatureDescription,Name,NumericData]) // "Diam" is actually Depth in kilometers
-          else if USGS_Code='AT' then
-            CraterName_Label.Caption  := Format('%s%s m (Rev. %s)',[FeatureDescription,Name,NumericData]) // "Diam" is actually Revolution Number
-          else
-            CraterName_Label.Caption  := Format('%s%s  (%s km)',[FeatureDescription,Name,NumericData]);
-}
         end
       else
-        CraterName_Label.Caption  := '';
+        begin
 
+          ComputeDistanceAndBearing(Lon,Lat,SubSolarPoint.Longitude,SubSolarPoint.Latitude,SunAngle,SunBearing);
+
+          SunAngle := (Pi/2) - SunAngle;
+
+          SunAngle_Label.Caption := format('Sun is at = %0.2f deg altitude and %0.2f deg azimuth',
+            [SunAngle/OneDegree, SunBearing/OneDegree]);
+
+          case RefPtReadoutMode of
+            DistanceAndBearingRefPtMode :
+              begin
+                ComputeDistanceAndBearing(RefPtLon,RefPtLat,Lon,Lat,RefPtAngle,RefPtBearing);
+                RefPtDistance_Label.Caption := Format('From ref. pt. = %0.2f km  (%0.2f deg at %0.2f deg az)',
+                  [MoonRadius*RefPtAngle,RadToDeg(RefPtAngle),RadToDeg(RefPtBearing)]);
+              end;
+            ShadowLengthRefPtMode :
+              if UserPhoto_RadioButton.Checked then
+                UserPhotoElevationReadout
+              else
+                begin
+                  PolarToVector(Lat,Lon,MoonRadius,ShadowTipVector);
+                  ComputeDistanceAndBearing(RefPtLon,RefPtLat,Lon,Lat,RefPtAngle,RefPtBearing);
+                  CurrentElevationDifference_m := 1000*MoonRadius*(Cos(RefPtAngle-RefPtSunAngle)/Cos(RefPtSunAngle)-1);
+                  RefPtDistance_Label.Caption := Format('Shadow length = %0.2f deg; Height difference = %0.0f m',
+                    [RadToDeg(RefPtAngle),CurrentElevationDifference_m]);
+                end;
+            InverseShadowLengthRefPtMode :
+              if UserPhoto_RadioButton.Checked then
+                UserPhotoElevationReadout
+              else
+                begin
+                  PolarToVector(Lat,Lon,MoonRadius,ShadowTipVector);
+                  ComputeDistanceAndBearing(RefPtLon,RefPtLat,Lon,Lat,RefPtAngle,RefPtBearing);
+                  CurrentElevationDifference_m := 1000*MoonRadius*(Cos(RefPtAngle-SunAngle)/Cos(SunAngle)-1);
+                  RefPtDistance_Label.Caption := Format('Shadow length = %0.2f deg; Height difference = %0.0f m',
+                    [RadToDeg(RefPtAngle),CurrentElevationDifference_m]);
+                end;
+            RayHeightsRefPtMode :
+              begin
+                ComputeDistanceAndBearing(RefPtLon,RefPtLat,Lon,Lat,RefPtAngle,RefPtBearing);
+                RefPtDistance_Label.Caption := Format('Distance = %0.2f deg; Min. ray = %0.0f m; Max. = %0.0f m',
+                  [RadToDeg(RefPtAngle),RayHeight(RefPtSunAngle+SunRad,RefPtAngle),RayHeight(RefPtSunAngle-SunRad,RefPtAngle)]);
+              end;
+            else
+              begin
+                RefPtDistance_Label.Caption := '';
+              end;
+            end;
+
+          MinI := 0;
+          MinRsqrd := MaxInt;
+
+          for i := 0 to (Length(CraterInfo)-1) do with CraterInfo[i] do
+            begin
+              RSqrd := (X - Dot_X)*(X - Dot_X) + (Y - Dot_Y)*(Y - Dot_Y);
+              if RSqrd<MinRsqrd then
+                begin
+                  MinRsqrd := RSqrd;
+                  MinI := i;
+                end;
+            end;
+
+      // display name iff mouse pointer is within 5 pixel radius of a dot
+          if MinRsqrd<Sqr(5) then with CraterInfo[MinI].CraterData do
+            begin
+              if (USGS_Code='AA') or (USGS_Code='SF') then
+                FeatureDescription := 'Crater:  '
+              else if USGS_Code='GD' then
+                FeatureDescription := 'GLR dome list:  '
+              else if USGS_Code='CD' then
+                FeatureDescription := 'Crater depth:  '
+              else if USGS_Code='LF' then
+                FeatureDescription := 'Landing site:  '
+              else if (USGS_Code='CN') or (USGS_Code='CN5') then
+                FeatureDescription := 'Control pt:  '
+              else if USGS_Code='AT' then
+                FeatureDescription := 'Clementine LIDAR elevation:  '
+              else
+                FeatureDescription := '';
+
+              CraterName_Label.Caption  := FeatureDescription+LabelString(CraterInfo[MinI],True,True,True,True,True);
+    {
+              if (USGS_Code='CN') or (USGS_Code='CN5') then
+                CraterName_Label.Caption  := Format('%s%s (%s km elev)',[FeatureDescription,Name,NumericData]) // "Diam" is actually Radial Distance
+              else if USGS_Code='CD' then
+                CraterName_Label.Caption  := Format('%s%s (%s km)',[FeatureDescription,Name,NumericData]) // "Diam" is actually Depth in kilometers
+              else if USGS_Code='AT' then
+                CraterName_Label.Caption  := Format('%s%s m (Rev. %s)',[FeatureDescription,Name,NumericData]) // "Diam" is actually Revolution Number
+              else
+                CraterName_Label.Caption  := Format('%s%s  (%s km)',[FeatureDescription,Name,NumericData]);
+    }
+            end
+          else
+            CraterName_Label.Caption  := '';
+        end;
     end;
 end;  {Terminator_Form.JimsGraph1MouseMove}
 
@@ -3402,7 +3437,7 @@ procedure TTerminator_Form.JimsGraph1MouseDown(Sender: TObject; Button: TMouseBu
 begin
   LastMouseClickPosition.X := X;
   LastMouseClickPosition.Y := Y;
-  if Button=mbLeft then
+  if (Button=mbLeft) and (not ShowingEarth) then
     begin
       ImageCenterX := JimsGraph1.XValue(X);
       ImageCenterY := JimsGraph1.YValue(Y);
@@ -3612,6 +3647,17 @@ begin
   RefreshGoToList;
   with H_Terminator_Goto_Form do
     begin
+      if ShowingEarth then
+        begin
+          GoTo_Button.Hide;
+          AerialView_Button.Hide;
+        end
+      else
+        begin
+          GoTo_Button.Show;
+          AerialView_Button.Show;
+        end;
+
       ShowModal;
       if not (GoToState=Cancel) then
         begin
@@ -3727,7 +3773,7 @@ begin
 //      SubObs_Lat_LabeledNumericEdit.NumericEdit.Text := SetToLat_LabeledNumericEdit.NumericEdit.Text;
       SetManualGeometryLabels;
     end;
-  if not CalculateGeometry then Exit;
+  if not ShowingEarth then if not CalculateGeometry then Exit;
   PolarToVector(DegToRad(Lat_Deg),DegToRad(Long_Deg),1,CraterVector);
   FarsideFeature := DotProduct(CraterVector,SubObsvrVector)<0;
   X := DotProduct(CraterVector,XPrime_UnitVector);
@@ -4287,20 +4333,13 @@ var
 //  Answer : Word;
 begin
   SavePictureDialog1.FileName := ProposedFilename;
+
   if SavePictureDialog1.Execute then
     begin
-{
-      WantLabels := False;
-      Answer := MessageDlg('Include annotations above and below saved image?',mtConfirmation,[mbYes,mbNo,mbCancel],0);
-      case Answer of
-        mrCancel : Exit;  // leave this routine
-        mrYes : WantLabels := True;
-        end;
-}
       LabeledImage := TBitmap.Create;
       if AnnotateSavedImages then
         begin
-          if ImageManual then
+          if ImageManual and not(ShowingEarth or (OrientationMode=Equatorial) or (OrientationMode=AltAz)) then
             ImageStartRow := 45
           else
             ImageStartRow := 60;
@@ -4311,73 +4350,100 @@ begin
               Draw(0,30,JimsGraph1.Picture.Graphic);
     //          ShowMessage('The text height is '+IntToStr(Font.Height));
               Font.Color := SavedImageUpperLabelsColor;
-              if not ConvertXYtoLonLat(ImageCenterX,ImageCenterY,CenterLon,CenterLat) then
-                TextOut(0,1,Format(' LTVT Image: Sub-solar Pt = %s/%s  Sub-Earth Pt = %s/%s  XY-Center = (%0.4f,%0.4f)  Zoom = %0.3f',
-                  [LongitudeString(RadToDeg(ImageSubSolLon),3), LatitudeString(RadToDeg(ImageSubSolLat),3),
-                   LongitudeString(RadToDeg(ImageSubObsLon),3), LatitudeString(RadToDeg(ImageSubObsLat),3),
-                   ImageCenterX, ImageCenterY, ImageZoom]))
-              else
+              if ShowingEarth then
                 begin
-                  TextOut(0,1,Format(' LTVT Image: Sub-solar Pt = %s/%s  Sub-Earth Pt = %s/%s  Center = %s/%s  Zoom = %0.3f',
-                    [LongitudeString(RadToDeg(ImageSubSolLon),3), LatitudeString(RadToDeg(ImageSubSolLat),3),
-                     LongitudeString(RadToDeg(ImageSubObsLon),3), LatitudeString(RadToDeg(ImageSubObsLat),3),
-                     LongitudeString(RadToDeg(CenterLon),3), LatitudeString(RadToDeg(CenterLat),3), ImageZoom]));
-                end;
-
-              OutString := 'Vertical axis : ';
-              case OrientationMode of
-                Cartographic :
-                  OutString := OutString + 'central meridian';
-                LineOfCusps :
-                  OutString := OutString + 'line of cusps   ';
-                Equatorial :
-                  OutString := OutString + 'celestial north ';
-                AltAz :
-                  OutString := OutString + 'local zenith    ';
-                else
-                  OutString := OutString + 'unknown         ';
-                end; {case}
-
-
-              if InvertLR and InvertUD then
-                OutString := OutString + '    Inverted left-right and up-down'
-              else if InvertLR then
-                OutString := OutString + '    Inverted left-right'
-              else if InvertUD then
-                OutString := OutString + '    Inverted up-down';
-
-              if ManualRotationDegrees<>0 then
-                OutString := OutString + Format('    Additional CW rotation: %0.3f deg',[ManualRotationDegrees]);
-
-              TextOut(0,16,OutString);
-
-              Font.Color := SavedImageLowerLabelsColor;
-
-              if ImageManual then
-                begin
-                  TextStartRow := LabeledImage.Height - 15;
-                  TextOut(0,TextStartRow,'Texture file: '+ExtractFileName(TextureFilename));
+                      TextOut(0,1,Format(' LTVT Image: Sub-solar Pt = %s/%s  Center = Sub-Lunar Pt = %s/%s  Zoom = %0.3f',
+                        [LongitudeString(RadToDeg(ImageSubSolLon),3), LatitudeString(RadToDeg(ImageSubSolLat),3),
+                         LongitudeString(RadToDeg(ImageSubObsLon),3), LatitudeString(RadToDeg(ImageSubObsLat),3),
+                         1.0]));
+                  OutString := 'Vertical axis : central meridian';
                 end
               else
                 begin
-                  TextStartRow := LabeledImage.Height - 30;
-                  TextOut(0,TextStartRow,'Texture file: '+ExtractFileName(TextureFilename));
-                  DateTimeString := DateToStr(ImageDate)+' at  '+TimeToStr(ImageTime)+' UT';
-                  TextStartRow := LabeledImage.Height - 15;
-                  if ImageGeocentric then
-                    TextOut(0,TextStartRow,'Geocentric computation for: '+DateTimeString)
+                  if not ConvertXYtoLonLat(ImageCenterX,ImageCenterY,CenterLon,CenterLat) then
+                    TextOut(0,1,Format(' LTVT Image: Sub-solar Pt = %s/%s  Sub-Earth Pt = %s/%s  XY-Center = (%0.4f,%0.4f)  Zoom = %0.3f',
+                      [LongitudeString(RadToDeg(ImageSubSolLon),3), LatitudeString(RadToDeg(ImageSubSolLat),3),
+                       LongitudeString(RadToDeg(ImageSubObsLon),3), LatitudeString(RadToDeg(ImageSubObsLat),3),
+                       ImageCenterX, ImageCenterY, ImageZoom]))
                   else
-                    TextOut(0,TextStartRow,Format('This view is predicted for an observer on earth at %s/%s and %0.0f m elev on ',
-                      [LongitudeString(ImageObsLon,3),LatitudeString(ImageObsLat,3),ImageObsElev])+DateTimeString);
+                    begin
+                      TextOut(0,1,Format(' LTVT Image: Sub-solar Pt = %s/%s  Sub-Earth Pt = %s/%s  Center = %s/%s  Zoom = %0.3f',
+                        [LongitudeString(RadToDeg(ImageSubSolLon),3), LatitudeString(RadToDeg(ImageSubSolLat),3),
+                         LongitudeString(RadToDeg(ImageSubObsLon),3), LatitudeString(RadToDeg(ImageSubObsLat),3),
+                         LongitudeString(RadToDeg(CenterLon),3), LatitudeString(RadToDeg(CenterLat),3), ImageZoom]));
+                    end;
+
+                  OutString := 'Vertical axis : ';
+                  case OrientationMode of
+                    Cartographic :
+                      OutString := OutString + 'central meridian';
+                    LineOfCusps :
+                      OutString := OutString + 'line of cusps   ';
+                    Equatorial :
+                      OutString := OutString + 'celestial north ';
+                    AltAz :
+                      OutString := OutString + 'local zenith    ';
+                    else
+                      OutString := OutString + 'unknown         ';
+                    end; {case}
+
+
+                  if InvertLR and InvertUD then
+                    OutString := OutString + '    Inverted left-right and up-down'
+                  else if InvertLR then
+                    OutString := OutString + '    Inverted left-right'
+                  else if InvertUD then
+                    OutString := OutString + '    Inverted up-down';
+
+                  if ManualRotationDegrees<>0 then
+                    OutString := OutString + Format('    Additional CW rotation: %0.3f deg',[ManualRotationDegrees]);
                 end;
-            end;
-          end
-        else  // no labels
-          begin
-            LabeledImage.Height := JimsGraph1.Height;
-            LabeledImage.Width := JimsGraph1.Width;
-            LabeledImage.Canvas.Draw(0,0,JimsGraph1.Picture.Graphic);
-          end;
+
+                TextOut(0,16,OutString);
+
+                Font.Color := SavedImageLowerLabelsColor;
+
+                if ImageManual and not(ShowingEarth or (OrientationMode=Equatorial) or (OrientationMode=AltAz)) then
+                  begin
+                    TextStartRow := LabeledImage.Height - 15;
+                    TextOut(0,TextStartRow,'Texture file: '+ExtractFileName(TextureFilename));
+                  end
+                else
+                  begin
+                    TextStartRow := LabeledImage.Height - 30;
+                    TextOut(0,TextStartRow,'Texture file: '+ExtractFileName(TextureFilename));
+                    DateTimeString := DateToStr(ImageDate)+' at  '+TimeToStr(ImageTime)+' UT';
+                    TextStartRow := LabeledImage.Height - 15;
+                    if ShowingEarth then
+                      TextOut(0,TextStartRow,Format('Earth viewed from center of Moon on %s',[DateTimeString]))
+                    else
+                      begin
+                        if ImageGeocentric then
+                          TextOut(0,TextStartRow,'Geocentric computation for: '+DateTimeString)
+                        else
+                          begin
+                            if ImageManual then
+                              begin
+                                if OrientationMode=Equatorial then
+                                  TextOut(0,TextStartRow,Format('Celestial north polar direction for %s',[DateTimeString]))
+                                else
+                                  TextOut(0,TextStartRow,Format('Zenith direction for an observer on Earth at %s/%s and %0.0f m elev on %s',
+                                    [LongitudeString(ImageObsLon,3),LatitudeString(ImageObsLat,3),ImageObsElev,DateTimeString]));
+                              end
+                            else
+                              TextOut(0,TextStartRow,Format('This view is predicted for an observer on Earth at %s/%s and %0.0f m elev on ',
+                                [LongitudeString(ImageObsLon,3),LatitudeString(ImageObsLat,3),ImageObsElev])+DateTimeString);
+                          end;
+                      end;
+                  end;
+                end;
+              end
+            else  // no labels
+              begin
+                LabeledImage.Height := JimsGraph1.Height;
+                LabeledImage.Width := JimsGraph1.Width;
+                LabeledImage.Canvas.Draw(0,0,JimsGraph1.Picture.Graphic);
+              end;
 
         DesiredExtension := UpperCase(ExtractFileExt(SavePictureDialog1.FileName));
 
@@ -4402,6 +4468,7 @@ begin
           end;
         LabeledImage.Free;
     end;
+
 end;
 
 procedure TTerminator_Form.FindAndLoadJPL_File(const TrialFilename : string);
@@ -4532,6 +4599,12 @@ end;
 
 procedure TTerminator_Form.DrawCircle_MainMenuItemClick(Sender: TObject);
 begin
+  if ShowingEarth then
+    begin
+      ShowMessage('This tool is not intended for use with Earth images');
+      Exit;
+    end;
+
   CircleDrawing_Form.ShowModal;
 end;
 
@@ -5108,7 +5181,7 @@ begin
   end;
 
   try
-    SkyColor := StrToInt(IniFile.ReadString('LTVT Defaults','Sky_Color',IntToStr(clWhite)));
+    SkyColor := StrToInt(IniFile.ReadString('LTVT Defaults','Sky_Color',IntToStr(clNavy)));
   except
     SkyColor := clWhite;
   end;
@@ -5604,6 +5677,8 @@ begin  {TTerminator_Form.SaveFileOptions}
   IniFile.WriteString('LTVT Defaults','Texture3_MinLat_deg',Tex3MinLatText);
   IniFile.WriteString('LTVT Defaults','Texture3_MaxLat_deg',Tex3MaxLatText);
 
+  IniFile.WriteString('LTVT Defaults','EarthTexture_File',BriefName(EarthTextureFilename));
+
   FileSettingsChanged := False;
   IniFile.Free;
 end;   {TTerminator_Form.SaveFileOptions}
@@ -5616,7 +5691,7 @@ const
 
 var
   IniFile : TIniFile;
-  TempTexture1Name, TempTexture2Name, TempTexture3Name : String;
+  TempTexture1Name, TempTexture2Name, TempTexture3Name, TempEarthTextureName : String;
 
 begin  {TTerminator_Form.RestoreFileOptions}
 //  ShowMessage('Reading options from ini file...');
@@ -5705,6 +5780,14 @@ begin  {TTerminator_Form.RestoreFileOptions}
   Tex3MinLatText := IniFile.ReadString('LTVT Defaults','Texture3_MinLat_deg',Tex3MinLat_DefaultText);
   Tex3MaxLatText := IniFile.ReadString('LTVT Defaults','Texture3_MaxLat_deg',Tex3MaxLat_DefaultText);
 
+  TempEarthTextureName := EarthTextureFilename;
+  EarthTextureFilename := FullFilename(IniFile.ReadString('LTVT Defaults','EarthTexture_File','land_shallow_topo_2048.jpg'));
+  if TempEarthTextureName<>EarthTextureFilename then
+    begin
+      Earth_TextureMap.Free;
+      Earth_Texture_Loaded := False;
+    end;
+
   IniFile.Free;
 end;   {TTerminator_Form.RestoreFileOptions}
 
@@ -5725,6 +5808,7 @@ begin
       Tex3MaxLon_LabeledNumericEdit.NumericEdit.Text := Tex3MaxLonText;
       Tex3MinLat_LabeledNumericEdit.NumericEdit.Text := Tex3MinLatText;
       Tex3MaxLat_LabeledNumericEdit.NumericEdit.Text := Tex3MaxLatText;
+      TempEarthTextureName := EarthTextureFilename;
 
       TempDotFilename := CraterFilename;
       H_Terminator_Goto_Form.MinimizeGotoList_CheckBox.Checked :=
@@ -5790,6 +5874,14 @@ begin
       Tex3MaxLonText := Tex3MaxLon_LabeledNumericEdit.NumericEdit.Text;
       Tex3MinLatText := Tex3MinLat_LabeledNumericEdit.NumericEdit.Text;
       Tex3MaxLatText := Tex3MaxLat_LabeledNumericEdit.NumericEdit.Text;
+
+      if TempEarthTextureName<>EarthTextureFilename then
+        begin
+          Earth_TextureMap.Free;
+          Earth_Texture_Loaded := False;
+          EarthTextureFilename := TempEarthTextureName;
+          FileSettingsChanged := True;
+        end;
 
       if TempDotFilename<>CraterFilename then
         begin
@@ -6266,11 +6358,401 @@ begin
             LTO_XPix := Round(RawX);
             LTO_YPix := Round(RawY);
             Result := True;
-          end;  
+          end;
       end;
 
     end;
 end;
+
+procedure TTerminator_Form.DrawRuklGrid1Click(Sender: TObject);
+{note: this is a simplified routine that works only for a zero libration view}
+const
+  NumRuklRows = 8;
+  NumRuklCols = 11;
+  RuklXStep = 2/NumRuklCols;
+  RuklYStep = 2/NumRuklRows;
+var
+  I : Integer;
+  X, Y : Extended;
+  WantRuklSubgrid : Boolean;
+begin
+  if not ((SubObs_Lon_LabeledNumericEdit.NumericEdit.ExtendedValue=0)
+   and (SubObs_Lat_LabeledNumericEdit.NumericEdit.ExtendedValue=0))
+     and (MessageDlg('Rükl grid is valid only for zero libration views',mtWarning,mbOKCancel,0)=mrCancel) then
+       Exit;
+
+  WantRuklSubgrid := not H_Terminator_Goto_Form.Center_RadioButton.Checked; // assume subgrid is wanted only after a GoTo to a quadrant
+
+  with JimsGraph1 do
+    begin
+      with Canvas do
+        begin
+          Pen.Color := clWhite;
+
+          X := -1;
+          for I := 1 to (NumRuklCols+1) do
+            begin
+              Pen.Style := psSolid;
+              MoveTo(XPix(X),YPix(1));
+              LineTo(XPix(X),YPix(-1));    // note: LineTo stops short of destination by 1 pixel
+
+              if WantRuklSubgrid then
+                begin
+                  X := X + RuklXStep/2;
+                  Pen.Style := psDashDot;
+                  MoveTo(XPix(X),YPix(1));
+                  LineTo(XPix(X),YPix(-1));    // note: LineTo stops short of destination by 1 pixel
+                  X := X + RuklXStep/2;
+                end
+              else
+                X := X + RuklXStep;
+
+            end;
+
+          Y := 1;
+          for I := 1 to (NumRuklCols+1) do
+            begin
+              Pen.Style := psSolid;
+              MoveTo(XPix(-1),YPix(Y));
+              LineTo(XPix(1),YPix(Y));    // note: LineTo stops short of destination by 1 pixel
+
+              if WantRuklSubgrid then
+                begin
+                  Y := Y - RuklYStep/2;
+                  Pen.Style := psDashDot;
+                  MoveTo(XPix(-1),YPix(Y));
+                  LineTo(XPix(1),YPix(Y));    // note: LineTo stops short of destination by 1 pixel
+                  Y := Y - RuklYStep/2;
+                end
+              else
+                  Y := Y - RuklYStep;
+            end;
+
+          Pen.Style := psSolid; // probably not necessary if other routines set desired style
+
+        end;
+    end;
+end;
+
+procedure TTerminator_Form.Image_PopupMenuPopup(Sender: TObject);
+
+  procedure SetItems(const DesiredState : Boolean);
+    begin
+      MouseOptions_RightClickMenuItem.Visible := DesiredState;
+      DrawLinesToPoleAndSun_RightClickMenuItem.Visible := DesiredState;
+//      Goto_RightClickMenuItem.Visible := DesiredState;
+      IdentifyNearestFeature_RightClickMenuItem.Visible := DesiredState;
+      LabelFeatureAndSatellites_RightClickMenuItem.Visible := DesiredState;
+      LabelNearestDot_RightClickMenuItem.Visible := DesiredState;
+      CountDots_RightClickMenuItem.Visible := DesiredState;
+      DrawCircle_RightClickMenuItem.Visible := DesiredState;
+      SetRefPt_RightClickMenuItem.Visible := DesiredState;
+      NearestDotToReferencePoint_RightClickMenuItem.Visible := DesiredState;
+      Recordshadowmeasurement_RightClickMenuItem.Visible := DesiredState;
+    end;
+    
+begin
+  if ShowingEarth then
+    SetItems(False)  // hide most options
+  else
+    begin
+      SetItems(True);  // make same options visible
+      Recordshadowmeasurement_RightClickMenuItem.Visible :=
+        (RefPtReadoutMode=ShadowLengthRefPtMode) or (RefPtReadoutMode=InverseShadowLengthRefPtMode);
+    end;
+end;
+
+procedure TTerminator_Form.ShowEarth_MainMenuItemClick(Sender: TObject);
+var
+  UT_MJD : extended;
+  SubLunar, SubSolar : TPolarCoordinates;
+  TempPicture : TPicture;
+  ScaledMap : TBitMap;
+
+  MapPtr : ^TBitmap;
+
+  i, j,                {screen coords}
+  RawXPix, RawYPix  : Integer;
+
+  Lat, Lon,            {selenographic latitude, longitude [radians]}
+  MinLon, MaxLon, MinLat, MaxLat,  {of TextureMap}
+  XPixPerRad, YPixPerRad,  {of TextureMap}
+  Y, Gamma  : Extended;
+
+  RawRow, ScaledRow  :  pRGBArray;
+
+  SkyPixel, NoDataPixel : TRGBTriple;
+
+function GeographicLatitude(const VectorLatitude : Extended) : Extended;
+  const
+  // WGS-84 values from http://www.movable-type.co.uk/scripts/latlong-vincenty.html
+  // for others see http://en.wikipedia.org/wiki/Figure_of_the_Earth
+    a = 6378137.0;    // [km]
+    b = 6356752.3142;
+    ab_ratio_sqrd = (a*a)/(b*b);
+  begin
+    if VectorLatitude>=PiByTwo then
+      Result := PiByTwo
+    else if VectorLatitude<=-PiByTwo then
+      Result := -PiByTwo
+    else
+    // formula verified at  http://bse.unl.edu/adamchuk/web_ssm/web_GPS_eq.html
+      Result := ArcTan(ab_ratio_sqrd*Tan(VectorLatitude));
+  end;
+
+begin {TTerminator_Form.ShowEarth_MainMenuItemClick}
+  ImageDate := DateOf(Date_DateTimePicker.Date);
+  ImageTime := TimeOf(Time_DateTimePicker.Time);
+
+// Note time correction is needed to make results agree with JPL Ephemeris and maximum zenith elevation in mouseover
+  UT_MJD := DateTimeToModifiedJulianDate(ImageDate + ImageTime) - 1.5*OneMinute/OneDay; // add empirical time correction
+
+  if not EphemerisDataAvailable(UT_MJD) then
+    begin
+      ShowMessage('Cannot estimate geometry -- ephemeris file not loaded');
+      Exit;
+    end;
+
+  SubLunar := SubLunarPointOnEarth(UT_MJD);
+  SubSolar := SubSolarPointOnEarth(UT_MJD);
+
+  PolarToVector(SubLunar.Latitude,SubLunar.Longitude,1,SubObsvrVector);
+  PolarToVector(SubSolar.Latitude,SubSolar.Longitude,1,SubSolarVector);
+
+  with SubLunar do   // for labeling if image is saved
+    begin
+      ImageSubObsLon := Longitude;
+      ImageSubObsLat := GeographicLatitude(Latitude);
+    end;
+
+  with SubSolar do
+    begin
+      ImageSubSolLon := Longitude;
+      ImageSubSolLat := GeographicLatitude(Latitude);
+    end;
+
+{
+  ShowMessage(Format('Sun at %0.3f, %0.3f (%0.3f)'+CR+'Moon at %0.3f, %0.3f (%0.3f)',
+    [RadToDeg(SubSolar.Longitude),RadToDeg(SubSolar.Latitude),RadToDeg(GeographicLatitude(SubSolar.Latitude)),
+    RadToDeg(SubLunar.Longitude),RadToDeg(SubLunar.Latitude),RadToDeg(GeographicLatitude(SubLunar.Latitude))]));
+}
+
+  PolarToVector(GeographicLatitude(SubLunar.Latitude), SubLunar.Longitude, 1, ZPrime_UnitVector); {sub-observer point}
+
+  NormalizeVector(ZPrime_UnitVector);
+
+  CrossProduct(Uy,ZPrime_UnitVector,XPrime_UnitVector);
+  if VectorMagnitude(XPrime_UnitVector)=0 then XPrime_UnitVector := Ux;  //ZPrime_UnitVector parallel to Uy (looking from over north or south pole)
+  NormalizeVector(XPrime_UnitVector);
+  CrossProduct(ZPrime_UnitVector,XPrime_UnitVector,YPrime_UnitVector);
+
+  Gamma := Gamma_LabeledNumericEdit.NumericEdit.ExtendedValue;
+  if Gamma<>0 then
+    Gamma := 1/Gamma
+  else
+    Gamma := 1000;
+
+  ClearImage;
+
+  SkyPixel := ColorToRGBTriple(SkyColor);
+  NoDataPixel := ColorToRGBTriple(NoDataColor);
+
+  if not Earth_Texture_Loaded then
+    begin
+      OldFilename := EarthTextureFilename;
+      Earth_TextureMap := TBitmap.Create;
+
+      if (not FileExists(EarthTextureFilename)) and (MessageDlg('LTVT cannot find the Earth texture map'+CR
+                        +'   Do you want help with this?',
+          mtWarning,[mbYes,mbNo],0)=mrYes) then
+            begin
+              HtmlHelp(0,PChar(Application.HelpFile+'::/Help Topics/TextureFilesStepByStep.htm'),HH_DISPLAY_TOPIC, 0);
+            end;
+
+      if FileExists(EarthTextureFilename) or PictureFileFound('Earth Texture File','land_shallow_topo_2048.jpg',EarthTextureFilename) then
+        begin
+          Screen.Cursor := crHourGlass;
+          StatusLine_Label.Caption := 'Please wait, reading texture file...';
+          Application.ProcessMessages;
+          TempPicture := TPicture.Create;
+          TempPicture.OnProgress := ImageLoadProgress;
+//          TempPicture.Bitmap.PixelFormat := pf24bit; // doesn't help
+          TRY
+            TRY
+              TempPicture.LoadFromFile(EarthTextureFilename);
+              if LinuxCompatibilityMode then
+                begin
+                  Earth_TextureMap.Width  := TempPicture.Graphic.Width;
+                  Earth_TextureMap.Height := TempPicture.Graphic.Height;
+                  Earth_TextureMap.PixelFormat := pf24bit;
+                  Earth_TextureMap.Canvas.Draw(0,0, TempPicture.Graphic);
+                end
+              else
+                begin
+                  Earth_TextureMap.Assign(TempPicture.Graphic);
+                  Earth_TextureMap.PixelFormat := pf24bit;  // Note: this seems essential and needs to be done AFTER loading the graphic
+                    // but it significantly slows down the loading of the image, particularly if it is already in BMP format.
+                end;
+              Earth_Texture_Loaded := true;
+            EXCEPT
+              ShowMessage('Unable to load "'+EarthTextureFilename+'"');
+            END;
+
+          FINALLY
+            TempPicture.Free;
+            StatusLine_Label.Caption := '';
+            Application.ProcessMessages;
+            Screen.Cursor := DefaultCursor;
+          END;
+        end;
+
+      if EarthTextureFilename<>OldFilename then FileSettingsChanged := True;
+    end;
+
+  MapPtr := @Earth_TextureMap;
+  TextureFilename := EarthTextureFilename;
+
+  if MapPtr=nil then
+    begin
+      ShowMessage('No texture map loaded -- drawing map in Dots mode');
+      DrawDots_Button.Click;
+    end
+  else
+    begin
+      DrawingMap_Label.Caption := 'Drawing texture map...';
+      Screen.Cursor := crHourGlass;
+      Application.ProcessMessages;
+      ProgressBar1.Max := JimsGraph1.Height-1;
+      ProgressBar1.Step := 1;
+      ProgressBar1.Show;
+      DrawCircles_CheckBox.Hide;
+      MarkCenter_CheckBox.Hide;
+
+      MinLon := DegToRad(-180);
+      MaxLon := DegToRad(180);
+      MinLat := DegToRad(-90);
+      MaxLat := DegToRad(90);
+
+      XPixPerRad := MapPtr^.Width/(MaxLon - MinLon);
+      YPixPerRad := MapPtr^.Height/(MaxLat - MinLat);
+
+      JimsGraph1.SetRange(-1,1,-1,1);
+
+//      ShowMessage(Format('Min lon: %0.3f  Max Lon: %0.3f  ppd: %0.3f',[RadToDeg(MinLon),RadToDeg(MaxLon),XPixPerRad*DegToRad(1)]));
+
+      ScaledMap := TBitmap.Create;
+      ScaledMap.PixelFormat := pf24bit;
+      ScaledMap.Height := JimsGraph1.Height;
+      ScaledMap.Width := JimsGraph1.Width;
+
+      for j := 0 to JimsGraph1.Height-1 do with JimsGraph1 do
+        begin
+    //      Application.ProcessMessages;
+          ProgressBar1.StepIt;
+          Y := YValue(j);
+          ScaledRow := ScaledMap.ScanLine[j];
+
+          for i := 0 to JimsGraph1.Width-1 do
+            begin
+              if ConvertXYtoLonLat(XValue(i),Y,Lon,Lat) then {point is inside circle, want to draw}
+                begin
+                      RawXPix := Trunc((Lon - MinLon)*XPixPerRad);
+                      RawYPix := Trunc((MaxLat - Lat)*YPixPerRad);
+
+                   // wrap around if necessary
+                      while RawXPix<0 do RawXPix := RawXPix + MapPtr^.Width;
+                      while RawXPix>(MapPtr^.Width-1) do RawXPix := RawXPix - MapPtr^.Width;
+                      while RawYPix<0 do RawYPix := RawYPix + MapPtr^.Height;
+                      while RawYPix>(MapPtr^.Height-1) do RawYPix := RawYPix - MapPtr^.Height;
+
+                      RawRow := MapPtr^.ScanLine[RawYPix];
+                      ScaledRow[i] := RawRow[RawXPix];
+                      GammaCorrectPixelValue(ScaledRow[i],Gamma);
+                end
+              else if SkyColor<>clWhite then
+                begin
+                  ScaledRow[i] := SkyPixel;  // generates background of specified color outside image area
+                end;
+            end;
+
+        end;
+
+      JimsGraph1.Canvas.Draw(0,0,ScaledMap);
+
+      ScaledMap.Free;
+
+      DrawCircle(RadToDeg(SubSolar.Longitude),RadToDeg(SubSolar.Latitude),RadToDeg(Pi/2-SunRad),clRed); // Evening terminator
+      DrawCircle(RadToDeg(SubSolar.Longitude),RadToDeg(SubSolar.Latitude),RadToDeg(Pi/2+SunRad),clBlue); // Morning terminator
+
+      MarkXY(0,0,ReferencePointColor);
+
+      ProgressBar1.Hide;
+      DrawCircles_CheckBox.Show;
+      MarkCenter_CheckBox.Show;
+      DrawingMap_Label.Caption := '';
+      Screen.Cursor := DefaultCursor;
+
+      ShowingEarth := True;
+    end;
+
+
+end;  {TTerminator_Form.ShowEarth_MainMenuItemClick}
+
+function TTerminator_Form.EphemerisDataAvailable(const MJD : Extended) : Boolean;
+var
+  JED : Extended;
+
+  procedure LookForJPLFile;
+    var
+      JPL_Year : integer;
+    begin  // try to silently load another file
+      JPL_Year := Round(YearOf(Date_DateTimePicker.Date));
+      FindAndLoadJPL_File(JPL_FilePath+'UNXP'+IntToStr(50*(JPL_Year div 50))+'.405');
+      if EphemerisFileLoaded then
+        begin
+          JPL_Filename := EphemerisFilname;
+          JPL_FilePath := ExtractFilePath(EphemerisFilname);
+        end;
+    end;
+
+begin {TTerminator_Form.EphemerisDataAvailable}
+  Result := False;
+
+  if not EphemerisFileLoaded then
+    begin
+      FindAndLoadJPL_File(JPL_Filename);  // load default file if it has not yet been done
+      if EphemerisFileLoaded then
+        begin
+          JPL_Filename := EphemerisFilname;
+          JPL_FilePath := ExtractFilePath(EphemerisFilname);
+        end;
+    end;
+
+  JED := MJD + MJDOffset;
+
+  if EphemerisFileLoaded and ((JED<SS[1]) or (JED>SS[2])) then
+  {JED = requested Julian date;  SS[1] = start date of file; SS[2] = end date of file}
+    LookForJPLFile;
+
+  if EphemerisFileLoaded and ((JED<SS[1]) or (JED>SS[2])) then
+    begin // ask for assistance only if necessary
+      if MessageDlg(format('Unable to estimate geometry: requested date is not within ephemeris file limits of %0s to %0s',
+        [DateToStr(JulianDateToDateTime(SS[1])),DateToStr(JulianDateToDateTime(SS[2]))])
+        +' Load a different JPL file?',mtConfirmation,mbOKCancel,0)=mrOK then
+        LookForJPLFile
+      else
+        Exit;
+    end;
+
+  if (not EphemerisFileLoaded) or ((JED<SS[1]) or (JED>SS[2])) then
+    begin
+//      ShowMessage('Cannot estimate geometry -- ephemeris file not loaded');
+      Exit;
+    end;
+
+  Result := True;
+
+end;   {TTerminator_Form.EphemerisDataAvailable}
 
 procedure TTerminator_Form.DisplayF1Help(const PressedKey : Word; const ShiftState : TShiftState; const HelpFileName : String);
 {launches .chm help on indicated page if PressedKey=F1}
@@ -6472,83 +6954,6 @@ procedure TTerminator_Form.CountDots_RightClickMenuItemClick(
   Sender: TObject);
 begin
   ShowMessage('Number of dots in current display: '+IntToStr(Length(CraterInfo)));
-end;
-
-procedure TTerminator_Form.DrawRuklGrid1Click(Sender: TObject);
-{note: this is a simplified routine that works only for a zero libration view}
-const
-  NumRuklRows = 8;
-  NumRuklCols = 11;
-  RuklXStep = 2/NumRuklCols;
-  RuklYStep = 2/NumRuklRows;
-var
-  I : Integer;
-  X, Y : Extended;
-  WantRuklSubgrid : Boolean;
-begin
-  if not ((SubObs_Lon_LabeledNumericEdit.NumericEdit.ExtendedValue=0)
-   and (SubObs_Lat_LabeledNumericEdit.NumericEdit.ExtendedValue=0))
-     and (MessageDlg('Rükl grid is valid only for zero libration views',mtWarning,mbOKCancel,0)=mrCancel) then
-       Exit;
-
-
-  WantRuklSubgrid := not H_Terminator_Goto_Form.Center_RadioButton.Checked; // assume subgrid is wanted only after a GoTo to a quadrant
-
-  with JimsGraph1 do
-    begin
-      with Canvas do
-        begin
-          Pen.Color := clWhite;
-
-          X := -1;
-          for I := 1 to (NumRuklCols+1) do
-            begin
-              Pen.Style := psSolid;
-              MoveTo(XPix(X),YPix(1));
-              LineTo(XPix(X),YPix(-1));    // note: LineTo stops short of destination by 1 pixel
-
-              if WantRuklSubgrid then
-                begin
-                  X := X + RuklXStep/2;
-                  Pen.Style := psDashDot;
-                  MoveTo(XPix(X),YPix(1));
-                  LineTo(XPix(X),YPix(-1));    // note: LineTo stops short of destination by 1 pixel
-                  X := X + RuklXStep/2;
-                end
-              else
-                X := X + RuklXStep;
-
-            end;
-
-          Y := 1;
-          for I := 1 to (NumRuklCols+1) do
-            begin
-              Pen.Style := psSolid;
-              MoveTo(XPix(-1),YPix(Y));
-              LineTo(XPix(1),YPix(Y));    // note: LineTo stops short of destination by 1 pixel
-
-              if WantRuklSubgrid then
-                begin
-                  Y := Y - RuklYStep/2;
-                  Pen.Style := psDashDot;
-                  MoveTo(XPix(-1),YPix(Y));
-                  LineTo(XPix(1),YPix(Y));    // note: LineTo stops short of destination by 1 pixel
-                  Y := Y - RuklYStep/2;
-                end
-              else
-                  Y := Y - RuklYStep;
-            end;
-
-          Pen.Style := psSolid; // probably not necessary if other routines set desired style
-
-        end;
-    end;
-end;
-
-procedure TTerminator_Form.Image_PopupMenuPopup(Sender: TObject);
-begin
-  Recordshadowmeasurement_RightClickMenuItem.Visible :=
-    (RefPtReadoutMode=ShadowLengthRefPtMode) or (RefPtReadoutMode=InverseShadowLengthRefPtMode);
 end;
 
 end.
