@@ -922,7 +922,7 @@ v0.19
        data with feature type code "AT", since altimeter results from other
        missions, such as Kaguya, are becoming available.
     6. Add an Abort button to the PhotoSesssions and Moon Event Predictor
-       search forms.   
+       search forms.
     7. In Libration Tabulator, hide MinMoon and MaxSun elevation input boxes
        when geocentric mode is selected; and correct operation so that the
        calculated geocentric "elevations" of the Moon and Sun are ignored.
@@ -931,7 +931,14 @@ v0.19
     8. Add printout of current constraints in header at top of Libration
        Tabulator listings.
 
-                                                                     6 Mar 2009}
+  v0.19.9
+    1. Enlarge Calibrated Photo Selection form horizontally, and rearrange
+       buttons at top of memo area for improved functionality with respect to
+       colongitude, which can now be displayed independent of whether list is
+       filtered or not.  Sort by: (1) colongitude if that checkbox is checked;
+       (2) solar altitude if list is filtered AND colongitude not checked;
+       (3) otherwise, by filename.
+                                                                    20 Mar 2009}
 
 
 interface
@@ -1535,7 +1542,7 @@ uses FileCtrl, H_Terminator_About_Unit, H_Terminator_Goto_Unit, H_Terminator_Set
 {$R *.dfm}
 
 const
-  ProgramVersion = '0.19.8';
+  ProgramVersion = '0.19.9';
 
 // note: the following constants specify (in degrees) that texture files span
 //   the full lunar globe.  They should not be changed.

@@ -69,10 +69,11 @@ type
     SunAngleOnly_RadioButton: TRadioButton;
     ListLibrations_CheckBox: TCheckBox;
     PhotoListHeaders_Label: TLabel;
-    FeaturePos_Label: TLabel;
+    FeaturePos_Part1_Label: TLabel;
     Overlay_Image: TImage;
     CopyInfo_Button: TButton;
     Colongitude_CheckBox: TCheckBox;
+    FeaturePos_Part2_Label: TLabel;
     procedure Cancel_ButtonClick(Sender: TObject);
     procedure SelectPhoto_ButtonClick(Sender: TObject);
     procedure ListBox1Click(Sender: TObject);
@@ -207,7 +208,18 @@ begin
         Exit;
       end;
 
-      FeaturePos_Label.Caption := '';
+      FeaturePos_Part1_Label.Caption := '';
+      FeaturePos_Part2_Label.Caption := '';
+
+      if Colongitude_CheckBox.Checked then
+        begin
+          Colongitude := (Pi/2) - Terminator_Form.SubSolarPoint.Longitude;
+          while Colongitude>TwoPi do Colongitude := Colongitude - TwoPi;
+          while Colongitude<0 do Colongitude := Colongitude + TwoPi;
+
+          FeaturePos_Part1_Label.Caption := Format('In current: Colon= %0.2f, Lat= %0.2f',
+            [Colongitude/OneDegree, Terminator_Form.SubSolarPoint.Latitude/OneDegree]);
+        end;
 
       if (FilterPhotos_CheckBox.Checked) then
         begin
@@ -222,27 +234,19 @@ begin
               OriginalHeight := IntegerValue(PhotoHeight);
               if OriginalHeight=0 then OriginalHeight := 1;
 
-              if Colongitude_CheckBox.Checked then
-                begin
-                  Colongitude := (Pi/2) - Terminator_Form.SubSolarPoint.Longitude;
-                  while Colongitude>TwoPi do Colongitude := Colongitude - TwoPi;
-                  while Colongitude<0 do Colongitude := Colongitude + TwoPi;
-
-                  FeaturePos_Label.Caption := Format('In current: Colon= %0.2f, Lat= %0.2f;   In selected at: X= %0.2f, Y= %0.2f',
-                    [Colongitude/OneDegree, Terminator_Form.SubSolarPoint.Latitude/OneDegree,
-                     OriginalXPix/OriginalWidth, OriginalYPix/OriginalHeight]);
-                end
-              else
+              if not Colongitude_CheckBox.Checked then
                 begin
                   ComputeDistanceAndBearing(TargetLonDeg*OneDegree,TargetLatDeg*OneDegree,
                     Terminator_Form.SubSolarPoint.Longitude,Terminator_Form.SubSolarPoint.Latitude,
                     SunAngle,SunBearing);
                   SunAngle := (Pi/2) - SunAngle;
 
-                  FeaturePos_Label.Caption := Format('In current: Alt= %0.2f, Az= %0.1f;  In selected at: X= %0.2f, Y= %0.2f',
-                    [SunAngle/OneDegree, SunBearing/OneDegree,
-                     OriginalXPix/OriginalWidth, OriginalYPix/OriginalHeight]);
+                  FeaturePos_Part1_Label.Caption := Format('In current: Alt= %0.2f, Az= %0.1f',
+                    [SunAngle/OneDegree, SunBearing/OneDegree]);
                 end;
+
+              FeaturePos_Part2_Label.Caption := Format('In selected at: X= %0.2f, Y= %0.2f',
+                [OriginalXPix/OriginalWidth, OriginalYPix/OriginalHeight]);
 
               Ratio := Thumbnail_Image.Width/OriginalWidth;
               ThumbnailMagnification := Ratio;
@@ -727,7 +731,7 @@ begin
     end
   else if Colongitude_CheckBox.Checked then HeaderString := ' Colongitude  Latitude';
   if ListLibrations_CheckBox.Checked then HeaderString := HeaderString + '       Lon.       Lat.';
-  if (not FilterPhotos_CheckBox.Checked) or (Length(HeaderString)<25) then
+  if (not (FilterPhotos_CheckBox.Checked or Colongitude_CheckBox.Checked)) or (Length(HeaderString)<25) then
     HeaderString := HeaderString + '      File name';
   PhotoListHeaders_Label.Caption := HeaderString;
 
@@ -875,13 +879,10 @@ begin
 
       if (Sort_CheckBox.Checked) and (Length(PhotoListData)>1) then
         begin
-          if FilterPhotos_CheckBox.Checked then
-            begin
-              if Colongitude_CheckBox.Checked then
-                SortColongitudes
-              else
-                SortSunAltitudes;
-            end
+          if Colongitude_CheckBox.Checked then
+            SortColongitudes
+          else if FilterPhotos_CheckBox.Checked then
+            SortSunAltitudes
           else
             SortFilenames;
         end;

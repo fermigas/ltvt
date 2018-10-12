@@ -1,9 +1,9 @@
 object CalibratedPhotoLoader_Form: TCalibratedPhotoLoader_Form
-  Left = 104
+  Left = 46
   Top = 9
-  Width = 856
+  Width = 942
   Height = 726
-  Caption = 'Calibrated Photo Selector  v0.7'
+  Caption = 'Calibrated Photo Selector  v0.8'
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -16,7 +16,7 @@ object CalibratedPhotoLoader_Form: TCalibratedPhotoLoader_Form
   PixelsPerInch = 96
   TextHeight = 13
   object Thumbnail_Image: TImage
-    Left = 560
+    Left = 640
     Top = 48
     Width = 265
     Height = 153
@@ -25,14 +25,14 @@ object CalibratedPhotoLoader_Form: TCalibratedPhotoLoader_Form
     Proportional = True
   end
   object Label2: TLabel
-    Left = 583
+    Left = 663
     Top = 336
     Width = 207
     Height = 13
     Caption = '-------------------    Calibration Points  -----------------'
   end
   object DateTime_Label: TLabel
-    Left = 560
+    Left = 640
     Top = 208
     Width = 78
     Height = 13
@@ -40,7 +40,7 @@ object CalibratedPhotoLoader_Form: TCalibratedPhotoLoader_Form
     Caption = 'DateTime_Label'
   end
   object ObsLocation_Label: TLabel
-    Left = 560
+    Left = 640
     Top = 232
     Width = 92
     Height = 13
@@ -48,7 +48,7 @@ object CalibratedPhotoLoader_Form: TCalibratedPhotoLoader_Form
     Caption = 'ObsLocation_Label'
   end
   object SubObsPt_Label: TLabel
-    Left = 560
+    Left = 640
     Top = 280
     Width = 80
     Height = 13
@@ -58,7 +58,7 @@ object CalibratedPhotoLoader_Form: TCalibratedPhotoLoader_Form
     Caption = 'SubObsPt_Label'
   end
   object SubSolPt_Label: TLabel
-    Left = 560
+    Left = 640
     Top = 304
     Width = 76
     Height = 13
@@ -68,7 +68,7 @@ object CalibratedPhotoLoader_Form: TCalibratedPhotoLoader_Form
     Caption = 'SubSolPt_Label'
   end
   object PhotoSize_Label: TLabel
-    Left = 560
+    Left = 640
     Top = 256
     Width = 80
     Height = 13
@@ -94,7 +94,7 @@ object CalibratedPhotoLoader_Form: TCalibratedPhotoLoader_Form
     Caption = 'ImageFilename_Label'
   end
   object Label1: TLabel
-    Left = 560
+    Left = 640
     Top = 615
     Width = 110
     Height = 13
@@ -119,18 +119,16 @@ object CalibratedPhotoLoader_Form: TCalibratedPhotoLoader_Form
     Hint = 'Identity of columns in list box'
     Caption = 'PhotoListHeaders_Label'
   end
-  object FeaturePos_Label: TLabel
-    Left = 216
+  object FeaturePos_Part1_Label: TLabel
+    Left = 264
     Top = 80
-    Width = 86
+    Width = 117
     Height = 13
-    Hint = 
-      'Sun angle in current photo and where feature is in requested pho' +
-      'to as fraction of width (from left) and height (from top)'
-    Caption = 'FeaturePos_Label'
+    Hint = 'Sun angle in main window'
+    Caption = 'FeaturePos_Part1_Label'
   end
   object Overlay_Image: TImage
-    Left = 560
+    Left = 640
     Top = 48
     Width = 265
     Height = 153
@@ -139,10 +137,20 @@ object CalibratedPhotoLoader_Form: TCalibratedPhotoLoader_Form
     Proportional = True
     Transparent = True
   end
+  object FeaturePos_Part2_Label: TLabel
+    Left = 464
+    Top = 80
+    Width = 86
+    Height = 13
+    Hint = 
+      'Where feature is in requested photo as fraction of width (from l' +
+      'eft) and height (from top)'
+    Caption = 'FeaturePos_Label'
+  end
   object ListBox1: TListBox
     Left = 16
     Top = 96
-    Width = 529
+    Width = 609
     Height = 585
     Hint = 'Click on a photo name or use keyboard to move through list'
     Font.Charset = DEFAULT_CHARSET
@@ -158,7 +166,7 @@ object CalibratedPhotoLoader_Form: TCalibratedPhotoLoader_Form
     OnKeyDown = ListBox1KeyDown
   end
   object SelectPhoto_Button: TButton
-    Left = 568
+    Left = 648
     Top = 552
     Width = 65
     Height = 25
@@ -169,7 +177,7 @@ object CalibratedPhotoLoader_Form: TCalibratedPhotoLoader_Form
     OnKeyDown = SelectPhoto_ButtonKeyDown
   end
   object Cancel_Button: TButton
-    Left = 736
+    Left = 816
     Top = 552
     Width = 57
     Height = 25
@@ -180,7 +188,7 @@ object CalibratedPhotoLoader_Form: TCalibratedPhotoLoader_Form
     OnKeyDown = Cancel_ButtonKeyDown
   end
   inline X1_Pix_LabeledNumericEdit: TLabeledNumericEdit
-    Left = 696
+    Left = 776
     Top = 368
     Width = 107
     Height = 21
@@ -206,7 +214,7 @@ object CalibratedPhotoLoader_Form: TCalibratedPhotoLoader_Form
     end
   end
   inline Y1_Pix_LabeledNumericEdit: TLabeledNumericEdit
-    Left = 696
+    Left = 776
     Top = 392
     Width = 107
     Height = 21
@@ -232,7 +240,7 @@ object CalibratedPhotoLoader_Form: TCalibratedPhotoLoader_Form
     end
   end
   inline Lon1_LabeledNumericEdit: TLabeledNumericEdit
-    Left = 558
+    Left = 638
     Top = 368
     Width = 99
     Height = 21
@@ -256,7 +264,7 @@ object CalibratedPhotoLoader_Form: TCalibratedPhotoLoader_Form
     end
   end
   inline Lat1_LabeledNumericEdit: TLabeledNumericEdit
-    Left = 558
+    Left = 638
     Top = 392
     Width = 99
     Height = 21
@@ -282,7 +290,7 @@ object CalibratedPhotoLoader_Form: TCalibratedPhotoLoader_Form
     end
   end
   inline InversionCode_LabeledNumericEdit: TLabeledNumericEdit
-    Left = 672
+    Left = 752
     Top = 504
     Width = 123
     Height = 21
@@ -308,7 +316,7 @@ object CalibratedPhotoLoader_Form: TCalibratedPhotoLoader_Form
     end
   end
   inline X2_Pix_LabeledNumericEdit: TLabeledNumericEdit
-    Left = 696
+    Left = 776
     Top = 440
     Width = 107
     Height = 21
@@ -334,7 +342,7 @@ object CalibratedPhotoLoader_Form: TCalibratedPhotoLoader_Form
     end
   end
   inline Y2_Pix_LabeledNumericEdit: TLabeledNumericEdit
-    Left = 696
+    Left = 776
     Top = 464
     Width = 107
     Height = 21
@@ -360,7 +368,7 @@ object CalibratedPhotoLoader_Form: TCalibratedPhotoLoader_Form
     end
   end
   inline Lon2_LabeledNumericEdit: TLabeledNumericEdit
-    Left = 558
+    Left = 638
     Top = 440
     Width = 99
     Height = 21
@@ -384,7 +392,7 @@ object CalibratedPhotoLoader_Form: TCalibratedPhotoLoader_Form
     end
   end
   inline Lat2_LabeledNumericEdit: TLabeledNumericEdit
-    Left = 558
+    Left = 638
     Top = 464
     Width = 99
     Height = 21
@@ -410,7 +418,7 @@ object CalibratedPhotoLoader_Form: TCalibratedPhotoLoader_Form
     end
   end
   object OverwriteNone_RadioButton: TRadioButton
-    Left = 560
+    Left = 640
     Top = 592
     Width = 249
     Height = 17
@@ -423,7 +431,7 @@ object CalibratedPhotoLoader_Form: TCalibratedPhotoLoader_Form
     OnKeyDown = OverwriteNone_RadioButtonKeyDown
   end
   object OverwriteGeometry_RadioButton: TRadioButton
-    Left = 552
+    Left = 632
     Top = 638
     Width = 145
     Height = 17
@@ -436,7 +444,7 @@ object CalibratedPhotoLoader_Form: TCalibratedPhotoLoader_Form
     OnKeyDown = OverwriteGeometry_RadioButtonKeyDown
   end
   object OverwriteDateTime_RadioButton: TRadioButton
-    Left = 704
+    Left = 784
     Top = 638
     Width = 121
     Height = 17
@@ -449,7 +457,7 @@ object CalibratedPhotoLoader_Form: TCalibratedPhotoLoader_Form
     OnKeyDown = OverwriteDateTime_RadioButtonKeyDown
   end
   object OverwriteAll_RadioButton: TRadioButton
-    Left = 552
+    Left = 632
     Top = 661
     Width = 209
     Height = 17
@@ -462,13 +470,13 @@ object CalibratedPhotoLoader_Form: TCalibratedPhotoLoader_Form
     OnKeyDown = OverwriteAll_RadioButtonKeyDown
   end
   inline TargetLat_LabeledNumericEdit: TLabeledNumericEdit
-    Left = 342
-    Top = 52
+    Left = 438
+    Top = 53
     Width = 99
     Height = 21
     Hint = 'Selenographic latitude in decimal degrees (N=+  S=-)'
     AutoSize = True
-    TabOrder = 5
+    TabOrder = 6
     inherited Units_Label: TLabel [0]
       Left = 96
       Width = 3
@@ -492,22 +500,22 @@ object CalibratedPhotoLoader_Form: TCalibratedPhotoLoader_Form
     Top = 48
     Width = 73
     Height = 25
-    Hint = 'List photos in current file (applying filter if requested)'
+    Hint = 'Click to refresh list if any options have been changed'
     Caption = 'List Photos'
     TabOrder = 1
     OnClick = ListPhotos_ButtonClick
     OnKeyDown = ListPhotos_ButtonKeyDown
   end
   object FilterPhotos_CheckBox: TCheckBox
-    Left = 168
-    Top = 52
-    Width = 73
+    Left = 264
+    Top = 53
+    Width = 65
     Height = 17
     Hint = 
-      'Show only photos including feature at specified lon/lat next tim' +
-      'e you click "List Photos"'
+      'Show only photos including feature at specified lon/lat; display' +
+      ' and sort by solar altitude unless "colongitude" is checked'
     Caption = 'Filter List'
-    TabOrder = 3
+    TabOrder = 4
     OnClick = FilterPhotos_CheckBoxClick
     OnKeyDown = FilterPhotos_CheckBoxKeyDown
   end
@@ -523,9 +531,9 @@ object CalibratedPhotoLoader_Form: TCalibratedPhotoLoader_Form
     OnKeyDown = ChangeFile_ButtonKeyDown
   end
   object Sort_CheckBox: TCheckBox
-    Left = 112
-    Top = 52
-    Width = 57
+    Left = 104
+    Top = 53
+    Width = 41
     Height = 17
     Hint = 
       'If checked, entries in box will be "alphabetical" next time you ' +
@@ -534,7 +542,7 @@ object CalibratedPhotoLoader_Form: TCalibratedPhotoLoader_Form
     TabOrder = 2
   end
   object SunAngleOnly_RadioButton: TRadioButton
-    Left = 704
+    Left = 784
     Top = 616
     Width = 73
     Height = 17
@@ -548,24 +556,24 @@ object CalibratedPhotoLoader_Form: TCalibratedPhotoLoader_Form
     TabStop = True
   end
   object ListLibrations_CheckBox: TCheckBox
-    Left = 440
-    Top = 45
-    Width = 89
+    Left = 536
+    Top = 53
+    Width = 81
     Height = 17
     Hint = 
       'List the longitude and latitude of the Sub-Observer point of eac' +
       'h photo in selection list'
-    Caption = 'List Librations'
-    TabOrder = 6
+    Caption = 'List librations'
+    TabOrder = 7
   end
   inline TargetLon_LabeledNumericEdit: TLabeledNumericEdit
-    Left = 238
-    Top = 52
+    Left = 334
+    Top = 53
     Width = 99
     Height = 21
     Hint = 'Selenographic longitude in decimal degrees (E=+  W=-)'
     AutoSize = True
-    TabOrder = 4
+    TabOrder = 5
     inherited Item_Label: TLabel
       Width = 21
       Caption = 'Lon:'
@@ -583,7 +591,7 @@ object CalibratedPhotoLoader_Form: TCalibratedPhotoLoader_Form
     end
   end
   object CopyInfo_Button: TButton
-    Left = 576
+    Left = 656
     Top = 504
     Width = 59
     Height = 25
@@ -594,15 +602,13 @@ object CalibratedPhotoLoader_Form: TCalibratedPhotoLoader_Form
     OnKeyDown = CopyInfo_ButtonKeyDown
   end
   object Colongitude_CheckBox: TCheckBox
-    Left = 440
-    Top = 63
-    Width = 81
+    Left = 160
+    Top = 53
+    Width = 97
     Height = 17
-    Hint = 
-      'If checked, filtered lists will display colongitude rather than ' +
-      'solar altitude'
-    Caption = 'Colongitude'
-    TabOrder = 7
+    Hint = 'Display and sort by colongitude'
+    Caption = 'By colongitude'
+    TabOrder = 3
     OnKeyDown = Colongitude_CheckBoxKeyDown
   end
   object OpenDialog1: TOpenDialog
