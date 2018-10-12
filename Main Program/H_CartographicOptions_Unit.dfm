@@ -195,9 +195,8 @@ object CartographicOptions_Form: TCartographicOptions_Form
     Width = 97
     Height = 22
     Hint = 
-      'Select the color to be used for drawing areas  in which there is' +
-      ' no intensity data when a user supplied photo is being used for ' +
-      'the texture map'
+      'Select the color to be used for drawing areas in which there is ' +
+      'no valid data'
     Selected = clWhite
     Style = [cbStandardColors, cbExtendedColors, cbCustomColor, cbPrettyNames]
     ItemHeight = 16

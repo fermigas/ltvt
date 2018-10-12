@@ -4,7 +4,7 @@ object PhotosessionSearch_Form: TPhotosessionSearch_Form
   Width = 962
   Height = 696
   ActiveControl = Tabulate_Button
-  Caption = 'LTVT PhotoSessions Search v0.8'
+  Caption = 'LTVT PhotoSessions Search v0.10'
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -13,6 +13,7 @@ object PhotosessionSearch_Form: TPhotosessionSearch_Form
   Font.Style = []
   OldCreateOrder = False
   ShowHint = True
+  OnActivate = FormActivate
   OnCreate = FormCreate
   OnDestroy = FormDestroy
   OnShow = FormShow
@@ -59,8 +60,8 @@ object PhotosessionSearch_Form: TPhotosessionSearch_Form
       Width = 123
       Height = 19
       Hint = 
-        'Selenographic North Latitude  of Target Point in Degrees -- DD.d' +
-        'dd format'
+        'Latitude  of Target Point in decimal degrees --DD.ddd format (No' +
+        'rth=+/South=-)'
       AutoSize = True
       TabOrder = 1
       inherited Item_Label: TLabel
@@ -85,8 +86,8 @@ object PhotosessionSearch_Form: TPhotosessionSearch_Form
       Width = 123
       Height = 19
       Hint = 
-        'Selenographic East Longitude of Target Point in Degrees  -- DD.d' +
-        'dd format'
+        'Longitude of Target Point in decimal degrees  --DD.ddd format  (' +
+        'East=+ West=-)'
       AutoSize = True
       TabOrder = 0
       inherited Item_Label: TLabel
@@ -138,8 +139,8 @@ object PhotosessionSearch_Form: TPhotosessionSearch_Form
       Width = 194
       Height = 19
       Hint = 
-        'Flag cases where solar azimuth is this close to target event -- ' +
-        'DD.ddd format'
+        'Show only cases where solar elevation is this close to target ev' +
+        'ent -- DD.ddd format'
       AutoSize = True
       TabOrder = 4
       inherited Item_Label: TLabel
@@ -185,6 +186,34 @@ object PhotosessionSearch_Form: TPhotosessionSearch_Form
         OnKeyDown = SunAzimuth_LabeledNumericEditNumericEditKeyDown
       end
     end
+    inline SunAzimuthTolerance_LabeledNumericEdit: TLabeledNumericEdit
+      Left = 359
+      Top = 52
+      Width = 194
+      Height = 19
+      Hint = 
+        'Show only  cases where solar azimuth is this close to target eve' +
+        'nt -- DD.ddd format'
+      AutoSize = True
+      TabOrder = 5
+      inherited Item_Label: TLabel
+        Width = 113
+        Caption = 'Allowable Azimuth Error:'
+      end
+      inherited Units_Label: TLabel
+        Left = 176
+        Width = 18
+        Caption = 'deg'
+      end
+      inherited NumericEdit: TNumericEdit
+        Left = 128
+        Width = 41
+        Height = 19
+        Hint = 'Enter a positive decimal value'
+        Text = '180.0'
+        OnKeyDown = SunAzimuthTolerance_LabeledNumericEditNumericEditKeyDown
+      end
+    end
   end
   object ColongitudeMode_GroupBox: TGroupBox
     Left = 16
@@ -219,53 +248,27 @@ object PhotosessionSearch_Form: TPhotosessionSearch_Form
         OnKeyDown = Colongitude_LabeledNumericEditNumericEditKeyDown
       end
     end
-    inline SolarLatitude_LabeledNumericEdit: TLabeledNumericEdit
-      Left = 183
+    inline ColongitudeTolerance_LabeledNumericEdit: TLabeledNumericEdit
+      Left = 215
       Top = 16
-      Width = 138
+      Width = 202
       Height = 19
-      Hint = 'Sun'#39's selenographic colongitude -- DD.ddd format'
+      Hint = 
+        'Show only cases where longitude is within this range of target  ' +
+        '-- DD.ddd format'
       AutoSize = True
       TabOrder = 1
       inherited Item_Label: TLabel
-        Width = 45
-        Hint = 'Latitude of subsolar point'
-        Caption = 'Solar Lat:'
+        Width = 123
+        Caption = 'Allowable Longitude Error:'
       end
       inherited Units_Label: TLabel
-        Left = 120
+        Left = 184
         Width = 18
         Caption = 'deg'
       end
       inherited NumericEdit: TNumericEdit
-        Left = 48
-        Width = 65
-        Height = 19
-        Text = '0.00'
-        OnKeyDown = SolarLatitude_LabeledNumericEditNumericEditKeyDown
-      end
-    end
-    inline ColongitudeTolerance_LabeledNumericEdit: TLabeledNumericEdit
-      Left = 359
-      Top = 16
-      Width = 210
-      Height = 19
-      Hint = 
-        'Flag cases where Solar Inclination is this close to target event' +
-        ' -- DD.ddd format'
-      AutoSize = True
-      TabOrder = 2
-      inherited Item_Label: TLabel
-        Width = 132
-        Caption = 'Allowable Colongitude Error:'
-      end
-      inherited Units_Label: TLabel
-        Left = 192
-        Width = 18
-        Caption = 'deg'
-      end
-      inherited NumericEdit: TNumericEdit
-        Left = 144
+        Left = 136
         Width = 41
         Height = 19
         Hint = 'Enter a positive decimal value'
@@ -323,7 +326,7 @@ object PhotosessionSearch_Form: TPhotosessionSearch_Form
   object ColongitudeMode_RadioButton: TRadioButton
     Left = 16
     Top = 48
-    Width = 113
+    Width = 145
     Height = 17
     Hint = 'Select events with specified colongitude'
     Caption = 'Colongitude Mode'
@@ -336,7 +339,7 @@ object PhotosessionSearch_Form: TPhotosessionSearch_Form
   object SunAngleMode_RadioButton: TRadioButton
     Left = 168
     Top = 48
-    Width = 113
+    Width = 145
     Height = 17
     Hint = 
       'Select events when sun has specified altitude over specified lun' +

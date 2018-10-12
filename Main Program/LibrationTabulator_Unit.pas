@@ -124,6 +124,7 @@ type
       var Key: Word; Shift: TShiftState);
     procedure MinLibration_RadioButtonKeyDown(Sender: TObject;
       var Key: Word; Shift: TShiftState);
+    procedure FormActivate(Sender: TObject);
   private
     { Private declarations }
   public
@@ -192,6 +193,11 @@ begin
   ObsElevList.Free;;
 end;
 
+procedure TLibrationTabulator_Form.FormActivate(Sender: TObject);
+begin
+  MinMoonElevDeg_LabeledNumericEdit.Item_Label.Caption := 'Min. '+PlanetName[CurrentTargetPlanet]+' Elev.:';
+end;
+
 procedure TLibrationTabulator_Form.FormShow(Sender: TObject);
 var
   ObsListFile : TextFile;
@@ -219,7 +225,7 @@ begin
               ObsLonList.Add(LeadingElement(DataLine,','));
               ObsLatList.Add(LeadingElement(DataLine,','));
               ObsElevList.Add(LeadingElement(DataLine,','));
-              ObsNameList.Add(Trim(DataLine));
+              ObsNameList.Add(ExtractCSV_item(DataLine));
             end;
         end;
       CloseFile(ObsListFile);
@@ -333,7 +339,7 @@ begin
     Trim(ObserverLongitude_LabeledNumericEdit.NumericEdit.Text)+', '+
     Trim(ObserverLatitude_LabeledNumericEdit.NumericEdit.Text)+', '+
     Trim(ObserverElevation_LabeledNumericEdit.NumericEdit.Text)+', '+
-    NameToAdd);
+    CSV_formatted_string(NameToAdd));
   CloseFile(ObsListFile);
 
   ObsLonList.Add(Trim(ObserverLongitude_LabeledNumericEdit.NumericEdit.Text));
@@ -418,7 +424,8 @@ procedure CalculateCircumstances(const MJD: Extended);
     ComputeDistanceAndBearing(SubEarthPoint.Longitude, SubEarthPoint.Latitude, CraterLon, CraterLat, CenterAngle, CenterAngleAz);
     Libration := NominalCenterAngle-CenterAngle;
 
-    CalculatePosition(MJD,Moon,BlankStarDataRecord,MoonPosition);
+//    CalculatePosition(MJD,Moon,BlankStarDataRecord,MoonPosition);
+    CalculatePosition(MJD,CurrentTargetPlanet,BlankStarDataRecord,MoonPosition);
     CalculatePosition(MJD,Sun, BlankStarDataRecord,SunPosition);
 
     Lon1 := SubEarthPoint.Longitude;
@@ -464,7 +471,7 @@ function NS_Tag(const Latitude : extended): string;
     if GeocentricSubEarthMode then
       Memo1.Lines.Add('Librations calculated for a geocentric observer')
     else
-      Memo1.Lines.Add(Format('Librations and Moon/Sun positions calculated for observer at %0.4f°%s  %0.4f°%s  %0.0f m',
+      Memo1.Lines.Add(Format('Librations and '+CurrentPlanetName+'/Sun positions calculated for observer at %0.4f°%s  %0.4f°%s  %0.0f m',
         [Abs(-ObserverLongitude),EW_Tag(-ObserverLongitude),Abs(ObserverLatitude),NS_Tag(ObserverLatitude),ObserverElevation]));
     Memo1.Lines.Add(Format('Center Dist(ance) and Sun Angle calculated for feature at %0.4f°%s  %0.4f°%s',
       [Abs(RadToDeg(CraterLon)),EW_Tag(RadToDeg(CraterLon)),Abs(RadToDeg(CraterLat)),NS_Tag(RadToDeg(CraterLat))]));
@@ -481,7 +488,7 @@ function NS_Tag(const Latitude : extended): string;
     else
       Memo1.Lines.Add('  *  Distance of feature from apparent lunar disk center <'+MaxCenterAngleDeg_LabeledNumericEdit.NumericEdit.Text+'°');
     if not GeocentricSubEarthMode then
-       Memo1.Lines.Add('  *  Center of Moon >'+MinMoonElevDeg_LabeledNumericEdit.NumericEdit.Text
+       Memo1.Lines.Add('  *  Center of '+CurrentPlanetName+' >'+MinMoonElevDeg_LabeledNumericEdit.NumericEdit.Text
          +'° and center of Sun <'+MaxSunElevDeg_LabeledNumericEdit.NumericEdit.Text
          +'° above observer''s horizon');
     Memo1.Lines.Add('');
@@ -492,7 +499,7 @@ function NS_Tag(const Latitude : extended): string;
       end
     else
       begin
-        Memo1.Lines.Add('                      Center                      Sun Angle       Librations      Center of Moon    Center of Sun');
+        Memo1.Lines.Add('                      Center                      Sun Angle       Librations      Center of '+CurrentPlanetName+'    Center of Sun');
         Memo1.Lines.Add('   Date      Time UT   Dist.   Libr.  %Illum  Altitude Azimuth   Long.    Lat.     Alt.     Azi.     Alt.     Azi');
       end;
   end;  {PrintHeader}

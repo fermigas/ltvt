@@ -41,7 +41,7 @@ They are used for determining if a lunar crater is
   CuspDirection, ObserverVertical : TVector;
   SubSolarAngle : extended;
 
-procedure tpplan (const tjd, ujd,glon,glat,ht : extended; const lplan : TTargetOptions;
+procedure tpplan (const tjd, ujd,glon,glat,ht : extended; const lplan : TJPL_TargetOptions;
   var pout,vout : TVector; var ra,dec,dis,drdt : extended);
 //   this entry computes the topocentric place of a planet,
 //   given the geodetic location of the observer.  Kaplan assumes applan
@@ -81,7 +81,7 @@ procedure tpplan (const tjd, ujd,glon,glat,ht : extended; const lplan : TTargetO
 //        drst   := true radial velocity from earth to planet in au/day (out)
 
 
-procedure applan (const tjd : extended; const l,n : TTargetOptions; var pout,vout : TVector;
+procedure applan (const tjd : extended; const l,n : TJPL_TargetOptions; var pout,vout : TVector;
   var ra,dec,dis,drdt : extended);
 //   this subroutine computes the apparent place of a planet or other
 //   solar system body.  rectangular coordinates of solar system bodies
@@ -128,7 +128,7 @@ procedure tpstar (const tjd : extended; const ram,decm,pmra,pmdec,parlax,radvel 
 //                 true equator and equinox of date (out)
 
 
-procedure apstar (const tjd : extended; const n : TTargetOptions;
+procedure apstar (const tjd : extended; const n : TJPL_TargetOptions;
   const ram,decm,pmra,pmdec,parlax,radvel :extended; var ra,dec : extended);
 //   this subroutine computes the apparent place of a star,
 //   given its mean place, proper motion, parallax, and radial
@@ -576,7 +576,7 @@ begin
          pos2[j] := pos1[j] + vel1[j] * (tjd2 - tjd1)
 end;
 
-procedure apstar (const tjd : extended; const n : TTargetOptions;
+procedure apstar (const tjd : extended; const n : TJPL_TargetOptions;
   const ram,decm,pmra,pmdec,parlax,radvel :extended; var ra,dec : extended);
 //   this subroutine computes the apparent place of a star,
 //   given its mean place, proper motion, parallax, and radial
@@ -624,10 +624,10 @@ begin
       tlast := 0;  {in event of error}
 //   get position and velocity of the earth wrt barycenter of
 //   solar system and wrt center of sun
-      ReadEphemeris(t1,Earth,SolarSystemBarycenter,PositionsAndVelocities,AU_day,EphemerisResults);
+      ReadEphemeris(t1,JPL_Earth,SolarSystemBarycenter,PositionsAndVelocities,AU_day,EphemerisResults);
       peb := EphemerisResults.R;
       veb := EphemerisResults.R_dot;
-      ReadEphemeris(t1,Earth,Sun,PositionsOnly,AU_day,EphemerisResults);
+      ReadEphemeris(t1,JPL_Earth,JPL_Sun,PositionsOnly,AU_day,EphemerisResults);
       pes := EphemerisResults.R;
       tlast := tjd;
     end;
@@ -711,10 +711,10 @@ begin
       tlast := 0;  {in event of error}
 //   get position and velocity of the earth wrt barycenter of
 //   solar system and wrt center of sun
-      ReadEphemeris(t1,Earth,SolarSystemBarycenter,PositionsAndVelocities,AU_day,EphemerisResults);
+      ReadEphemeris(t1,JPL_Earth,SolarSystemBarycenter,PositionsAndVelocities,AU_day,EphemerisResults);
       peb := EphemerisResults.R;
       veb := EphemerisResults.R_dot;
-      ReadEphemeris(t1,Earth,Sun,PositionsOnly,AU_day,EphemerisResults);
+      ReadEphemeris(t1,JPL_Earth,JPL_Sun,PositionsOnly,AU_day,EphemerisResults);
       pes := EphemerisResults.R;
       tlast := tjd;
     end;
@@ -2313,7 +2313,7 @@ begin
 
 end;
 
-procedure applan (const tjd : extended; const l,n : TTargetOptions; var pout,vout : TVector;
+procedure applan (const tjd : extended; const l,n : TJPL_TargetOptions; var pout,vout : TVector;
   var ra,dec,dis,drdt : extended);
 //   this subroutine computes the apparent place of a planet or other
 //   solar system body.  rectangular coordinates of solar system bodies
@@ -2371,7 +2371,7 @@ begin
       ReadEphemeris(t1,n,SolarSystemBarycenter,PositionsAndVelocities,AU_day,EphemerisResults);
       peb := EphemerisResults.R;
       veb := EphemerisResults.R_dot;
-      ReadEphemeris(t1,n,Sun,PositionsOnly,AU_day,EphemerisResults);
+      ReadEphemeris(t1,n,JPL_Sun,PositionsOnly,AU_day,EphemerisResults);
       pes := EphemerisResults.R;
       tlast := tjd;
     end;
@@ -2430,7 +2430,7 @@ begin
 end;
 
 
-procedure tpplan (const tjd, ujd,glon,glat,ht : extended; const lplan : TTargetOptions;
+procedure tpplan (const tjd, ujd,glon,glat,ht : extended; const lplan : TJPL_TargetOptions;
   var pout,vout : TVector; var ra,dec,dis,drdt : extended);
 //   this entry computes the topocentric place of a planet,
 //   given the geodetic location of the observer.  Kaplan assumes applan
@@ -2511,10 +2511,10 @@ begin
       tlast := 0;  {in event of error}
 //   get position and velocity of the earth wrt barycenter of
 //   solar system and wrt center of sun
-      ReadEphemeris(t1,Earth,SolarSystemBarycenter,PositionsAndVelocities,AU_day,EphemerisResults);
+      ReadEphemeris(t1,JPL_Earth,SolarSystemBarycenter,PositionsAndVelocities,AU_day,EphemerisResults);
       peb := EphemerisResults.R;
       veb := EphemerisResults.R_dot;
-      ReadEphemeris(t1,Earth,Sun,PositionsOnly,AU_day,EphemerisResults);
+      ReadEphemeris(t1,JPL_Earth,JPL_Sun,PositionsOnly,AU_day,EphemerisResults);
       pes := EphemerisResults.R;
       tlast := tjd;
     end;
@@ -2648,7 +2648,7 @@ begin
  }
   pep := pos6;
 
-  if lplan=Sun then
+  if lplan=JPL_Sun then
     begin
       SubSolarAngle := 0;
       CuspDirection := Uz;

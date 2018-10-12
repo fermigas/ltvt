@@ -3,7 +3,7 @@ object CalibratedPhotoLoader_Form: TCalibratedPhotoLoader_Form
   Top = 9
   Width = 942
   Height = 726
-  Caption = 'Calibrated Photo Selector  v0.8'
+  Caption = 'Calibrated Photo Selector  v0.9'
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -13,6 +13,7 @@ object CalibratedPhotoLoader_Form: TCalibratedPhotoLoader_Form
   OldCreateOrder = False
   ShowHint = True
   OnCreate = FormCreate
+  OnKeyDown = FormKeyDown
   PixelsPerInch = 96
   TextHeight = 13
   object Thumbnail_Image: TImage
@@ -172,9 +173,9 @@ object CalibratedPhotoLoader_Form: TCalibratedPhotoLoader_Form
     Height = 25
     Hint = 'Click to select highlighted photo and close form'
     Caption = 'Select'
-    TabOrder = 18
+    TabOrder = 20
     OnClick = SelectPhoto_ButtonClick
-    OnKeyDown = SelectPhoto_ButtonKeyDown
+    OnKeyDown = FormKeyDown
   end
   object Cancel_Button: TButton
     Left = 816
@@ -183,9 +184,9 @@ object CalibratedPhotoLoader_Form: TCalibratedPhotoLoader_Form
     Height = 25
     Hint = 'Close form without selecting a photo'
     Caption = 'Cancel'
-    TabOrder = 19
+    TabOrder = 21
     OnClick = Cancel_ButtonClick
-    OnKeyDown = Cancel_ButtonKeyDown
+    OnKeyDown = FormKeyDown
   end
   inline X1_Pix_LabeledNumericEdit: TLabeledNumericEdit
     Left = 776
@@ -209,7 +210,7 @@ object CalibratedPhotoLoader_Form: TCalibratedPhotoLoader_Form
     inherited NumericEdit: TNumericEdit
       Left = 40
       Width = 55
-      OnKeyDown = X1_Pix_LabeledNumericEditNumericEditKeyDown
+      OnKeyDown = FormKeyDown
       InputType = tInteger
     end
   end
@@ -235,7 +236,7 @@ object CalibratedPhotoLoader_Form: TCalibratedPhotoLoader_Form
     inherited NumericEdit: TNumericEdit
       Left = 40
       Width = 55
-      OnKeyDown = Y1_Pix_LabeledNumericEditNumericEditKeyDown
+      OnKeyDown = FormKeyDown
       InputType = tInteger
     end
   end
@@ -260,7 +261,7 @@ object CalibratedPhotoLoader_Form: TCalibratedPhotoLoader_Form
       Left = 32
       Width = 65
       Text = '0.000'
-      OnKeyDown = Lon1_LabeledNumericEditNumericEditKeyDown
+      OnKeyDown = FormKeyDown
     end
   end
   inline Lat1_LabeledNumericEdit: TLabeledNumericEdit
@@ -284,34 +285,34 @@ object CalibratedPhotoLoader_Form: TCalibratedPhotoLoader_Form
       Left = 32
       Width = 65
       Text = '0.000'
-      OnKeyDown = Lat1_LabeledNumericEditNumericEditKeyDown
+      OnKeyDown = FormKeyDown
       InputMin = '-90'
       InputMax = '90'
     end
   end
   inline InversionCode_LabeledNumericEdit: TLabeledNumericEdit
-    Left = 752
+    Left = 808
     Top = 504
-    Width = 123
+    Width = 99
     Height = 21
     Hint = 
       '+1 indicates a normal image; -1 indicates the disk file is a mir' +
       'ror image of the naked eye Moon'
     AutoSize = True
-    TabOrder = 17
+    TabOrder = 19
     inherited Item_Label: TLabel
       Width = 56
       Caption = 'Mirror code:'
     end
     inherited Units_Label: TLabel
-      Left = 120
+      Left = 96
       Width = 3
       Caption = ''
     end
     inherited NumericEdit: TNumericEdit
       Left = 64
       Width = 33
-      OnKeyDown = InversionCode_LabeledNumericEditNumericEditKeyDown
+      OnKeyDown = FormKeyDown
       InputType = tInteger
     end
   end
@@ -337,7 +338,7 @@ object CalibratedPhotoLoader_Form: TCalibratedPhotoLoader_Form
     inherited NumericEdit: TNumericEdit
       Left = 40
       Width = 55
-      OnKeyDown = X2_Pix_LabeledNumericEditNumericEditKeyDown
+      OnKeyDown = FormKeyDown
       InputType = tInteger
     end
   end
@@ -363,7 +364,6 @@ object CalibratedPhotoLoader_Form: TCalibratedPhotoLoader_Form
     inherited NumericEdit: TNumericEdit
       Left = 40
       Width = 55
-      OnKeyDown = Y2_Pix_LabeledNumericEditNumericEditKeyDown
       InputType = tInteger
     end
   end
@@ -388,7 +388,7 @@ object CalibratedPhotoLoader_Form: TCalibratedPhotoLoader_Form
       Left = 32
       Width = 65
       Text = '0.000'
-      OnKeyDown = Lon2_LabeledNumericEditNumericEditKeyDown
+      OnKeyDown = FormKeyDown
     end
   end
   inline Lat2_LabeledNumericEdit: TLabeledNumericEdit
@@ -412,7 +412,7 @@ object CalibratedPhotoLoader_Form: TCalibratedPhotoLoader_Form
       Left = 32
       Width = 65
       Text = '0.000'
-      OnKeyDown = Lat2_LabeledNumericEditNumericEditKeyDown
+      OnKeyDown = FormKeyDown
       InputMin = '-90'
       InputMax = '90'
     end
@@ -427,8 +427,8 @@ object CalibratedPhotoLoader_Form: TCalibratedPhotoLoader_Form
       'rrent view in the main window (note: sun angle readouts and shad' +
       'ow lengths will NOT be valid)'
     Caption = 'Load without altering main window parameters'
-    TabOrder = 20
-    OnKeyDown = OverwriteNone_RadioButtonKeyDown
+    TabOrder = 22
+    OnKeyDown = FormKeyDown
   end
   object OverwriteGeometry_RadioButton: TRadioButton
     Left = 632
@@ -440,8 +440,8 @@ object CalibratedPhotoLoader_Form: TCalibratedPhotoLoader_Form
       'f this image -- image will be seen from original viewpoint, but ' +
       'will probably be rotated and/or enlarged/compressed'
     Caption = 'Sun and observer angles'
-    TabOrder = 22
-    OnKeyDown = OverwriteGeometry_RadioButtonKeyDown
+    TabOrder = 24
+    OnKeyDown = FormKeyDown
   end
   object OverwriteDateTime_RadioButton: TRadioButton
     Left = 784
@@ -453,8 +453,8 @@ object CalibratedPhotoLoader_Form: TCalibratedPhotoLoader_Form
       'h those of this image and recomputes Sub-observer and Sub-solar ' +
       'points based on them'
     Caption = 'Date/Time/Location'
-    TabOrder = 23
-    OnKeyDown = OverwriteDateTime_RadioButtonKeyDown
+    TabOrder = 25
+    OnKeyDown = FormKeyDown
   end
   object OverwriteAll_RadioButton: TRadioButton
     Left = 632
@@ -466,8 +466,8 @@ object CalibratedPhotoLoader_Form: TCalibratedPhotoLoader_Form
       'phic display mode with zoom and optional rotation angle set to m' +
       'atch original image'
     Caption = 'Display at original scale and orientation'
-    TabOrder = 24
-    OnKeyDown = OverwriteAll_RadioButtonKeyDown
+    TabOrder = 26
+    OnKeyDown = FormKeyDown
   end
   inline TargetLat_LabeledNumericEdit: TLabeledNumericEdit
     Left = 438
@@ -490,7 +490,7 @@ object CalibratedPhotoLoader_Form: TCalibratedPhotoLoader_Form
       Left = 32
       Width = 41
       Text = '0.000'
-      OnKeyDown = TargetLat_LabeledNumericEditNumericEditKeyDown
+      OnKeyDown = FormKeyDown
       InputMin = '-90'
       InputMax = '90'
     end
@@ -504,7 +504,7 @@ object CalibratedPhotoLoader_Form: TCalibratedPhotoLoader_Form
     Caption = 'List Photos'
     TabOrder = 1
     OnClick = ListPhotos_ButtonClick
-    OnKeyDown = ListPhotos_ButtonKeyDown
+    OnKeyDown = FormKeyDown
   end
   object FilterPhotos_CheckBox: TCheckBox
     Left = 264
@@ -517,7 +517,7 @@ object CalibratedPhotoLoader_Form: TCalibratedPhotoLoader_Form
     Caption = 'Filter List'
     TabOrder = 4
     OnClick = FilterPhotos_CheckBoxClick
-    OnKeyDown = FilterPhotos_CheckBoxKeyDown
+    OnKeyDown = FormKeyDown
   end
   object ChangeFile_Button: TButton
     Left = 8
@@ -528,7 +528,7 @@ object CalibratedPhotoLoader_Form: TCalibratedPhotoLoader_Form
     Caption = 'Change'
     TabOrder = 0
     OnClick = ChangeFile_ButtonClick
-    OnKeyDown = ChangeFile_ButtonKeyDown
+    OnKeyDown = FormKeyDown
   end
   object Sort_CheckBox: TCheckBox
     Left = 104
@@ -540,6 +540,7 @@ object CalibratedPhotoLoader_Form: TCalibratedPhotoLoader_Form
       'click "List Photos"'
     Caption = 'Sort'
     TabOrder = 2
+    OnKeyDown = FormKeyDown
   end
   object SunAngleOnly_RadioButton: TRadioButton
     Left = 784
@@ -552,8 +553,9 @@ object CalibratedPhotoLoader_Form: TCalibratedPhotoLoader_Form
       'and shadow length measurements will be correct'
     Caption = 'Sun angle'
     Checked = True
-    TabOrder = 21
+    TabOrder = 23
     TabStop = True
+    OnKeyDown = FormKeyDown
   end
   object ListLibrations_CheckBox: TCheckBox
     Left = 536
@@ -565,6 +567,7 @@ object CalibratedPhotoLoader_Form: TCalibratedPhotoLoader_Form
       'h photo in selection list'
     Caption = 'List librations'
     TabOrder = 7
+    OnKeyDown = FormKeyDown
   end
   inline TargetLon_LabeledNumericEdit: TLabeledNumericEdit
     Left = 334
@@ -587,19 +590,19 @@ object CalibratedPhotoLoader_Form: TCalibratedPhotoLoader_Form
       Left = 32
       Width = 49
       Text = '0.000'
-      OnKeyDown = TargetLon_LabeledNumericEditNumericEditKeyDown
+      OnKeyDown = FormKeyDown
     end
   end
   object CopyInfo_Button: TButton
-    Left = 656
+    Left = 648
     Top = 504
     Width = 59
     Height = 25
     Hint = 'Copy selected photo information to clipboard'
     Caption = 'Copy Info'
-    TabOrder = 25
+    TabOrder = 17
     OnClick = CopyInfo_ButtonClick
-    OnKeyDown = CopyInfo_ButtonKeyDown
+    OnKeyDown = FormKeyDown
   end
   object Colongitude_CheckBox: TCheckBox
     Left = 160
@@ -609,7 +612,18 @@ object CalibratedPhotoLoader_Form: TCalibratedPhotoLoader_Form
     Hint = 'Display and sort by colongitude'
     Caption = 'By colongitude'
     TabOrder = 3
-    OnKeyDown = Colongitude_CheckBoxKeyDown
+    OnKeyDown = FormKeyDown
+  end
+  object ShowNote_Button: TButton
+    Left = 736
+    Top = 504
+    Width = 49
+    Height = 25
+    Hint = 'Display note found in data file'
+    Caption = 'Note'
+    TabOrder = 18
+    OnClick = ShowNote_ButtonClick
+    OnKeyDown = FormKeyDown
   end
   object OpenDialog1: TOpenDialog
     Left = 184

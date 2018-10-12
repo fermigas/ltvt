@@ -11,8 +11,9 @@ uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, LabeledNumericEdit, ExtCtrls, StdCtrls, Math, MPVectors, Win_Ops,
   ComCtrls, DateUtils, JPEG, H_JPL_Ephemeris, MoonPosition, H_ClockError,
+  H_CalibratedPhotoSelector_Unit {defines TTPhotoCalData},
   MP_Defs, Constnts, ExtDlgs, RGB_Library, IniFiles, Menus,
-  H_HTMLHelpViewer, Buttons, PopupMemo, LunarDEM_Data;
+  H_HTMLHelpViewer, Buttons, LTVT_PopupMemo, DEM_Data_Unit;
 
 type
   TCrater = record
@@ -37,6 +38,8 @@ type
     Lat_rad,
     HeightDev_km : Single;
     end;
+
+  TLongitudeConvention = (West, Centered, East);
 
 type
   TLTVT_Form = class(TForm)
@@ -91,7 +94,6 @@ type
     Geometry_GroupBox: TGroupBox;
     MoonDisplay_GroupBox: TGroupBox;
     MousePosition_GroupBox: TGroupBox;
-    Label4: TLabel;
     SearchPhotoSessions_Button: TButton;
     SetLocation_Button: TButton;
     HelpContents_MenuItem: TMenuItem;
@@ -140,6 +142,14 @@ type
     ThreeD_CheckBox: TCheckBox;
     DrawingMap_Label: TLabel;
     Abort_Button: TButton;
+    DrawDEMheightcontours_MainMenuItem: TMenuItem;
+    DrawContours_RightClickMenuItem: TMenuItem;
+    ChangeIniFile_MainMenuItem: TMenuItem;
+    SaveDialog1: TSaveDialog;
+    ChangeTargetPlanet_MainMenuItem: TMenuItem;
+    ColonIdentifier_Label: TLabel;
+    NearestDotAdditionalInfo_RightClickMenuItem: TMenuItem;
+    ExportTexture_MainMenuItem: TMenuItem;
     procedure DrawDots_ButtonClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure DrawTexture_ButtonClick(Sender: TObject);
@@ -193,6 +203,7 @@ type
     procedure MouseOptions_RightClickMenuItemClick(Sender: TObject);
     procedure CalibratePhoto_MainMenuItemClick(Sender: TObject);
     procedure LoadCalibratedPhoto_MainMenuItemClick(Sender: TObject);
+    procedure FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
     procedure Now_ButtonKeyDown(Sender: TObject; var Key: Word;
       Shift: TShiftState);
     procedure Date_DateTimePickerKeyDown(Sender: TObject; var Key: Word;
@@ -256,8 +267,6 @@ type
     procedure Help_RightClickMenuItemClick(Sender: TObject);
     procedure DrawCircle_RightClickMenuItemClick(Sender: TObject);
     procedure DrawCircle_MainMenuItemClick(Sender: TObject);
-    procedure FormKeyDown(Sender: TObject; var Key: Word;
-      Shift: TShiftState);
     procedure SearchUncalibratedPhotos_MainMenuItemClick(Sender: TObject);
     procedure MarkCenter_CheckBoxKeyDown(Sender: TObject; var Key: Word;
       Shift: TShiftState);
@@ -279,21 +288,28 @@ type
     procedure ThreeD_CheckBoxKeyDown(Sender: TObject; var Key: Word;
       Shift: TShiftState);
     procedure Abort_ButtonClick(Sender: TObject);
+    procedure DrawDEMheightcontours_MainMenuItemClick(Sender: TObject);
+    procedure ChangeIniFile_MainMenuItemClick(Sender: TObject);
+    procedure ChangeTargetPlanet_MainMenuItemClick(Sender: TObject);
+    procedure NearestDotAdditionalInfo_RightClickMenuItemClick(Sender: TObject);
+    procedure ExportTexture_MainMenuItemClick(Sender: TObject);
   private
     { Private declarations }
     fXScale, fXOffset,
     fYScale, fYOffset : extended;      // from JimsGraph1
   public
     { Public declarations }
-    IniFileName : string; {file used for saving default parameters}
+    CreatingForm : Boolean; // set to true during initial startup only
 
-    BasePath : string;  // path to LTVT.exe
+    IniFileName : String; {file used for saving default parameters}
+
+    BasePath : String;  // path to LTVT.exe
 
     ProposedFilename : String; // for saving file
 
     DefaultCursor : TCursor;
 
-    DEM_data : TKaguyaData;
+    DEM_data : TDemData;
     SurfaceData : array of array of TSurfaceReadout;  // used for mouse readout when DrawingMode=DEM_3D
     SurfaceData_NoDataValue : Single;
 
@@ -304,10 +320,7 @@ type
     Tex3MinLonText, Tex3MaxLonText, Tex3MinLatText, Tex3MaxLatText,
     ObservatoryComboBoxDefaultText, ObservatoryNoFileText  : string;
 
-    p1Text, p2Text, tauText : string; // arc-sec Mean Earth System offsets -- read from ini file
     ObserverLongitudeText, ObserverLatitudeText, ObserverElevationText : string; // altered via SelectObserverLocation_Form
-
-    DrawingMode : (DotMode, TextureMode, EarthView, DEM_2D, DEM_3D);
 
     MapPtr : ^TBitmap;  // image used to draw last texture
     MinLon, MaxLon, MinLat, MaxLat,  {of TextureMap}
@@ -331,16 +344,16 @@ type
 // variables set with DEM Options form
     DemIncludesCastShadows : Boolean;
     DemPhotometricMode : (Lambertian, Lommel_Seeliger, Lunar_Lambert);
-    DemCastShadowColor : TColor;
+    DemCastShadowColor, LommelSeeligerNoDataColor : TColor;
     MultiplyDemByTexture3 : Boolean;
+    MultipliedDemGammaBoost,
+    MultipliedDemIntensitiesBoost : Extended;
     DisplayDemComputationTimes : Boolean;
+    ShowDemInfo : Boolean;
     StayInDemModeOnRefresh : Boolean;
-    RigorousDemNormals : Boolean;
     DrawTerminatorOnDem : Boolean;
     DemGridStepMultiplier : Extended;
 
-
-    MoonRadius : extended;
     Point1Lon, Point1Lat, Point2Lon, Point2Lat : extended;  // set when measuring distance
 
 // set during MouseMove -- used to Record Shadow Measuremt
@@ -355,6 +368,7 @@ type
     RefX, RefY, RefPtLon, RefPtLat, RefPtSunAngle, RefPtSunBearing : extended;
 
     CursorType : (UseDefaultCursor, UseCrosshairCursor);
+    PlanetaryLongitudeConvention : TLongitudeConvention;
     RefPtReadoutMode : (NoRefPtReadout, DistanceAndBearingRefPtMode, PixelDataReadoutMode,
       ShadowLengthRefPtMode, InverseShadowLengthRefPtMode, RayHeightsRefPtMode);
 
@@ -370,6 +384,7 @@ type
     CraterCircleColor, ReferencePointColor : TColor;
 
     JPL_Data : TextFile;  {optional source of ephermis info: set by SelectFile; used by RetrieveData}
+
     LoRes_TextureMap : TBitmap; {set to USGS map on form CREATE -- so always available}
     LoRes_Texture_Loaded : boolean;
 
@@ -386,7 +401,8 @@ type
     Earth_TextureMap : TBitmap;
     Earth_Texture_Loaded : boolean;
 
-    TextureFilename : String; // identifies source of last background image used by Dots or Texture click
+    TextureFilename : String; // identifies source of last background image used by Texture click; relates to MapPtr, no longer changed by DEM or Dots
+    DemTextureFilename : String; // identifies source of last data source used to draw DEM
 
     LTO_Image : TBitmap;
 
@@ -407,7 +423,7 @@ type
     ManualRotationDegrees : extended; {[deg]}
     SunRad : extended; {semi-diameter of Sun [radians] -- initialized to 1920/2 arc-sec, re-set by EstimateData_ButtonClick}
 
-    SubSolarPoint : TPolarCoordinates;   {set by CalculateGeometry}
+    SubObserverPoint, SubSolarPoint : TPolarCoordinates;   {set by CalculateGeometry}
     SinSSLat, CosSSLat : extended;
 
     CraterList,  {current feature list}
@@ -426,26 +442,35 @@ type
     ShadowDirectionUserDistance : Extended; // amount of travel in photo X-Y system for 1 unit of ShadowDirectionVector
 
 // The following are used for labeling saved images:
+    DrawingMode : (DotMode, TextureMode, EarthView, DEM_2D, DEM_3D); // for last texture drawn
     ManualMode : boolean;  // current status of geometry labels
 
 // Set by clicking EstimateData button
     ImageDate, ImageTime : TDateTime;
     ImageGeocentric : Boolean;
     ImageObsLon, ImageObsLat, ImageObsElev : Extended;
+    ImagePlanet : Planet;
 
 // Set by CalculateGeometry
-    ImageManual, ImageIncludesCastShadows : Boolean;  // geometry was computed using manual settings
-    ImagePhotometricMode : String;
+    ImageManual : Boolean;  // geometry was computed using manual settings
     ImageSubSolLon, ImageSubSolLat, ImageSubObsLon, ImageSubObsLat,
     ImageCenterX, ImageCenterY, ImageZoom, ImageGamma : Extended;
+
+// Set by DrawDEM (can also modify ImageGamma)
+    ImageIncludesCastShadows : Boolean;
+    ImagePhotometricMode : String;
+    ImageDemMultipliedByTexture : Boolean;
+    ImageDemGridStepMultiplier : Extended;
+    ImageMultipliedDemGammaBoost,
+    ImageMultipliedDemIntensitiesBoost : Extended;
 
 // Initially False, set to True if any file names have changed from their defaults.
     FileSettingsChanged : Boolean;
     OldFilename : string;  // not really global but used in many routines to check for change.
 
     ShowDetails : Boolean;
-    PopupMemo : TPopupMemo_Form;
-    AbortDrawing : Boolean;
+    PopupMemo : TLTVT_PopupMemo_Form;
+    AbortKeyPressed : Boolean;
 
 // Set by GoTo when a cross is drawn per data on GoTo form
 //    MarkedPtLonText, MarkedPtLatText : string;
@@ -464,6 +489,18 @@ type
     LTO_Lambert_n, LTO_Lambert_F, LTO_Lambert_Rho_zero
      : Extended;
 
+// following were internal; now used by ExportTexture_Unit
+    UserPhotoData : TPhotoCalData;
+    UserPhotoLoaded : Boolean;
+    UserPhoto : TBitmap;
+
+
+    procedure ProcessMessages;
+    {for use by sub-forms wanting to check for Abort keypress}
+
+    procedure RefreshOptionsFromIniFile;
+
+// from JimsImage
     procedure SetRange(const Xmin, Xmax, Ymin, Ymax : extended);
 
     function XPix(const X : extended) : integer;
@@ -473,6 +510,7 @@ type
     procedure MoveToDataPoint(const X,Y : extended);
     procedure LineToDataPoint(const X,Y : extended);
     procedure PlotDataPoint(const X,Y : extended;  const PixelHt : integer;  const BorderColor, FillColor : TColor);
+// ----
 
     function EphemerisDataAvailable(const MJD : Extended) : Boolean;
 
@@ -486,10 +524,13 @@ type
     function YesNoToBoolean(const OptionString : string): boolean;
     {returns True if first letter of string is 'Y' or 'y'; otherwise False}
 
-    function PosNegDegrees(const Angle : extended) : extended;
-    {Adjusts Angle (in degrees) to range -180 .. +180}
+    function PosNegDegrees(const AngleDegrees : extended; const LongitudeConvention : TLongitudeConvention) : extended;
+    {Adjusts Angle (in degrees) to range per LongitudeConvention}
 
-    function LongitudeString(const LongitudeDegrees : extended; const DecimalPoints : integer): string;
+    function PlanetaryLongitudeString(const LongitudeDegrees : extended; const DecimalPoints : integer): string;
+    {returns value in range per LongitudeConvention}
+
+    function EarthLongitudeString(const LongitudeDegrees : extended; const DecimalPoints : integer): string;
     {returns value in range 180.nnn W to 180.nnn E}
 
     function LatitudeString(const LatitudeDegrees : extended; const DecimalPoints : integer): string;
@@ -632,9 +673,6 @@ type
     function BriefName(const FullName : string) : string;
     {strip off path if it is the same as LTVT.exe}
 
-    function UpperCaseParentName(const FeatureName, FT_Code : String) : String;
-    {attempts to extract parent part of FeatureName based on USGS Feature Type code; returns FeatureName if unsuccessful}
-
     function LabelString(const FeatureToLabel : TCraterInfo;
       const IncludeName, IncludeParent, IncludeSize, IncludeUnits, ShowMore : Boolean) : String;
     {returns string used for adding labels to map}
@@ -662,14 +700,16 @@ uses FileCtrl, H_Terminator_About_Unit, H_Terminator_Goto_Unit, H_Terminator_Set
   H_Terminator_SelectObserverLocation_Unit, H_MoonEventPredictor_Unit,
   H_PhotosessionSearch_Unit, H_Terminator_LabelFontSelector_Unit,
   H_ExternalFileSelection_Unit, H_CartographicOptions_Unit, NumericEdit,
-  H_MouseOptions_Unit, H_PhotoCalibrator_Unit, H_CalibratedPhotoSelector_Unit,
+  H_MouseOptions_Unit, H_PhotoCalibrator_Unit,
   LTO_Viewer_Unit, Satellite_PhotoCalibrator_Unit, CircleDrawing_Unit,
-  LibrationTabulator_Unit, MapFns_Unit, DEM_Options_Unit;
+  LibrationTabulator_Unit, MapFns_Unit, DEM_Options_Unit,
+  DEM_ContourDrawing_Unit, TargetSelection_Unit, IAU_FeatureNames_Info,
+  ExportTexture_Unit;
 
 {$R *.dfm}
 
 const
-  ProgramVersion = '0.20.2';
+  ProgramVersion = '0.21';
 
 // note: the following constants specify (in degrees) that texture files span
 //   the full lunar globe.  They should not be changed.
@@ -679,10 +719,6 @@ const
   Tex3MaxLat_DefaultText = '90';
 
 var
-  UserPhotoData : TPhotoCalData;
-  UserPhotoLoaded : Boolean;
-  UserPhoto : TBitmap;
-
   UserPhotoType : (EarthBased, Satellite);
 
   UserPhoto_SubObsVector,
@@ -693,6 +729,140 @@ var
   UserPhoto_StartXPix, UserPhoto_StartYPix, UserPhoto_InversionCode : Integer;
   UserPhoto_StartX, UserPhoto_StartY, UserPhoto_PixelsPerXYUnit,
   UserPhotoSinTheta, UserPhotoCosTheta : Extended;
+
+procedure TLTVT_Form.FormCreate(Sender: TObject);
+begin {TLTVT_Form.FormCreate}
+  CreatingForm := True;
+
+  CraterListCurrent := False;
+  GoToListCurrent := False;
+  IdentifySatellites := False;
+
+  DefaultCursor := Screen.Cursor;
+
+  Application.HelpFile := ExtractFilePath(Application.ExeName) + 'LTVT_USERGUIDE.chm';
+//  Application.OnHelp := HH;
+
+  BasePath := ExtractFilePath(Application.ExeName);
+
+  ProposedFilename := 'LTVT_Image.bmp';
+  ObservatoryComboBoxDefaultText := 'click ADD to assign a name to the current location';
+  ObservatoryNoFileText := 'click ADD to start a list on disk';
+
+  IniFileName := BasePath+'LTVT.ini'; //Note: if full path is not specified, file is assumed in C:\WINDOWS
+
+  StatusLine_Label.Caption := '';
+  LoRes_Texture_Loaded := false;
+  HiRes_Texture_Loaded := false;
+  Clementine_Texture_Loaded := false;
+
+//  ShortDateFormat := 'yyyy/mm/dd';
+  LongTimeFormat := 'hh:nn:ss';
+  ThousandSeparator := #0;
+  DecimalSeparator := '.';
+
+  try
+    Date_DateTimePicker.Date := EncodeDateDay(CurrentYear,1);
+  except
+  end;
+
+  Application.ShowHint := True;  // unable to get Menus to show hints!!
+
+  HideMouseMoveLabels;   // items shown only if mouse is on lunar disk
+
+  DEM_data := TDemData.Create;
+
+  RefPtLon := 0;
+  RefPtLat := 0;
+
+  SunRad := 1920*OneArcSec/2;  // this is overridden by Estimate Geometry if a JPL file is available
+
+  with Image1.Canvas do
+    begin
+      Brush.Color := clWhite;  {used for fill}
+      Brush.Style := bsClear;
+      Pen.Color := clBlack;    {used for lines}
+      Pen.Style := psSolid;
+      CopyMode := cmSrcCopy;
+    end;
+
+  LastImageWidth := 641;
+  LastImageHeight := 641;
+  FormResize(Self);
+  SetRange(0,1,0,1);
+
+  RefreshOptionsFromIniFile;
+
+  if not LinuxCompatibilityMode then Date_DateTimePicker.MinDate := EncodeDateDay(1601,1);
+
+  if StartWithCurrentUT then
+    begin
+      Now_Button.Click;
+    end
+  else
+    begin
+      SetManualGeometryLabels;
+      RefreshImage;
+    end;
+
+  ShowDetails := False;
+  PopupMemo := TLTVT_PopupMemo_Form.Create(Application);
+  PopupMemo.Caption := 'LTVT Calculation Details';
+
+  ImageCenterX := 0;
+  ImageCenterY := 0;
+
+  UserPhoto_RadioButton.Hide;
+  UserPhoto := TBitmap.Create;
+
+  LTO_RadioButton.Hide;
+  LTO_Image := TBitmap.Create;
+
+  ShadowProfileFilename := BasePath+'ShadowProfile.txt';
+  SurfaceData_NoDataValue := -99.99;
+
+  CreatingForm := False;
+end;  {TLTVT_Form.FormCreate}
+
+procedure TLTVT_Form.FormClose(Sender: TObject; var Action: TCloseAction);
+var
+  Answer : Word;
+begin
+  if (PhotosessionSearch_Form.PhotoSessionsFilename<>'') and (FullFilename(PhotosessionSearch_Form.PhotoSessionsFilename)<>FullFilename(NormalPhotoSessionsFilename)) then
+    begin
+      NormalPhotoSessionsFilename := PhotosessionSearch_Form.PhotoSessionsFilename;
+      FileSettingsChanged := True;
+    end;
+
+  if FileSettingsChanged then
+    begin
+      Answer := MessageDlg('Some external file locations/names may have been changed from their defaults.'+CR
+        +'Do you want to save the current ones as the new defaults?',mtConfirmation,[mbYes,mbNo,mbCancel],0);
+      case Answer of
+        mrCancel :
+          begin
+            Action := caNone;  // don't close Main Form after all!
+            Exit;  // leave this routine
+          end;
+        mrYes : SaveFileOptions;
+        end;
+    end;
+
+  if LoRes_Texture_Loaded then LoRes_TextureMap.Free;
+  if HiRes_Texture_Loaded then  HiRes_TextureMap.Free;
+  if Clementine_Texture_Loaded then Clementine_TextureMap.Free;
+  if UserPhotoLoaded then UserPhoto.Free;
+  LTO_Image.Free;
+
+  PopupMemo.Free;
+
+  DEM_data.Free;
+end;
+
+procedure TLTVT_Form.ProcessMessages;
+begin
+  Application.ProcessMessages;
+end;
 
 procedure TLTVT_Form.SetRange(const Xmin, Xmax, Ymin, Ymax : extended);
 begin
@@ -949,167 +1119,55 @@ function TLTVT_Form.YesNoToBoolean(const OptionString : string): boolean;
     Result := UpperCaseString(Substring(OptionString,1,1))='Y';
   end;
 
-procedure TLTVT_Form.FormCreate(Sender: TObject);
-var
-  IniFile : TIniFile;
-
-begin {TLTVT_Form.FormCreate}
-  CraterListCurrent := False;
-  GoToListCurrent := False;
-  IdentifySatellites := False;
-
-  DefaultCursor := Screen.Cursor;
-
-  Application.HelpFile := ExtractFilePath(Application.ExeName) + 'LTVT_USERGUIDE.chm';
-//  Application.OnHelp := HH;
-
-  BasePath := ExtractFilePath(Application.ExeName);
-
-  ProposedFilename := 'LTVT_Image.bmp';
-  ObservatoryComboBoxDefaultText := 'click ADD to assign a name to the current location';
-  ObservatoryNoFileText := 'click ADD to start a list on disk';
-
-  IniFileName := BasePath+'LTVT.ini'; //Note: if full path is not specified, file is assumed in C:\WINDOWS
-  IniFile := TIniFile.Create(IniFileName);
-
-  if YesNoToBoolean(IniFile.ReadString('LTVT Defaults','Draw_Dots_on_Startup','no')) then
-    DrawingMode := DotMode
-  else
-    DrawingMode := TextureMode;
-
-  CraterThreshold_LabeledNumericEdit.NumericEdit.Text := IniFile.ReadString('LTVT Defaults','Feature_size_threshold','-1');
-  IniFile.Free;
-
-  StatusLine_Label.Caption := '';
-  LoRes_Texture_Loaded := false;
-  HiRes_Texture_Loaded := false;
-  Clementine_Texture_Loaded := false;
-
-//  ShortDateFormat := 'yyyy/mm/dd';
-  LongTimeFormat := 'hh:nn:ss';
-  ThousandSeparator := #0;
-  DecimalSeparator := '.';
-
-  try
-    Date_DateTimePicker.Date := EncodeDateDay(CurrentYear,1);
-  except
+function TLTVT_Form.PosNegDegrees(const AngleDegrees : extended; const LongitudeConvention : TLongitudeConvention) : extended;
+{Adjusts Angle (in degrees) to range per LongitudeConvention}
+  begin
+    Result := AngleDegrees;
+    case LongitudeConvention of
+      West:
+        begin
+          while Result<-360 do Result := Result + 360;
+          while Result>0 do Result := Result - 360;
+        end;
+      East:
+        begin
+          while Result<0 do Result := Result + 360;
+          while Result>+360 do Result := Result - 360;
+        end;
+      else // Centered
+        while Result<-180 do Result := Result + 360;
+        while Result>+180 do Result := Result - 360;
+      end;
   end;
 
-  Application.ShowHint := True;  // unable to get Menus to show hints!!
-
-  HideMouseMoveLabels;   // items shown only if mouse is on lunar disk
-
-  DEM_data := TKaguyaData.Create;
-
-  RefPtLon := 0;
-  RefPtLat := 0;
-
-  MoonRadius := 1737.4;  {JPL lunar radius [km] = consistent with IAU mapping diameter?}
-
-  SunRad := 1920*OneArcSec/2;  // this is overridden by Estimate Geometry if a JPL file is available
-
-  with Image1.Canvas do
-    begin
-      Brush.Color := clWhite;  {used for fill}
-      Brush.Style := bsClear;
-      Pen.Color := clBlack;    {used for lines}
-      Pen.Style := psSolid;
-      CopyMode := cmSrcCopy;
-    end;
-
-  LastImageWidth := 641;
-  LastImageHeight := 641;
-  FormResize(Self);
-  SetRange(0,1,0,1);
-
-  FileSettingsChanged := False;
-
-  RestoreLocationOptions;
-  RestoreFileOptions;
-  RestoreDefaultLabelOptions;
-  RestoreCartographicOptions;
-  RestoreDemOptions;
-  RestoreMouseOptions;
-
-  if not LinuxCompatibilityMode then Date_DateTimePicker.MinDate := EncodeDateDay(1601,1);
-
-  if StartWithCurrentUT then
-    begin
-      Now_Button.Click;
-    end
-  else
-    begin
-      SetManualGeometryLabels;
-      RefreshImage;
-    end;
-
-  ShowDetails := False;
-  PopupMemo := TPopupMemo_Form.Create(Application);
-  PopupMemo.Caption := 'LTVT Calculation Details';
-
-  ImageCenterX := 0;
-  ImageCenterY := 0;
-
-  UserPhoto_RadioButton.Hide;
-  UserPhoto := TBitmap.Create;
-
-  LTO_RadioButton.Hide;
-  LTO_Image := TBitmap.Create;
-
-  ShadowProfileFilename := BasePath+'ShadowProfile.txt';
-  SurfaceData_NoDataValue := -99.99;
-
-end;  {TLTVT_Form.FormCreate}
-
-procedure TLTVT_Form.FormClose(Sender: TObject; var Action: TCloseAction);
-var
-  Answer : Word;
-begin
-  if (PhotosessionSearch_Form.PhotoSessionsFilename<>'') and (FullFilename(PhotosessionSearch_Form.PhotoSessionsFilename)<>FullFilename(NormalPhotoSessionsFilename)) then
-    begin
-      NormalPhotoSessionsFilename := PhotosessionSearch_Form.PhotoSessionsFilename;
-      FileSettingsChanged := True;
-    end;
-
-  if FileSettingsChanged then
-    begin
-      Answer := MessageDlg('Some external file locations/names may have been changed from their defaults.'+CR
-        +'Do you want to save the current ones as the new defaults?',mtConfirmation,[mbYes,mbNo,mbCancel],0);
-      case Answer of
-        mrCancel :
-          begin
-            Action := caNone;  // don't close Main Form after all!
-            Exit;  // leave this routine
-          end;
-        mrYes : SaveFileOptions;
-        end;
-    end;
-
-  LoRes_TextureMap.Free;
-  HiRes_TextureMap.Free;
-  Clementine_TextureMap.Free;
-  UserPhoto.Free;
-  LTO_Image.Free;
-
-  PopupMemo.Free;
-
-  DEM_data.Free;
-
-end;
-
-function TLTVT_Form.LongitudeString(const LongitudeDegrees : extended; const DecimalPoints : integer): string;
-{returns value in range 180.nnn W to 180.nnn E}
+function TLTVT_Form.PlanetaryLongitudeString(const LongitudeDegrees : extended; const DecimalPoints : integer): string;
+{returns value in range per LongitudeConvention}
 var
   DisplayLongitude : extended;
   LongitudeTag, FormatString : string;
 begin
-  DisplayLongitude := PosNegDegrees(LongitudeDegrees);  // put value in range -180 to +180
+  DisplayLongitude := PosNegDegrees(LongitudeDegrees,PlanetaryLongitudeConvention);  // put value in range -180 to +180
   FormatString := '%0.'+IntToStr(DecimalPoints)+'f';
   if DisplayLongitude>=0 then
     LongitudeTag := 'E'
   else
     LongitudeTag := 'W';
-  Result := Format(FormatString+' %0s',[Abs(DisplayLongitude),LongitudeTag]);
+  Result := Format(FormatString+'°%0s',[Abs(DisplayLongitude),LongitudeTag]);
+end;
+
+function TLTVT_Form.EarthLongitudeString(const LongitudeDegrees : extended; const DecimalPoints : integer): string;
+{returns value in range 180.nnn W to 180.nnn E}
+var
+  DisplayLongitude : extended;
+  LongitudeTag, FormatString : string;
+begin
+  DisplayLongitude := PosNegDegrees(LongitudeDegrees,Centered);  // put value in range -180 to +180
+  FormatString := '%0.'+IntToStr(DecimalPoints)+'f';
+  if DisplayLongitude>=0 then
+    LongitudeTag := 'E'
+  else
+    LongitudeTag := 'W';
+  Result := Format(FormatString+'°%0s',[Abs(DisplayLongitude),LongitudeTag]);
 end;
 
 function TLTVT_Form.LatitudeString(const LatitudeDegrees : extended; const DecimalPoints : integer): string;
@@ -1118,13 +1176,13 @@ var
   DisplayLatitude : extended;
   LatitudeTag, FormatString : string;
 begin
-  DisplayLatitude := PosNegDegrees(LatitudeDegrees);  // put value in range -180 to +180
+  DisplayLatitude := PosNegDegrees(LatitudeDegrees,Centered);  // put value in range -180 to +180
   FormatString := '%0.'+IntToStr(DecimalPoints)+'f';
   if DisplayLatitude>=0 then
     LatitudeTag := 'N'
   else
     LatitudeTag := 'S';
-  Result := Format(FormatString+' %0s',[Abs(DisplayLatitude),LatitudeTag]);
+  Result := Format(FormatString+'°%0s',[Abs(DisplayLatitude),LatitudeTag]);
 end;
 
 function TLTVT_Form.ConvertXYtoVector(const XProj, YProj, MaxRadius : extended;  Var PointUnitVector : TVector) : Boolean;
@@ -1187,7 +1245,7 @@ var
   Lat1, Lon1, Lat2, Lon2, Colong, RotationAngle,
   CosTheta,  {angle from projected center to sub-solar point}
   CenterX, CenterY, ZoomFactor, AspectRatio, TempVal : Extended;
-  InversionTag : String;
+  PlanetString, InversionTag : String;
 
 //  PolarAngle : Extended;
 
@@ -1199,33 +1257,39 @@ begin {TLTVT_Form.CalculateGeometry}
   ImageManual := ManualMode;  // current geometry was computed using manual settings
 
   ImageGamma := Gamma_LabeledNumericEdit.NumericEdit.ExtendedValue;
+
   if ImageGamma<>0 then
     ImageGamma := 1/ImageGamma
   else
     ImageGamma := 1000;
 
-  ImageIncludesCastShadows := DemIncludesCastShadows;
-
-  case DemPhotometricMode of
-    Lommel_Seeliger : ImagePhotometricMode := 'Lommel-Seeliger';
-    Lunar_Lambert : ImagePhotometricMode := 'Lunar-Lambert';
-    else
-      ImagePhotometricMode := 'Lambertian';
-    end;  
-
   Colong := 90 - SubSol_Lon_LabeledNumericEdit.NumericEdit.ExtendedValue;
   while Colong>360 do Colong := Colong - 360;
   while Colong<0   do Colong := Colong + 360;
-  Colongitude_Label.Caption := Format('%0.3f',[Colong]);
-  MT_Label.Caption := Format('MT = %0s',[LongitudeString(-Colong,3)]);
-  ET_Label.Caption := Format('ET = %0s',[LongitudeString(180-Colong,3)]);
+  if CurrentTargetPlanet=Moon then
+    begin
+      ColonIdentifier_Label.Caption := 'Colong = ';
+      Colongitude_Label.Caption := Format('%0.3f',[Colong]);
+    end
+  else
+    begin
+      ColonIdentifier_Label.Caption := '     CM =';
+      Colongitude_Label.Caption := Format('%0s',[PlanetaryLongitudeString(SubObs_Lon_LabeledNumericEdit.NumericEdit.ExtendedValue,3)]);
+    end;
+  MT_Label.Caption := Format('MT = %0s',[PlanetaryLongitudeString(-Colong,3)]);
+  ET_Label.Caption := Format('ET = %0s',[PlanetaryLongitudeString(180-Colong,3)]);
 
-  Lon1 := DegToRad(SubObs_Lon_LabeledNumericEdit.NumericEdit.ExtendedValue);
-  Lat1 := DegToRad(SubObs_Lat_LabeledNumericEdit.NumericEdit.ExtendedValue);
+
+// update with current values from form, since these may have been changed by user
+  SubObserverPoint.Longitude := DegToRad(SubObs_Lon_LabeledNumericEdit.NumericEdit.ExtendedValue);
+  SubObserverPoint.Latitude := DegToRad(SubObs_Lat_LabeledNumericEdit.NumericEdit.ExtendedValue);
+  SubObserverPoint.Radius := 1;
+
+  Lon1 := SubObserverPoint.Longitude;
+  Lat1 := SubObserverPoint.Latitude;
   ImageSubObsLon := Lon1;
   ImageSubObsLat := Lat1;
 
-// update with current values from form, since these may have been changed by user
   SubSolarPoint.Longitude := DegToRad(SubSol_Lon_LabeledNumericEdit.NumericEdit.ExtendedValue);
   SubSolarPoint.Latitude := DegToRad(SubSol_Lat_LabeledNumericEdit.NumericEdit.ExtendedValue);
   SubSolarPoint.Radius := 1;
@@ -1258,10 +1322,12 @@ begin {TLTVT_Form.CalculateGeometry}
     end;
   if InversionTag<>'' then InversionTag := InversionTag+')';
 
+  PlanetString := PlanetName[CurrentTargetPlanet];
+
   case OrientationMode of
     LineOfCusps :
       begin
-        MoonDisplay_GroupBox.Caption := 'Moon Display:  Line of Cusps View'+InversionTag;
+        MoonDisplay_GroupBox.Caption := PlanetString+' Display:  Line of Cusps View'+InversionTag;
 
         CrossProduct(ZPrime_UnitVector,SubSolarVector,YPrime_UnitVector);
 
@@ -1300,7 +1366,7 @@ begin {TLTVT_Form.CalculateGeometry}
               end;
           end;
 
-        MoonDisplay_GroupBox.Caption := 'Moon Display:  Equatorial View'+InversionTag;
+        MoonDisplay_GroupBox.Caption := PlanetString+' Display:  Equatorial View'+InversionTag;
         with SelenographicCoordinates(EarthAxisVector) do PolarToVector(Longitude,Latitude,1,CelestialPoleVector);
 //        ShowMessage('Moon pole at : '+VectorString(SelenographicCoordinateSystem.UnitZ,3)+'  Earth pole in seleno system : '+VectorString(CelestialPoleVector,3)+'  ZPrime : '+VectorString(ZPrime_UnitVector,3));
         CrossProduct(CelestialPoleVector,ZPrime_UnitVector,XPrime_UnitVector);
@@ -1328,7 +1394,7 @@ begin {TLTVT_Form.CalculateGeometry}
               end;
           end;
 
-        MoonDisplay_GroupBox.Caption := 'Moon Display:  Alt-Az View'+InversionTag;
+        MoonDisplay_GroupBox.Caption := PlanetString+' Display:  Alt-Az View'+InversionTag;
         with SelenographicCoordinates(ObserverZenithVector) do PolarToVector(Longitude,Latitude,1,ZenithVector);
 //        ShowMessage('Moon pole at : '+VectorString(SelenographicCoordinateSystem.UnitZ,3)+'  Zenith direction in seleno system : '+VectorString(ObserverVertical,3)+'  ZPrime : '+VectorString(ZPrime_UnitVector,3));
         CrossProduct(ZenithVector,ZPrime_UnitVector,XPrime_UnitVector);
@@ -1339,7 +1405,7 @@ begin {TLTVT_Form.CalculateGeometry}
 
     else {Cartographic}
       begin
-        MoonDisplay_GroupBox.Caption := 'Moon Display:  Cartographic View'+InversionTag;
+        MoonDisplay_GroupBox.Caption := PlanetString+' Display:  Cartographic View'+InversionTag;
         CrossProduct(Uy,ZPrime_UnitVector,XPrime_UnitVector);
         if VectorMagnitude(XPrime_UnitVector)=0 then XPrime_UnitVector := Ux;  //ZPrime_UnitVector parallel to Uy (looking from over north or south pole)
         NormalizeVector(XPrime_UnitVector);
@@ -1411,63 +1477,66 @@ if PolarAngle_CheckBox.Checked then
   ComputeDistanceAndBearing(RefPtLon,RefPtLat,SubSolarPoint.Longitude,SubSolarPoint.Latitude,RefPtSunAngle,RefPtSunBearing);
   RefPtSunAngle := Pi/2 - RefPtSunAngle;
 
-// Note: Except for computing PixelsPerRadian of texture files, lon/lat limits are relevant
-//  only to the Texture 3 ("Clementine") but are placed here so compiler can see they have
-//  been initialized.  These were formerly in DrawTexture
-
-  Val(Tex3MinLon_DefaultText,MinLon,ErrorCode);
-  Val(Tex3MaxLon_DefaultText,MaxLon,ErrorCode);
-  Val(Tex3MinLat_DefaultText,MinLat,ErrorCode);
-  Val(Tex3MaxLat_DefaultText,MaxLat,ErrorCode);
-
-  if Clementine_RadioButton.Checked then
+  if DrawingMode=TextureMode then
     begin
-      Val(Tex3MinLonText,TempVal,ErrorCode);
-      if ErrorCode=0 then
-        MinLon := TempVal
-      else
-        ShowMessage('Unable to decode Texture 3 Minimum Longitude; substituting'+Tex3MinLon_DefaultText);
+    // Note: Except for computing PixelsPerRadian of texture files, lon/lat limits are relevant
+    //  only to the Texture 3 ("Clementine") but are placed here so compiler can see they have
+    //  been initialized.  These were formerly in DrawTexture
 
-      Val(Tex3MaxLonText,TempVal,ErrorCode);
-      if ErrorCode=0 then
-        MaxLon := TempVal
-      else
-        ShowMessage('Unable to decode Texture 3 Maximum Longitude; substituting'+Tex3MaxLon_DefaultText);
+      Val(Tex3MinLon_DefaultText,MinLon,ErrorCode);
+      Val(Tex3MaxLon_DefaultText,MaxLon,ErrorCode);
+      Val(Tex3MinLat_DefaultText,MinLat,ErrorCode);
+      Val(Tex3MaxLat_DefaultText,MaxLat,ErrorCode);
 
-      Val(Tex3MinLatText,TempVal,ErrorCode);
-      if ErrorCode=0 then
-        MinLat := TempVal
-      else
-        ShowMessage('Unable to decode Texture 3 Minimum Latitude; substituting'+Tex3MinLat_DefaultText);
+      if Clementine_RadioButton.Checked then
+        begin
+          Val(Tex3MinLonText,TempVal,ErrorCode);
+          if ErrorCode=0 then
+            MinLon := TempVal
+          else
+            ShowMessage('Unable to decode Texture 3 Minimum Longitude; substituting'+Tex3MinLon_DefaultText);
 
-      Val(Tex3MaxLatText,TempVal,ErrorCode);
-      if ErrorCode=0 then
-        MaxLat := TempVal
-      else
-        ShowMessage('Unable to decode Texture 3 Maximum Latitude; substituting'+Tex3MaxLat_DefaultText);
+          Val(Tex3MaxLonText,TempVal,ErrorCode);
+          if ErrorCode=0 then
+            MaxLon := TempVal
+          else
+            ShowMessage('Unable to decode Texture 3 Maximum Longitude; substituting'+Tex3MaxLon_DefaultText);
 
-// Note danger of roundoff error in following, since most likely values are MinLon = -Pi and MaxLon = +Pi
-      while MinLon<-180  do MinLon := MinLon + 360;
-      while MinLon>180   do MinLon := MinLon - 360;
-      while MaxLon<-180  do MaxLon := MaxLon + 360;
-      while MaxLon>180   do MaxLon := MaxLon - 360;
+          Val(Tex3MinLatText,TempVal,ErrorCode);
+          if ErrorCode=0 then
+            MinLat := TempVal
+          else
+            ShowMessage('Unable to decode Texture 3 Minimum Latitude; substituting'+Tex3MinLat_DefaultText);
 
-      if MaxLon<=MinLon then MaxLon := MaxLon + 360;
+          Val(Tex3MaxLatText,TempVal,ErrorCode);
+          if ErrorCode=0 then
+            MaxLat := TempVal
+          else
+            ShowMessage('Unable to decode Texture 3 Maximum Latitude; substituting'+Tex3MaxLat_DefaultText);
 
+    // Note danger of roundoff error in following, since most likely values are MinLon = -Pi and MaxLon = +Pi
+          while MinLon<-180  do MinLon := MinLon + 360;
+          while MinLon>180   do MinLon := MinLon - 360;
+          while MaxLon<-180  do MaxLon := MaxLon + 360;
+          while MaxLon>180   do MaxLon := MaxLon - 360;
+
+          if MaxLon<=MinLon then MaxLon := MaxLon + 360;
+
+        end;
+
+      MinLon := DegToRad(MinLon);
+      MaxLon := DegToRad(MaxLon);
+      MinLat := DegToRad(MinLat);
+      MaxLat := DegToRad(MaxLat);
+
+      if MapPtr^<>nil then
+        begin
+          XPixPerRad := MapPtr^.Width/(MaxLon - MinLon);
+          YPixPerRad := MapPtr^.Height/(MaxLat - MinLat);
+        end;
+
+    //      ShowMessage(Format('Min lon: %0.3f  Max Lon: %0.3f  ppd: %0.3f',[RadToDeg(MinLon),RadToDeg(MaxLon),XPixPerRad*DegToRad(1)]));
     end;
-
-  MinLon := DegToRad(MinLon);
-  MaxLon := DegToRad(MaxLon);
-  MinLat := DegToRad(MinLat);
-  MaxLat := DegToRad(MaxLat);
-
-  if MapPtr^<>nil then
-    begin
-      XPixPerRad := MapPtr^.Width/(MaxLon - MinLon);
-      YPixPerRad := MapPtr^.Height/(MaxLat - MinLat);
-    end;
-
-//      ShowMessage(Format('Min lon: %0.3f  Max Lon: %0.3f  ppd: %0.3f',[RadToDeg(MinLon),RadToDeg(MaxLon),XPixPerRad*DegToRad(1)]));
 
   Result := True;
 end;  {TLTVT_Form.CalculateGeometry}
@@ -1780,15 +1849,15 @@ end;  {TLTVT_Form.Overlay_ButtonClick}
 
 procedure TLTVT_Form.DrawDEM_ButtonClick(Sender: TObject);
 // The Lunar-Lambert function is from McEwen: 1996LPI....27..841M
-  const  // polynomial in phase angle used to determine fractions of Lommel-Seeliger and Lambertian
-    A = -0.019;
-    B = 0.242E-3;
-    C = -1.46E-6;
+const  // polynomial in phase angle used to determine fractions of Lommel-Seeliger and Lambertian
+  A = -0.019;
+  B = 0.242E-3;
+  C = -1.46E-6;
 var
   i, j, RawTexture3XPixel, RawTexture3YPixel : integer;
   BackgroundPattern : TBitMap;
   BkgRow  :  pRGBArray;
-  SkyPixel, BlackPixel, ComputedShadowPixel, NoDataPixel, Texture3Pixel : TRGBTriple;
+  SkyPixel, BlackPixel, ComputedShadowPixel, NoDataPixel, Texture3Pixel, LommelSeeligerNoDataPixel : TRGBTriple;
   PointVector, SurfaceNormal,     // unit vectors
   RotationAxis, TestVector : TVector;
   GunCount : Integer;
@@ -1806,117 +1875,56 @@ function ComputeSurfaceNormal : Boolean;
   var
     Sample1Vector, Sample2Vector, LonVector, LatVector, RotationAxis2 : TVector;
     Sample1Coords, Sample2Coords : TPolarCoordinates;
-    LonStep, CosineLatitude, VectorLength : Extended;
+    VectorLength : Extended;
   begin
     Result := False;
 
-    if RigorousDemNormals then
-      begin
-
-        if DotProduct(PointVector,XPrime_UnitVector)>DotProduct(PointVector,ZPrime_UnitVector) then
-          CrossProduct(PointVector,ZPrime_UnitVector,RotationAxis)
-        else
-          CrossProduct(PointVector,XPrime_UnitVector,RotationAxis);
-
-        TestVector := PointVector;
-        RotateVector(TestVector,AngleStep,RotationAxis);
-        Sample1Coords := VectorToPolar(TestVector);
-        with Sample1Coords do
-          begin
-            if not DEM_data.ReadHeight(RadToDeg(Longitude),RadToDeg(Latitude),Radius) then Exit;
-            PolarToVector(Longitude,Latitude,Radius,Sample1Vector);
-          end;
-
-        TestVector := PointVector;
-        RotateVector(TestVector,-AngleStep,RotationAxis);
-        Sample2Coords := VectorToPolar(TestVector);
-        with Sample2Coords do
-          begin
-            if not DEM_data.ReadHeight(RadToDeg(Longitude),RadToDeg(Latitude),Radius) then Exit;
-            PolarToVector(Longitude,Latitude,Radius,Sample2Vector);
-          end;
-
-        VectorDifference(Sample1Vector,Sample2Vector,LatVector);
-
-        CrossProduct(RotationAxis,PointVector,RotationAxis2);
-
-        TestVector := PointVector;
-        RotateVector(TestVector,AngleStep,RotationAxis2);
-        Sample1Coords := VectorToPolar(TestVector);
-        with Sample1Coords do
-          begin
-            if not DEM_data.ReadHeight(RadToDeg(Longitude),RadToDeg(Latitude),Radius) then Exit;
-            PolarToVector(Longitude,Latitude,Radius,Sample1Vector);
-          end;
-
-        TestVector := PointVector;
-        RotateVector(TestVector,-AngleStep,RotationAxis2);
-        Sample2Coords := VectorToPolar(TestVector);
-        with Sample2Coords do
-          begin
-            if not DEM_data.ReadHeight(RadToDeg(Longitude),RadToDeg(Latitude),Radius) then Exit;
-            PolarToVector(Longitude,Latitude,Radius,Sample2Vector);
-          end;
-
-        VectorDifference(Sample1Vector,Sample2Vector,LonVector);
-
-      end
+    if DotProduct(PointVector,XPrime_UnitVector)>DotProduct(PointVector,ZPrime_UnitVector) then
+      CrossProduct(PointVector,ZPrime_UnitVector,RotationAxis)
     else
-      begin  // less rigorous method dithers longitude and latitude -- may not work well near poles
-        CosineLatitude := Cos(PointCoords.Latitude);
-        if CosineLatitude>0 then
-          LonStep := AngleStep/CosineLatitude
-        else
-          LonStep := Pi;
+      CrossProduct(PointVector,XPrime_UnitVector,RotationAxis);
 
-        if LonStep>Pi then LonStep := Pi;
-
-        Sample1Coords := PointCoords;
-        with Sample1Coords do
-          begin
-            Longitude := PointCoords.Longitude + LonStep;
-            if not DEM_data.ReadHeight(RadToDeg(Longitude),RadToDeg(Latitude),Radius) then Exit;
-            PolarToVector(Longitude,Latitude,Radius,Sample1Vector);
-          end;
-
-        Sample2Coords := PointCoords;
-        with Sample2Coords do
-          begin
-            Longitude := PointCoords.Longitude - LonStep;
-            if not DEM_data.ReadHeight(RadToDeg(Longitude),RadToDeg(Latitude),Radius) then Exit;
-            PolarToVector(Longitude,Latitude,Radius,Sample2Vector);
-          end;
-
-        VectorDifference(Sample1Vector,Sample2Vector,LonVector);
-
-        Sample1Coords := PointCoords;
-        with Sample1Coords do
-          begin
-            Latitude := PointCoords.Latitude + AngleStep;
-            if Abs(Latitude)>PiByTwo then
-              begin // wrap latitudes over pole
-                Longitude := Pi + Longitude;
-                Latitude  := Pi - Latitude;
-              end;
-            if not DEM_data.ReadHeight(RadToDeg(Longitude),RadToDeg(Latitude),Radius) then Exit;
-            PolarToVector(Longitude,Latitude,Radius,Sample1Vector);
-          end;
-
-        Sample2Coords := PointCoords;
-        with Sample2Coords do
-          begin
-            Latitude := PointCoords.Latitude - AngleStep;
-            if Abs(Latitude)>PiByTwo then
-              begin // wrap latitudes over pole
-                Longitude := Pi + Longitude;
-                Latitude  := Pi - Latitude;
-              end;
-            if not DEM_data.ReadHeight(RadToDeg(Longitude),RadToDeg(Latitude),Radius) then Exit;
-            PolarToVector(Longitude,Latitude,Radius,Sample2Vector);
-          end;
-
-        VectorDifference(Sample1Vector,Sample2Vector,LatVector);
+    TestVector := PointVector;
+    RotateVector(TestVector,AngleStep,RotationAxis);
+    Sample1Coords := VectorToPolar(TestVector);
+    with Sample1Coords do
+      begin
+        if not DEM_data.ReadHeight(Longitude,Latitude,Radius) then Exit;
+        PolarToVector(Longitude,Latitude,Radius,Sample1Vector);
       end;
+
+    TestVector := PointVector;
+    RotateVector(TestVector,-AngleStep,RotationAxis);
+    Sample2Coords := VectorToPolar(TestVector);
+    with Sample2Coords do
+      begin
+        if not DEM_data.ReadHeight(Longitude,Latitude,Radius) then Exit;
+        PolarToVector(Longitude,Latitude,Radius,Sample2Vector);
+      end;
+
+    VectorDifference(Sample1Vector,Sample2Vector,LatVector);
+
+    CrossProduct(RotationAxis,PointVector,RotationAxis2);
+
+    TestVector := PointVector;
+    RotateVector(TestVector,AngleStep,RotationAxis2);
+    Sample1Coords := VectorToPolar(TestVector);
+    with Sample1Coords do
+      begin
+        if not DEM_data.ReadHeight(Longitude,Latitude,Radius) then Exit;
+        PolarToVector(Longitude,Latitude,Radius,Sample1Vector);
+      end;
+
+    TestVector := PointVector;
+    RotateVector(TestVector,-AngleStep,RotationAxis2);
+    Sample2Coords := VectorToPolar(TestVector);
+    with Sample2Coords do
+      begin
+        if not DEM_data.ReadHeight(Longitude,Latitude,Radius) then Exit;
+        PolarToVector(Longitude,Latitude,Radius,Sample2Vector);
+      end;
+
+    VectorDifference(Sample1Vector,Sample2Vector,LonVector);
 
     CrossProduct(LonVector,LatVector,SurfaceNormal);
     VectorLength := VectorMagnitude(SurfaceNormal);
@@ -1952,9 +1960,9 @@ function SurfaceFound : Boolean;
         RotateVector(PointVector,RotationAngle,RotationAxis);
         PointCoords := VectorToPolar(PointVector);
         DotProd := DotProduct(SubObsvrVector,PointVector);
-        with PointCoords do if DEM_data.ReadHeight(RadToDeg(Longitude),RadToDeg(Latitude),Radius) then
+        with PointCoords do if DEM_data.ReadHeight(Longitude,Latitude,Radius) then
           begin
-//            DEM_data.ReadHeight(RadToDeg(Longitude),RadToDeg(Latitude),Radius);
+//            DEM_data.ReadHeight(Longitude,Latitude,Radius);
 //            ShowMessage(Format('Rot: %0.3f Lon: %0.3f Lat: %0.3f Nom Proj: %0.3f Proj: %0.3f',[RadToDeg(RotationAngle),RadToDeg(Longitude),RadToDeg(Latitude), Sqrt(ProjectionSqrd), Sqrt(Sqr(Radius)*(1 - Sqr(DotProd)))]));
             Result := (Sqr(Radius)*(1 - Sqr(DotProd)))>=ProjectionSqrd;
           end;
@@ -1963,46 +1971,76 @@ function SurfaceFound : Boolean;
 
 procedure EvaluateBrigthness;
 // entered with PointCoords specifying lon, lat and radius of point to evaluate
+  function ClippedCount(const CountToClip : Integer) : Integer;
+    begin
+      if CountToClip<=255 then
+        Result := CountToClip
+      else
+        Result := 255;
+    end;
 
   var
-    SinArg, PhotometricFunction, Denom : Extended;
+    SinArg, PhotometricFunction, U0, U, Denom : Extended;
   begin
    if not ComputeSurfaceNormal then
      BkgRow[i] := NoDataPixel
    else
      begin
 
-       DotProd := DotProduct(SubSolarVector,SurfaceNormal);
-       case DemPhotometricMode of
-         Lommel_Seeliger:
-           begin
-             Denom := DotProd + DotProduct(SubObsvrVector,SurfaceNormal);
-             if Denom=0 then Denom := 0.001; // substitute an arbitrary small number for a zero one
-             PhotometricFunction := DotProd/Denom;
-           end;
-         Lunar_Lambert:
-           begin
-             Denom := DotProd + DotProduct(SubObsvrVector,SurfaceNormal);
-             if Denom=0 then Denom := 0.001; // substitute an arbitrary small number for a zero one
-             PhotometricFunction := (LunarLambert_L*DotProd/Denom) + ((1 - LunarLambert_L)*DotProd);
-           end;
-         else // Lambertian
-           PhotometricFunction := DotProd;
-         end;
-       if PhotometricFunction>1 then PhotometricFunction := 1;
+       U0 := DotProduct(SubSolarVector,SurfaceNormal);
 
-       if PhotometricFunction<=0 then
+       if U0<=0 then
+         PhotometricFunction := 0  // element not illuminated
+       else
+         begin
+               case DemPhotometricMode of
+                 Lommel_Seeliger:
+                   begin
+                     U := DotProduct(SubObsvrVector,SurfaceNormal);
+                     if U<=0 then
+                       PhotometricFunction := -1  // element not visible, brightness calculation not meaningful
+                     else
+                       begin
+                         Denom := U0 + U;
+                         if Denom=0 then Denom := 0.001; // substitute an arbitrary small number for a zero one
+                         PhotometricFunction := U0/Denom;
+                       end;
+                   end;
+                 Lunar_Lambert:
+                   begin
+                     U := DotProduct(SubObsvrVector,SurfaceNormal);
+                     if U<=0 then
+                       PhotometricFunction := -1  // element not visible, brightness calculation not meaningful
+                     else
+                       begin
+                         Denom := U0 + U;
+                         if Denom=0 then Denom := 0.001; // substitute an arbitrary small number for a zero one
+                         PhotometricFunction := (LunarLambert_L*U0/Denom) + ((1 - LunarLambert_L)*U0);
+                       end;
+                   end;
+                 else // Lambertian
+                   PhotometricFunction := U0;
+                 end;
+               if PhotometricFunction>1 then PhotometricFunction := 1;  // should not happen?
+         end;
+
+       if PhotometricFunction<0 then
+         BkgRow[i] := LommelSeeligerNoDataPixel
+       else if PhotometricFunction=0 then
          BkgRow[i] := BlackPixel
        else
          begin
            if MultiplyDemByTexture3 then
              begin
+               PhotometricFunction := PhotometricFunction*MultipliedDemIntensitiesBoost;
+//               if PhotometricFunction>1 then PhotometricFunction := 1;
+               PhotometricFunction := Sqrt(PhotometricFunction);  // this is the default Gamma = 2 to correct linear intensities for display
                LookUpPixelData(PointCoords.Longitude,PointCoords.Latitude,RawTexture3XPixel,RawTexture3YPixel,Texture3Pixel);
                with BkgRow[i] do
                  begin
-                   rgbtRed := Round(Texture3Pixel.rgbtRed*PhotometricFunction);
-                   rgbtGreen := Round(Texture3Pixel.rgbtGreen*PhotometricFunction);
-                   rgbtBlue := Round(Texture3Pixel.rgbtBlue*PhotometricFunction);
+                   rgbtRed := ClippedCount(Round(Texture3Pixel.rgbtRed*PhotometricFunction));
+                   rgbtGreen := ClippedCount(Round(Texture3Pixel.rgbtGreen*PhotometricFunction));
+                   rgbtBlue := ClippedCount(Round(Texture3Pixel.rgbtBlue*PhotometricFunction));
                  end;
                GammaCorrectPixelValue(BkgRow[i],ImageGamma);
              end
@@ -2020,6 +2058,7 @@ procedure EvaluateBrigthness;
                    rgbtBlue := GunCount;
                  end;
              end;
+
            if ImageIncludesCastShadows then
              begin
                ShadowFound := False;
@@ -2029,7 +2068,7 @@ procedure EvaluateBrigthness;
                Theta1 := ArcCos(DotProd);
                with PointCoords do
                  begin
-                   DEM_data.ReadHeight(RadToDeg(Longitude),RadToDeg(Latitude),Radius);
+                   DEM_data.ReadHeight(Longitude,Latitude,Radius);
                    ProjectionSqrd := Sqr(Radius)*(1 - Sqr(DotProd));
                    SinArg := Sin(Theta1)*Radius/MaxR;
                    if SinArg>1 then
@@ -2048,7 +2087,7 @@ procedure EvaluateBrigthness;
                    RotateVector(TestVector,RotationAngle,RotationAxis);
                    TestCoords := VectorToPolar(TestVector);
                    DotProd := DotProduct(SubSolarVector,TestVector);
-                   with TestCoords do if DEM_data.ReadHeight(RadToDeg(Longitude),RadToDeg(Latitude),Radius) then
+                   with TestCoords do if DEM_data.ReadHeight(Longitude,Latitude,Radius) then
                      begin
                        ShadowFound := (Sqr(Radius)*(1 - Sqr(DotProd)))>ProjectionSqrd;
 //                               ShowMessage(Format('Rot: %0.3f Lon: %0.3f Lat: %0.3f Elev: %0.3f',[RadToDeg(RotationAngle),RadToDeg(Longitude),RadToDeg(Latitude),Radius]));
@@ -2062,6 +2101,13 @@ procedure EvaluateBrigthness;
   end;
 
 begin  {TLTVT_Form.DrawDEM_ButtonClick}
+  Image3D := ThreeD_CheckBox.Checked;
+
+  if Image3D then
+    DrawingMode := DEM_3D
+  else
+    DrawingMode := DEM_2D;
+
   if not CalculateGeometry then Exit;
 
   if MultiplyDemByTexture3 then
@@ -2070,27 +2116,49 @@ begin  {TLTVT_Form.DrawDEM_ButtonClick}
         begin
           ShowMessage('Texture map to multiply by has not been loaded');
           Exit;
-        end;
-//      Clementine_RadioButton.Checked := True;
+        end
+      else if MultipliedDemGammaBoost<>0 then
+        ImageGamma := ImageGamma/MultipliedDemGammaBoost; // internal gamma is reciprocal of the one seen in user interface
     end;
+
+// following records current options for possible use in labeling Saved image
+  ImageIncludesCastShadows := DemIncludesCastShadows;
+
+  case DemPhotometricMode of
+    Lommel_Seeliger : ImagePhotometricMode := 'Lommel-Seeliger';
+    Lunar_Lambert : ImagePhotometricMode := 'Lunar-Lambert';
+    else
+      ImagePhotometricMode := 'Lambertian';
+    end;
+
+  ImageDemMultipliedByTexture := MultiplyDemByTexture3;
+  ImageDemGridStepMultiplier := DemGridStepMultiplier;
+  ImageMultipliedDemGammaBoost := MultipliedDemGammaBoost;
+  ImageMultipliedDemIntensitiesBoost := MultipliedDemIntensitiesBoost;
 
   with DEM_data do
     if not FileOpen then
       begin
         DisplayTimings := DisplayDemComputationTimes;
-        StatusLine_Label.Caption := 'Reading DEM';
+        ThreeD_CheckBox.Hide;
+        StatusLine_Label.Caption := 'Reading DEM';;
+        Screen.Cursor := crHourGlass;
         Application.ProcessMessages;
         if not SelectFile(DEM_Filename) then
           begin
             StatusLine_Label.Caption := '';
+            ThreeD_CheckBox.Show;
             if (MessageDlg('LTVT was unable to open the Digital Elevation Model (DEM) file'+CR
                 +'   Do you want help with this topic?', mtWarning,[mbYes,mbNo],0)=mrYes) then
               begin
                 HtmlHelp(0,PChar(Application.HelpFile+'::/Help Topics/DemOptionsForm.htm'),HH_DISPLAY_TOPIC, 0);
               end;
+            Screen.Cursor := DefaultCursor;
             Exit;
           end;
         StatusLine_Label.Caption := '';
+        Screen.Cursor := DefaultCursor;
+        ThreeD_CheckBox.Show;
       end;
 
   StartTime := Now;
@@ -2105,22 +2173,18 @@ begin  {TLTVT_Form.DrawDEM_ButtonClick}
 
   with DEM_data do
     begin
-      AngleStep := DemGridStepMultiplier*DegToRad(Abs(LatStep));
-      TextureFilename := InputFilename;
-      MaxR := RefHeight + MaxHtData;
+      AngleStep := DemGridStepMultiplier*Abs(LatStepRad);
+      DemTextureFilename := InputFilename;
+      MaxR := RefHeightKm + MaxHtDeviationKm;
     end;
-
-  Image3D := ThreeD_CheckBox.Checked;
 
   if Image3D then
     begin
-      DrawingMode := DEM_3D;
       MaxProjection := MaxR/MoonRadius;
       SetLength(SurfaceData,Image1.Width,Image1.Height);  // in mouse readout, first coord (X) = horizontal
     end
   else
     begin
-      DrawingMode := DEM_2D;
       MaxProjection := 1;
       SetLength(SurfaceData,0,0);
     end;
@@ -2133,6 +2197,7 @@ begin  {TLTVT_Form.DrawDEM_ButtonClick}
   NoDataPixel := ColorToRGBTriple(NoDataColor);
   BlackPixel := ColorToRGBTriple(clBlack);
   ComputedShadowPixel := ColorToRGBTriple(DemCastShadowColor);
+  LommelSeeligerNoDataPixel := ColorToRGBTriple(LommelSeeligerNoDataColor);
 
   BackgroundPattern := TBitmap.Create;
   BackgroundPattern.PixelFormat := pf24bit;
@@ -2149,11 +2214,11 @@ begin  {TLTVT_Form.DrawDEM_ButtonClick}
   ThreeD_CheckBox.Hide;
   Application.ProcessMessages;
 
-  AbortDrawing := False;
+  AbortKeyPressed := False;
   Abort_Button.Show;
 
   j := 0;
-  while (j<BackgroundPattern.Height) and (not AbortDrawing) do
+  while (j<BackgroundPattern.Height) and (not AbortKeyPressed) do
     begin
       ProgressBar1.StepIt;
       BkgRow := BackgroundPattern.ScanLine[j];
@@ -2166,7 +2231,7 @@ begin  {TLTVT_Form.DrawDEM_ButtonClick}
                if ConvertXYtoVector(XProj,YProj,MaxProjection,PointVector) then
                  begin
                    PointCoords := VectorToPolar(PointVector);
-                   with PointCoords do if not DEM_data.ReadHeight(RadToDeg(Longitude),RadToDeg(Latitude),Radius) then
+                   with PointCoords do if not DEM_data.ReadHeight(Longitude,Latitude,Radius) then
                      begin
                        BkgRow[i] := NoDataPixel;  // reject points where DEM has no data at nominal point:
                        with SurfaceData[i,j] do
@@ -2256,12 +2321,11 @@ var
   SkyPixel, SunlightPixel, ShadowPixel : TRGBTriple;
   PointVector : TVector;
 begin
+  DrawingMode := DotMode;
   if not CalculateGeometry then Exit;
 
-  TextureFilename := 'none (Dots Mode)';
-
+//  TextureFilename := 'none (Dots Mode)';
   Screen.Cursor := crHourGlass;
-  DrawingMode := DotMode;
   ClearImage;
 
 //--- draw background pattern of light and shadow ---
@@ -2317,19 +2381,19 @@ var
 begin
   Result := False;
 
-  if UserPhoto_RadioButton.Checked then
+  if MapPtr=@UserPhoto then
     begin
       if ConvertLonLatToUserPhotoXPixYPix(Lon,Lat,MoonRadius,RawXPix,RawYPix)
         and (RawXPix>=0) and (RawXPix<MapPtr^.Width) and (RawYPix>=0) and (RawYPix<MapPtr^.Height) then
           Result := True;
     end
-  else if LTO_RadioButton.Checked then
+  else if MapPtr=@LTO_Image then
     begin
       if ConvertLTOLonLatToXY(RadToDeg(Lon),RadToDeg(Lat),RawXPix,RawYPix) and
        (RawXPix>=0) and (RawXPix<MapPtr^.Width) and (RawYPix>=0) and (RawYPix<MapPtr^.Height) then
           Result := True;
     end
-  else if Clementine_RadioButton.Checked then // Texture Map 3
+  else if MapPtr=@Clementine_TextureMap then // Texture Map 3
     begin
     // Note: MaxLon may exceed Pi if texture spans farside seam
       if (Lat>=MinLat) and (Lat<=MaxLat) then
@@ -2415,8 +2479,8 @@ begin {TLTVT_Form.DrawTexture_ButtonClick}
       if FileExists(LoResFilename) or PictureFileFound('USGS Low Resolution Texture File','lores.jpg',LoResFilename) then
         begin
           Screen.Cursor := crHourGlass;
-          StatusLine_Label.Caption := 'Please wait, reading texture file...';
           ThreeD_CheckBox.Hide;
+          StatusLine_Label.Caption := 'Please wait, reading texture file...';
           Application.ProcessMessages;
           TempPicture := TPicture.Create;
           TempPicture.OnProgress := ImageLoadProgress;
@@ -2471,8 +2535,8 @@ begin {TLTVT_Form.DrawTexture_ButtonClick}
       if FileExists(HiResFilename) or PictureFileFound('USGS High Resolution Texture File','hires.jpg',HiResFilename) then
         begin
           Screen.Cursor := crHourGlass;
-          StatusLine_Label.Caption := 'Please wait, reading texture file...';
           ThreeD_CheckBox.Hide;
+          StatusLine_Label.Caption := 'Please wait, reading texture file...';
           Application.ProcessMessages;
           TempPicture := TPicture.Create;
           TempPicture.OnProgress := ImageLoadProgress;
@@ -2527,8 +2591,8 @@ begin {TLTVT_Form.DrawTexture_ButtonClick}
       if FileExists(ClementineFilename) or PictureFileFound('Clementine Texture File','hires_clem.jpg',ClementineFilename) then
         begin
           Screen.Cursor := crHourGlass;
-          StatusLine_Label.Caption := 'Please wait, reading texture file...';
           ThreeD_CheckBox.Hide;
+          StatusLine_Label.Caption := 'Please wait, reading texture file...';
           Application.ProcessMessages;
           TempPicture := TPicture.Create;
 //          TempPicture.Bitmap.PixelFormat := pf24bit; // doesn't help
@@ -2572,8 +2636,8 @@ begin {TLTVT_Form.DrawTexture_ButtonClick}
       if FileExists(UserPhotoData.PhotoFilename) then
         begin
           Screen.Cursor := crHourGlass;
-          StatusLine_Label.Caption := 'Please wait, reading texture file...';
           ThreeD_CheckBox.Hide;
+          StatusLine_Label.Caption := 'Please wait, reading texture file...';
           Application.ProcessMessages;
           TempPicture := TPicture.Create;
           TRY
@@ -2619,7 +2683,7 @@ begin {TLTVT_Form.DrawTexture_ButtonClick}
   else if Clementine_RadioButton.Checked and Clementine_Texture_Loaded then
     begin
       MapPtr := @Clementine_TextureMap;
-      TextureFilename := ClementineFilename
+      TextureFilename := ClementineFilename;
     end
   else if HiResUSGS_RadioButton.Checked and HiRes_Texture_Loaded then
     begin
@@ -2652,9 +2716,15 @@ begin {TLTVT_Form.DrawTexture_ButtonClick}
   else
     begin
       if Clementine_RadioButton.Checked and not Clementine_Texture_Loaded then
-        ShowMessage(Clementine_RadioButton.Caption+' not loaded -- using '+LoResUSGS_RadioButton.Caption);
+        begin
+          UserPhoto_RadioButton.Checked := True;
+          ShowMessage(Clementine_RadioButton.Caption+' not loaded -- using '+LoResUSGS_RadioButton.Caption);
+        end;
       if HiResUSGS_RadioButton.Checked and not HiRes_Texture_Loaded then
-        ShowMessage(HiResUSGS_RadioButton.Caption+' not loaded -- using '+LoResUSGS_RadioButton.Caption);
+        begin
+          UserPhoto_RadioButton.Checked := True;
+          ShowMessage(HiResUSGS_RadioButton.Caption+' not loaded -- using '+LoResUSGS_RadioButton.Caption);
+        end;
 
       DrawingMap_Label.Caption := 'Drawing texture map...';
       Screen.Cursor := crHourGlass;
@@ -2715,14 +2785,6 @@ begin {TLTVT_Form.DrawTexture_ButtonClick}
 
 end;  {TLTVT_Form.DrawTexture_ButtonClick}
 
-function TLTVT_Form.PosNegDegrees(const Angle : extended) : extended;
-{Adjusts Angle (in degrees) to range -180 .. +180}
-  begin
-    Result := Angle;
-    while Result<-180 do Result := Result + 360;
-    while Result>+180 do Result := Result - 360;
-  end;
-
 function  TLTVT_Form.CalculateSubPoints(const MJD, ObsLon, ObsLat, ObsElev : extended; var SubObsPt, SubSunPt : TPolarCoordinates) : Boolean;
 var
   SavedObsLon, SavedObsLat, SavedObsElev : Extended;
@@ -2757,9 +2819,10 @@ var
 
 procedure TLTVT_Form.EstimateData_ButtonClick(Sender: TObject);
 var
-  UT_MJD : extended;
+  UT_MJD : Extended;
   SunPosition, MoonPosition : PositionResultRecord;
   SubEarthPoint : TPolarCoordinates;
+  PossessiveS : String;
 
 begin {EstimateData_ButtonClick}
 //  FocusControl(MousePosition_GroupBox); // need to remove focus or button will remain pictured in a depressed state
@@ -2776,12 +2839,13 @@ begin {EstimateData_ButtonClick}
   ImageDate := DateOf(Date_DateTimePicker.Date);
   ImageTime := TimeOf(Time_DateTimePicker.Time);
   ImageGeocentric := GeocentricSubEarthMode;
+  ImagePlanet := CurrentTargetPlanet;
 
   UT_MJD := DateTimeToModifiedJulianDate(ImageDate + ImageTime);
 
   if not CalculateSubPoints(UT_MJD,ImageObsLon,ImageObsLat,ImageObsElev,SubEarthPoint,SubSolarPoint) then exit;
 
-  CalculatePosition(UT_MJD,Moon,BlankStarDataRecord,MoonPosition);
+  CalculatePosition(UT_MJD,CurrentTargetPlanet,BlankStarDataRecord,MoonPosition);
   CalculatePosition(UT_MJD,Sun, BlankStarDataRecord,SunPosition);
 
 //  with MoonPosition do ShowMessage(Format('MJD=%0.2f: DUT=%0.3f;  EUT=%0.3f',[UT_MJD,DUT,EUT]));
@@ -2795,19 +2859,23 @@ begin {EstimateData_ButtonClick}
     end
   else
     begin
-      EstimatedData_Label.Caption := 'For observer at '+LongitudeString(ImageObsLon,4)+' / '+LatitudeString(ImageObsLat,4);
-      MoonElev_Label.Caption := Format('Moon: %0.1f deg at %0.1f az    Sun: %0.1f deg at %0.1f az',
-        [MoonPosition.TopocentricAlt,MoonPosition.Azimuth,SunPosition.TopocentricAlt,SunPosition.Azimuth]);
+      EstimatedData_Label.Caption := 'For observer at '+EarthLongitudeString(ImageObsLon,4)+' / '+LatitudeString(ImageObsLat,4);
+      MoonElev_Label.Caption := Format('%s: %0.1f° elev at %0.1f° az    Sun: %0.1f° elev at %0.1f° az',
+        [CurrentPlanetName,MoonPosition.TopocentricAlt,MoonPosition.Azimuth,SunPosition.TopocentricAlt,SunPosition.Azimuth]);
     end;
 
-  MoonDiameter_Label.Caption := Format('Moon''s angular diameter: %0.1f arc-seconds',[7200*RadToDeg(ArcSin(MoonRadius*OneKm/OneAU/ObserverToMoonAU))]);
+  if CurrentPlanetName[Length(CurrentPlanetName)]='s' then
+    PossessiveS := ''
+  else
+    PossessiveS := 's';
+  MoonDiameter_Label.Caption := Format('%s''%s angular diameter: %0.1f arc-seconds',[CurrentPlanetName,PossessiveS,7200*RadToDeg(ArcSin(MoonRadius*OneKm/OneAU/ObserverToMoonAU))]);
 
   SetEstimatedGeometryLabels;
 
-  SubObs_Lon_LabeledNumericEdit.NumericEdit.Text := Format('%0.3f',[PosNegDegrees(RadToDeg(SubEarthPoint.Longitude))]);
+  SubObs_Lon_LabeledNumericEdit.NumericEdit.Text := Format('%0.3f',[PosNegDegrees(RadToDeg(SubEarthPoint.Longitude),LTVT_Form.PlanetaryLongitudeConvention)]);
   SubObs_Lat_LabeledNumericEdit.NumericEdit.Text := Format('%0.3f',[RadToDeg(SubEarthPoint.Latitude)]);
 
-  SubSol_Lon_LabeledNumericEdit.NumericEdit.Text := Format('%0.3f',[PosNegDegrees(RadToDeg(SubSolarPoint.Longitude))]);
+  SubSol_Lon_LabeledNumericEdit.NumericEdit.Text := Format('%0.3f',[PosNegDegrees(RadToDeg(SubSolarPoint.Longitude),LTVT_Form.PlanetaryLongitudeConvention)]);
   SubSol_Lat_LabeledNumericEdit.NumericEdit.Text := Format('%0.3f',[RadToDeg(SubSolarPoint.Latitude)]);
 
   SunRad := Rsun/(OneAU*MoonToSunAU);
@@ -2815,6 +2883,7 @@ begin {EstimateData_ButtonClick}
 
   if ShowDetails then with PopupMemo do
     begin
+      Caption := 'LTVT Calculation Details';
       Show;
       Memo.Lines.Add('Requested date/time: '+DateToStr(ImageDate)+' at '+TimeToStr(ImageTime)+' UTC');
       Memo.Lines.Add(Format(' --> Julian date = %0.9f',[UT_MJD + MJDOffset]));
@@ -2894,14 +2963,14 @@ begin  {RefreshCraterList}
 
   if EOF(CraterFile) then
     begin
-      ShowMessage('Lunar feature file ['+CraterFilename+'] is empty');
+      ShowMessage('Feature file ['+CraterFilename+'] is empty');
       Exit;
     end;
 
   Readln(CraterFile,DataLine);
   if Substring(DataLine,1,5)<>'USGS1' then
     begin
-      ShowMessage('Lunar feature file ['+CraterFilename+'] is not in USGS1 format');
+      ShowMessage('Feature file ['+CraterFilename+'] is not in USGS1 format');
       Exit;
     end;
 
@@ -2947,8 +3016,10 @@ begin  {RefreshCraterList}
             end
           else
             begin
-              AdditionalInfo1 := '';
+              AdditionalInfo1 := StrippedString(DataLine); // all remaining information
               AdditionalInfo2 := '';
+              if (Length(AdditionalInfo1)>1) and (AdditionalInfo1[1]='"') and (AdditionalInfo1[Length(AdditionalInfo1)]='"') then
+                AdditionalInfo1 := ExtractCSV_item(AdditionalInfo1); // treat as delimited item created by Excel
             end;
 
           if CraterCount<Length(CraterList) then
@@ -2963,7 +3034,7 @@ begin  {RefreshCraterList}
 
           Inc(CraterCount);
 
-          if (UpperCaseString(USGS_Code)='AA') then
+          if (UpperCaseString(USGS_Code)<>'SF') then  // regard all non-satellite features as primaries
             begin
               if (PrimaryCraterCount<Length(PrimaryCraterList)) then
                 PrimaryCraterList[PrimaryCraterCount] := CurrentCrater
@@ -3076,10 +3147,10 @@ var
           CurrentElevationDifference_m := 1000*(MagV2 - MoonRadius);
 
           if MagV2<>0 then
-            RefPtDistance_Label.Caption := Format('Shadow length = %0.2f deg; Height difference = %0.0f m',
+            RefPtDistance_Label.Caption := Format('Shadow length = %0.2f°; Height difference = %0.0f m',
               [RadToDeg(ArcCos(ACosArg)),CurrentElevationDifference_m])
           else
-            RefPtDistance_Label.Caption := Format('Shadow length = %0.2f deg; Height difference = %0.0f m',
+            RefPtDistance_Label.Caption := Format('Shadow length = %0.2f°; Height difference = %0.0f m',
               [0,CurrentElevationDifference_m]);
         end
       else
@@ -3110,14 +3181,14 @@ begin {LTVT_Form.Image1MouseMove}
     begin
       if DrawingMode=EarthView then
         begin
-          MousePosition_GroupBox.Hint := 'Box gives information related to observations of Sun and Moon from sea level at current mouse point on Earth';
+          MousePosition_GroupBox.Hint := 'Box gives information related to observations of Sun and '+CurrentPlanetName+' from sea level at current mouse point on Earth';
           MousePosition_GroupBox.Caption := format('Mouse Position:  Longitude = %0s   Latitude = %0s',
-            [LongitudeString(RadToDeg(Lon),2),LatitudeString(RadToDeg(Lat),2)]);
+            [EarthLongitudeString(RadToDeg(Lon),2),LatitudeString(RadToDeg(Lat),2)]);
 
           MouseLonLat_Label.Hint := 'Altitude and azimuth of center of Sun as viewed from sea level at current mouse point';
-          SunAngle_Label.Hint := 'Altitude and azimuth of center of Moon as viewed from sea level at current mouse point';
-          RefPtDistance_Label.Hint := 'Librations in longitude and latitude and diameter of Moon as viewed from sea level at current mouse point';
-          CraterName_Label.Hint := 'Angular separation of Sun and Moon and percent illumination of Moon as viewed from sea level at current mouse point';
+          SunAngle_Label.Hint := 'Altitude and azimuth of center of '+CurrentPlanetName+' as viewed from sea level at current mouse point';
+          RefPtDistance_Label.Hint := 'Librations in longitude and latitude and diameter of '+CurrentPlanetName+' as viewed from sea level at current mouse point';
+          CraterName_Label.Hint := 'Angular separation of Sun and '+CurrentPlanetName+' and percent illumination of '+CurrentPlanetName+' as viewed from sea level at current mouse point';
 
           SavedGeocentricMode := GeocentricSubEarthMode;
 
@@ -3129,13 +3200,13 @@ begin {LTVT_Form.Image1MouseMove}
 
           UT_MJD := DateTimeToModifiedJulianDate(ImageDate + ImageTime);
 
-          CalculatePosition(UT_MJD,Moon,BlankStarDataRecord,MoonPosition);
+          CalculatePosition(UT_MJD,CurrentTargetPlanet,BlankStarDataRecord,MoonPosition);
           CalculatePosition(UT_MJD,Sun, BlankStarDataRecord,SunPosition);
 
-          MouseLonLat_Label.Caption := Format(' Sun is at :  %0.2f deg altitude and %0.2f deg azimuth',
+          MouseLonLat_Label.Caption := Format(' Sun is at :  %0.2f° altitude and %0.2f° azimuth',
             [SunPosition.TopocentricAlt,SunPosition.Azimuth]);
-          SunAngle_Label.Caption := Format('Moon is at : %0.2f deg altitude and %0.2f deg azimuth',
-            [MoonPosition.TopocentricAlt,MoonPosition.Azimuth]);
+          SunAngle_Label.Caption := Format('%s is at : %0.2f° altitude and %0.2f° azimuth',
+            [CurrentPlanetName,MoonPosition.TopocentricAlt,MoonPosition.Azimuth]);
 
        {Note: need to correct reversal of positive West to negative West longitude}
           if not CalculateSubPoints(UT_MJD,-ObserverLongitude,ObserverLatitude,0,EarthViewerSubEarthPoint,EarthViewerSubSolarPoint) then
@@ -3152,9 +3223,9 @@ begin {LTVT_Form.Image1MouseMove}
               ComputeDistanceAndBearing(MoonPosition.Azimuth*OneDegree,MoonPosition.TopocentricAlt*OneDegree,SunPosition.Azimuth*OneDegree,SunPosition.TopocentricAlt*OneDegree,SunAngle,SunBearing);
 
               RefPtDistance_Label.Caption := Format('Librations : %s / %s   Diam = %0.1f arc-sec'   ,
-                [LongitudeString(RadToDeg(EarthViewerSubEarthPoint.Longitude),3),LatitudeString(RadToDeg(EarthViewerSubEarthPoint.Latitude),3),
+                [PlanetaryLongitudeString(RadToDeg(EarthViewerSubEarthPoint.Longitude),3),LatitudeString(RadToDeg(EarthViewerSubEarthPoint.Latitude),3),
                 7200*RadToDeg(ArcSin(MoonRadius*OneKm/OneAU/ObserverToMoonAU))]);
-              CraterName_Label.Caption := format(' Elongation = %0.2f deg;  Illumination = %0.3f%s',
+              CraterName_Label.Caption := format(' Elongation = %0.2f°;  Illumination = %0.3f%s',
                 [SunAngle/OneDegree, 50*(1 + CosTheta), '%']);
             end;
 
@@ -3163,15 +3234,23 @@ begin {LTVT_Form.Image1MouseMove}
         end
       else // showing Moon image
         begin
-          MousePosition_GroupBox.Hint := 'Box gives information related to current mouse position on Moon; in top caption, "Map" is IAU format LTO zone number; "Rnn" is Rükl sheet number';
-          RuklString := Rukl_String(Lon,Lat);
-          if RuklString='' then
-            MousePosition_GroupBox.Caption := format('Mouse Position:  X = %0.4f  Y = %0.4f  Map: %s',[ProjectedX,ProjectedY,LTO_String(Lon,Lat)])
+          if CurrentTargetPlanet=Moon then
+            begin
+              MousePosition_GroupBox.Hint := 'Box gives information related to current mouse position on Moon; in top caption, "Map" is IAU format LTO zone number; "Rnn" is Rükl sheet number';
+              RuklString := Rukl_String(Lon,Lat);
+              if RuklString='' then
+                MousePosition_GroupBox.Caption := format('Mouse Position:  X = %0.4f  Y = %0.4f  Map: %s',[ProjectedX,ProjectedY,LTO_String(Lon,Lat)])
+              else
+                MousePosition_GroupBox.Caption := format('Mouse Position:  X = %0.4f  Y = %0.4f  Map: %s / R%s',[ProjectedX,ProjectedY,LTO_String(Lon,Lat),RuklString]);
+            end
           else
-            MousePosition_GroupBox.Caption := format('Mouse Position:  X = %0.4f  Y = %0.4f  Map: %s / R%s',[ProjectedX,ProjectedY,LTO_String(Lon,Lat),RuklString]);
+            begin
+              MousePosition_GroupBox.Hint := 'Box gives information related to current mouse position on '+CurrentPlanetName;
+              MousePosition_GroupBox.Caption := format('Mouse Position:  X = %0.4f  Y = %0.4f',[ProjectedX,ProjectedY]);
+            end;
 
-          MouseLonLat_Label.Hint := 'Selenographic longitude and latitude of current mouse point';
-          SunAngle_Label.Hint := 'Altitude and azimuth of center of Sun as viewed from current mouse point on Moon';
+          MouseLonLat_Label.Hint := 'Longitude and latitude of current mouse point';
+          SunAngle_Label.Hint := 'Altitude and azimuth of center of Sun as viewed from current mouse point on '+CurrentPlanetName;
           RefPtDistance_Label.Hint := 'Information related to mouse distance from current reference point';
           CraterName_Label.Hint := 'Information about dot closest to current mouse point';
 
@@ -3188,21 +3267,21 @@ begin {LTVT_Form.Image1MouseMove}
 
 
           MouseLonLat_Label.Caption := format('Longitude = %0s   Latitude = %0s',
-            [LongitudeString(RadToDeg(Lon),2),LatitudeString(RadToDeg(Lat),2)]);
+            [PlanetaryLongitudeString(RadToDeg(Lon),2),LatitudeString(RadToDeg(Lat),2)]);
 
           ComputeDistanceAndBearing(Lon,Lat,SubSolarPoint.Longitude,SubSolarPoint.Latitude,SunAngle,SunBearing);
 
           SunAngle := (Pi/2) - SunAngle;
 
-          SunAngle_Label.Caption := format('Sun is at = %0.2f deg altitude and %0.2f deg azimuth',
+          SunAngle_Label.Caption := format('Sun is at = %0.2f° altitude and %0.2f° azimuth',
             [SunAngle/OneDegree, SunBearing/OneDegree]);
 
           case RefPtReadoutMode of
             DistanceAndBearingRefPtMode :
               begin
                 ComputeDistanceAndBearing(RefPtLon,RefPtLat,Lon,Lat,RefPtAngle,RefPtBearing);
-                RefPtDistance_Label.Hint := 'Distance of current mouse point from reference point and azimuth CW from lunar north';
-                RefPtDistance_Label.Caption := Format('From ref. pt. = %0.2f km  (%0.2f deg at %0.2f deg az)',
+                RefPtDistance_Label.Hint := 'Distance of current mouse point from reference point and azimuth CW from '+CurrentPlanetName+' north';
+                RefPtDistance_Label.Caption := Format('From ref. pt. = %0.2f km  (%0.2f° at %0.2f° az)',
                   [MoonRadius*RefPtAngle,RadToDeg(RefPtAngle),RadToDeg(RefPtBearing)]);
               end;
             PixelDataReadoutMode :
@@ -3218,10 +3297,23 @@ begin {LTVT_Form.Image1MouseMove}
                         [RawXPixel,RawYPixel,rgbtRed,rgbtGreen,rgbtBlue,Hue,Saturation,Value])
                     end
                   else
-                    RefPtDistance_Label.Caption := 'Mouse outside source image';
+                    begin
+                      RefPtDistance_Label.Caption := 'Mouse outside source image';
+                    end;
                 end
               else
-                RefPtDistance_Label.Caption := '(computed image -- no RGB source )';
+                begin
+                  RefPtDistance_Label.Hint := 'Pixel location and RGB intensities in display image';
+                  PixelData := ColorToRGBTriple(Image1.Canvas.Pixels[X,Y]);
+                  with PixelData do
+                    begin
+                      RGBtoHSV(rgbtred, rgbtgreen, rgbtblue, Hue, Saturation, Value);
+                      Saturation := Round(100*Saturation/255);
+                      Value := Round(100*Value/255);
+                      RefPtDistance_Label.Caption := Format('Display I,J: %0d,%0d  RGB: %0d/%0d/%0d HSV: %0d/%0d/%0d',
+                        [X,Y,rgbtRed,rgbtGreen,rgbtBlue,Hue,Saturation,Value])
+                    end;
+                end;
             ShadowLengthRefPtMode :
               begin
                 RefPtDistance_Label.Hint := 'Interpretation of current mouse position based on reference point at start of shadow';
@@ -3232,7 +3324,7 @@ begin {LTVT_Form.Image1MouseMove}
                     PolarToVector(Lon,Lat,MoonRadius,ShadowTipVector);
                     ComputeDistanceAndBearing(RefPtLon,RefPtLat,Lon,Lat,RefPtAngle,RefPtBearing);
                     CurrentElevationDifference_m := 1000*MoonRadius*(Cos(RefPtAngle-RefPtSunAngle)/Cos(RefPtSunAngle)-1);
-                    RefPtDistance_Label.Caption := Format('Shadow length = %0.2f deg; Height difference = %0.0f m',
+                    RefPtDistance_Label.Caption := Format('Shadow length = %0.2f°; Height difference = %0.0f m',
                       [RadToDeg(RefPtAngle),CurrentElevationDifference_m]);
                   end;
               end;
@@ -3246,7 +3338,7 @@ begin {LTVT_Form.Image1MouseMove}
                     PolarToVector(Lon,Lat,MoonRadius,ShadowTipVector);
                     ComputeDistanceAndBearing(RefPtLon,RefPtLat,Lon,Lat,RefPtAngle,RefPtBearing);
                     CurrentElevationDifference_m := 1000*MoonRadius*(Cos(RefPtAngle-SunAngle)/Cos(SunAngle)-1);
-                    RefPtDistance_Label.Caption := Format('Shadow length = %0.2f deg; Height difference = %0.0f m',
+                    RefPtDistance_Label.Caption := Format('Shadow length = %0.2f°; Height difference = %0.0f m',
                       [RadToDeg(RefPtAngle),CurrentElevationDifference_m]);
                   end;
               end;
@@ -3254,7 +3346,7 @@ begin {LTVT_Form.Image1MouseMove}
               begin
                 ComputeDistanceAndBearing(RefPtLon,RefPtLat,Lon,Lat,RefPtAngle,RefPtBearing);
                 RefPtDistance_Label.Hint := 'Interpretation of current mouse position based on reference point at start of shadow';
-                RefPtDistance_Label.Caption := Format('Distance = %0.2f deg; Min. ray = %0.0f m; Max. = %0.0f m',
+                RefPtDistance_Label.Caption := Format('Distance = %0.2f°; Min. ray = %0.0f m; Max. = %0.0f m',
                   [RadToDeg(RefPtAngle),RayHeight(RefPtSunAngle+SunRad,RefPtAngle),RayHeight(RefPtSunAngle-SunRad,RefPtAngle)]);
               end;
             else
@@ -3270,7 +3362,7 @@ begin {LTVT_Form.Image1MouseMove}
                   end
                 else
                   begin
-                    if DEM_data.ReadHeight(RadToDeg(Lon),RadToDeg(Lat),DEM_height) then
+                    if DEM_data.ReadHeight(Lon,Lat,DEM_height) then
                       RefPtDistance_Label.Caption := Format('Height = %0.3f km',[DEM_height])
                     else
                       RefPtDistance_Label.Caption := 'No DEM data available';
@@ -3296,6 +3388,8 @@ begin {LTVT_Form.Image1MouseMove}
             begin
               if (USGS_Code='AA') or (USGS_Code='SF') then
                 FeatureDescription := 'Crater:  '
+              else if USGS_Code='AL' then
+                FeatureDescription := 'Albedo feature:  '
               else if USGS_Code='GD' then
                 FeatureDescription := 'GLR dome list:  '
               else if USGS_Code='CD' then
@@ -3417,9 +3511,13 @@ begin
 end;
 
 procedure TLTVT_Form.SetEstimatedGeometryLabels;
+var
+  DesiredLabel : String;
 begin
-  GeometryType_Label.Caption :=
-    '---------------------------    Computed Geometry    ----------------------------';
+  DesiredLabel := '    Computed Geometry for '+CurrentPlanetName+'    ';
+  while Length(DesiredLabel)<=78 do DesiredLabel := '-'+DesiredLabel+'-'; // try to pad to 80 chars
+
+  GeometryType_Label.Caption := DesiredLabel;
   EstimatedData_Label.Show;
   MoonElev_Label.Show;
   MoonDiameter_Label.Show;
@@ -3557,7 +3655,7 @@ var
         end;
     end;
 
-begin
+begin {TLTVT_Form.GoTo_MainMenuItemClick}
   RefreshGoToList;
   with H_Terminator_Goto_Form do
     begin
@@ -3634,7 +3732,7 @@ begin
             end;
         end;
     end;
-end;
+end;  {TLTVT_Form.GoTo_MainMenuItemClick}
 
 procedure TLTVT_Form.MarkXY(const X, Y : extended; const MarkColor : TColor);
 var
@@ -3670,12 +3768,12 @@ begin
       begin
         if not ConvertXYtoLonLat(X,Y,DesiredLon,DesiredLat) then
           begin
-            ShowMessage('Unable to create aerial view: the requested X-Y position is not on the lunar disk');
+            ShowMessage('Unable to create aerial view: the requested X-Y position is not on the planetary disk');
             Exit;
           end
         else
           begin
-            SubObs_Lon_LabeledNumericEdit.NumericEdit.Text := Format('%0.3f',[PosNegDegrees(RadToDeg(DesiredLon))]);
+            SubObs_Lon_LabeledNumericEdit.NumericEdit.Text := Format('%0.3f',[PosNegDegrees(RadToDeg(DesiredLon),LTVT_Form.PlanetaryLongitudeConvention)]);
             SubObs_Lat_LabeledNumericEdit.NumericEdit.Text := Format('%0.3f',[RadToDeg(DesiredLat)]);
             SetManualGeometryLabels;
             if not CalculateGeometry then Exit;
@@ -3694,10 +3792,11 @@ var
   CraterVector : TVector;
   X, Y : Extended;
   FarsideFeature : Boolean;
+  PossessiveS : String;
 begin
   with H_Terminator_Goto_Form do if GoToState=AerialView then
     begin
-        SubObs_Lon_LabeledNumericEdit.NumericEdit.Text := Format('%0.3f',[PosNegDegrees(Long_Deg)]);
+        SubObs_Lon_LabeledNumericEdit.NumericEdit.Text := Format('%0.3f',[PosNegDegrees(Long_Deg,LTVT_Form.PlanetaryLongitudeConvention)]);
         SubObs_Lat_LabeledNumericEdit.NumericEdit.Text := Format('%0.3f',[Lat_Deg]);
 //      SubObs_Lon_LabeledNumericEdit.NumericEdit.Text := SetToLon_LabeledNumericEdit.NumericEdit.Text;
 //      SubObs_Lat_LabeledNumericEdit.NumericEdit.Text := SetToLat_LabeledNumericEdit.NumericEdit.Text;
@@ -3713,7 +3812,13 @@ begin
       if DrawingMode=EarthView then
         ShowMessage('In the current viewing geometry, the requested feature is on the Earth''s farside')
       else
-        ShowMessage('In the current viewing geometry, the requested feature is on the Moon''s farside');
+        begin
+          if CurrentPlanetName[Length(CurrentPlanetName)]='s' then
+            PossessiveS := ''
+          else
+            PossessiveS := 's';
+          ShowMessage('In the current viewing geometry, the requested feature is on '+CurrentPlanetName+''''+PossessiveS+' farside');
+        end;
       if H_Terminator_Goto_Form.GoToState=Mark then MarkXY(X,Y,clRed);
     end
   else
@@ -3730,6 +3835,7 @@ end;
 
 procedure TLTVT_Form.RefreshImage;
 begin
+//  ShowMessage('About to refresh image...');
   case DrawingMode of
     DotMode : DrawDots_Button.Click;
     DEM_2D, DEM_3D :
@@ -3743,9 +3849,7 @@ begin
     DrawTexture_Button.Click;
   end;
 
-{Note: control does not seem to reach this point except on the very first call
-  to "Refresh Image" after the program is started. Why is that???}
-//   ShowMessage('Image refreshed');
+//  ShowMessage('Image refreshed');
 end;
 
 procedure TLTVT_Form.DrawLinesToPoleAndSun_RightClickMenuItemClick(Sender: TObject);
@@ -3811,11 +3915,44 @@ var
   ParentName : string;
   CraterX, CraterY, LastMouseX, LastMouseY, RSqrd, MinRsqrd, ClosestCraterX, ClosestCraterY,
   Diam : extended;
-  ClosestCrater, CurrentCrater : TCrater;
+  ClosestCrater : TCrater;
   CraterVector : TVector;
-  CraterNum, CraterIndex, DiamErrorCode : integer;
-  DotRadius, DotRadiusSqrd, XOffset, YOffset  : integer;
+  CraterNum, CraterIndex, DiamErrorCode : Integer;
+  DotRadius, DotRadiusSqrd, XOffset, YOffset  : Integer;
   CraterColor : TColor;
+  DotToLabelInfo : TCraterInfo;
+
+function UpperCasePrimaryName(const FeatureName, FT_Code : String) : String;
+{attempts to extract uppercase version of parent part of FeatureName based on USGS Feature Type code;
+ returns FeatureName if unsuccessful}
+var
+  USGS_Code : String;
+  SpacePos : Integer;
+begin
+  USGS_Code := UpperCase(FT_Code);
+  Result := UpperCase(Trim(FeatureName));
+
+  if USGS_Code='SF' then
+    begin
+      SpacePos := Length(Result);
+      while (SpacePos>0) and (Result[SpacePos]<>' ') do Dec(SpacePos);
+      if SpacePos>1 then Result := Trim(Substring(Result,1,SpacePos-1));
+      if Substring(Result,1,1)='[' then Result := Trim(Substring(Result,2,SpacePos-1));  // discontinued satellite
+    end
+  else if not ((USGS_Code='AA') or (USGS_Code='LF')) then
+  // assume name is a one word descriptor followed by parent name plus possible Greek suffix
+    begin
+      SpacePos := Pos(' ',Result);
+      Result := Trim(Substring(Result,SpacePos+1,MaxInt));
+
+      SpacePos := Pos('DELTA',Result);   // possible suffix for Mons
+      if SpacePos<>0 then Result := Trim(Substring(Result,1,SpacePos-1));
+
+      SpacePos := Pos('GAMMA',Result);
+      if SpacePos<>0 then Result := Trim(Substring(Result,1,SpacePos-1));
+    end;
+
+end;
 
 begin {TLTVT_Form.IdentifyNearestFeature_RightClickMenuItemClick}
   ClosestCraterX := 0;  // compiler is complaining these may not be initialized
@@ -3868,30 +4005,31 @@ begin {TLTVT_Form.IdentifyNearestFeature_RightClickMenuItemClick}
           RadToDeg(Diam/MoonRadius/2),CraterCircleColor);
     end;
 
-  if IdentifySatellites then
+  with DotToLabelInfo do
     begin
-      ParentName := UpperCaseParentName(ClosestCrater.Name,ClosestCrater.USGS_Code);
-//      ShowMessage('Seeking satellites of '+ParentName);
-    end
-  else
-    ShowMessage(ClosestCrater.Name+' has been plotted');
+      CraterData := ClosestCrater;
+      Dot_X := XPix(ClosestCraterX);
+      Dot_Y := YPix(ClosestCraterY);
+    end;
+
+  LabelDot(DotToLabelInfo);
 
   if not PositionInCraterInfo(XPix(ClosestCraterX), YPix(ClosestCraterY)) then
     begin
       CraterIndex := Length(CraterInfo);
       SetLength(CraterInfo,CraterIndex+1);
-      CraterInfo[CraterIndex].CraterData := ClosestCrater;
-      CraterInfo[CraterIndex].Dot_X := XPix(ClosestCraterX);
-      CraterInfo[CraterIndex].Dot_Y := YPix(ClosestCraterY);
+      CraterInfo[CraterIndex] := DotToLabelInfo;
     end;
 
   if IdentifySatellites then
     begin
+      ParentName := UpperCasePrimaryName(ClosestCrater.Name,ClosestCrater.USGS_Code);
+//      ShowMessage('Looking for "'+ParentName+'"');
       for CraterNum := 1 to Length(CraterList) do with CraterList[CraterNum-1] do
         begin
-              if IncludeDiscontinuedNames or (Substring(Name,1,1)<>'[') then
+            if IncludeDiscontinuedNames or (Substring(Name,1,1)<>'[') then
               begin
-                if UpperCaseParentName(Name,USGS_Code)=ParentName then
+                if UpperCasePrimaryName(Name,USGS_Code)=ParentName then
                   begin
                     PolarToVector(Lon,Lat,1,CraterVector);
                     if DotProduct(CraterVector,SubObsvrVector)>=0 then with Image1 do
@@ -3936,15 +4074,22 @@ begin {TLTVT_Form.IdentifyNearestFeature_RightClickMenuItemClick}
                                 RadToDeg(Diam/MoonRadius/2),CraterCircleColor);
                           end;
 
-                        if not PositionInCraterInfo(XPix(CraterX), YPix(CraterY)) then
+                        with DotToLabelInfo do
                           begin
-                            CurrentCrater := CraterList[CraterNum-1];
+                            CraterData := CraterList[CraterNum-1];
+                            Dot_X := XPix(CraterX);
+                            Dot_Y := YPix(CraterY);
+                          end;
+
+                        LabelDot(DotToLabelInfo);
+
+                        if not PositionInCraterInfo(DotToLabelInfo.Dot_X, DotToLabelInfo.Dot_Y) then
+                          begin
                             CraterIndex := Length(CraterInfo);
                             SetLength(CraterInfo,CraterIndex+1);
-                            CraterInfo[CraterIndex].CraterData := CurrentCrater;
-                            CraterInfo[CraterIndex].Dot_X := XPix(CraterX);
-                            CraterInfo[CraterIndex].Dot_Y := YPix(CraterY);
+                            CraterInfo[CraterIndex] := DotToLabelInfo;
                           end;
+
                       end;
                   end;
               end;
@@ -3959,7 +4104,6 @@ procedure TLTVT_Form.LabelFeatureAndSatellites_RightClickMenuItemClick(Sender: T
 begin
   IdentifySatellites := True;
   IdentifyNearestFeature_RightClickMenuItemClick(Sender);
-  LabelDots_Button.Click;
   IdentifySatellites := False;
 end;
 
@@ -4144,6 +4288,7 @@ begin  {TLTVT_Form.SetRefPt_RightClickMenuItemClick}
                  begin
                    SubSol_Lon_LabeledNumericEdit.NumericEdit.Text := UserPhotoData.SubSolLon;
                    SubSol_Lat_LabeledNumericEdit.NumericEdit.Text := UserPhotoData.SubSolLat;
+                   SetManualGeometryLabels;
                    DrawTexture_Button.Click;
                  end;
                mrCancel : Exit;
@@ -4158,7 +4303,7 @@ begin  {TLTVT_Form.SetRefPt_RightClickMenuItemClick}
       RefY := YValue(LastMouseClickPosition.Y);
       if not ConvertXYtoLonLat(RefX,RefY,RefPtLon,RefPtLat) then
         begin
-          ShowMessage('The mouse click is not on the visible lunar disk!');
+          ShowMessage('The mouse click is not on the visible disk!');
           Exit;
         end;
       DrawCross(LastMouseClickPosition.X,LastMouseClickPosition.Y,DotSize+1,ReferencePointColor);
@@ -4265,13 +4410,16 @@ begin  {TLTVT_Form.SaveImage_MainMenuItemClick}
 end;   {TLTVT_Form.SaveImage_MainMenuItemClick}
 
 procedure TLTVT_Form.SaveImage_ButtonClick(Sender: TObject);
+const
+  AnnotationLineHeight = 15;
 var
   JPEG_Image : TJPEGImage;
   LabeledImage : TBitMap;
-  ImageStartRow, TextStartRow : Integer;
+  NumAnnotationLinesAtBottom, TextStartRow : Integer;
   CenterLon, CenterLat : Extended;
   DateTimeString, OutString, DesiredExtension, TextureID,
   DEM_ShadowMode : String;
+  DisplayingDemMultipliedByTexture : Boolean;
 //  Answer : Word;
 begin
   SavePictureDialog1.FileName := ProposedFilename;
@@ -4282,37 +4430,48 @@ begin
       if AnnotateSavedImages then
         begin
           if ImageManual and not((DrawingMode=EarthView) or (OrientationMode=Equatorial) or (OrientationMode=AltAz)) then
-            ImageStartRow := 45
+            NumAnnotationLinesAtBottom := 1
           else
-            ImageStartRow := 60;
-          LabeledImage.Height := Image1.Height + ImageStartRow;
+            NumAnnotationLinesAtBottom := 2;
+
+          DisplayingDemMultipliedByTexture := ((DrawingMode=DEM_2D) or (DrawingMode=DEM_2D)) and ImageDemMultipliedByTexture;
+          if DisplayingDemMultipliedByTexture then Inc(NumAnnotationLinesAtBottom);
+
+          LabeledImage.Height := Image1.Height + AnnotationLineHeight*(2+NumAnnotationLinesAtBottom);
           LabeledImage.Width := Image1.Width;
           with LabeledImage.Canvas do
             begin
-              Draw(0,30,Image1.Picture.Graphic);
+              Draw(0,2*AnnotationLineHeight,Image1.Picture.Graphic);
     //          ShowMessage('The text height is '+IntToStr(Font.Height));
               Font.Color := SavedImageUpperLabelsColor;
               if DrawingMode=EarthView then
                 begin
-                      TextOut(0,1,Format(' Sub-solar Pt = %s/%s  Center (Sub-Lunar Pt) = %s/%s  Zoom = %0.3f',
-                        [LongitudeString(RadToDeg(ImageSubSolLon),3), LatitudeString(RadToDeg(ImageSubSolLat),3),
-                         LongitudeString(RadToDeg(ImageSubObsLon),3), LatitudeString(RadToDeg(ImageSubObsLat),3),
-                         1.0]));
+                  if CurrentTargetPlanet=Moon then
+                    TextOut(0,1,Format(' Sub-solar Pt = %s/%s  Center (Sub-Lunar Pt) = %s/%s  Zoom = %0.3f',
+                      [PlanetaryLongitudeString(RadToDeg(ImageSubSolLon),3), LatitudeString(RadToDeg(ImageSubSolLat),3),
+                       PlanetaryLongitudeString(RadToDeg(ImageSubObsLon),3), LatitudeString(RadToDeg(ImageSubObsLat),3),
+                       1.0]))
+                  else
+                    TextOut(0,1,Format(' Sub-solar Pt = %s/%s  Center (Sub-%s Pt) = %s/%s  Zoom = %0.3f',
+                      [PlanetaryLongitudeString(RadToDeg(ImageSubSolLon),3), LatitudeString(RadToDeg(ImageSubSolLat),3),
+                       CurrentPlanetName,
+                       PlanetaryLongitudeString(RadToDeg(ImageSubObsLon),3), LatitudeString(RadToDeg(ImageSubObsLat),3),
+                       1.0]));
                   OutString := ' Vertical axis : central meridian';
                 end
               else
                 begin
                   if not ConvertXYtoLonLat(ImageCenterX,ImageCenterY,CenterLon,CenterLat) then
                     TextOut(0,1,Format(' Sub-solar Pt = %s/%s  Sub-Earth Pt = %s/%s  XY-Center = (%0.4f,%0.4f)  Zoom = %0.3f',
-                      [LongitudeString(RadToDeg(ImageSubSolLon),3), LatitudeString(RadToDeg(ImageSubSolLat),3),
-                       LongitudeString(RadToDeg(ImageSubObsLon),3), LatitudeString(RadToDeg(ImageSubObsLat),3),
+                      [PlanetaryLongitudeString(RadToDeg(ImageSubSolLon),3), LatitudeString(RadToDeg(ImageSubSolLat),3),
+                       PlanetaryLongitudeString(RadToDeg(ImageSubObsLon),3), LatitudeString(RadToDeg(ImageSubObsLat),3),
                        ImageCenterX, ImageCenterY, ImageZoom]))
                   else
                     begin
                       TextOut(0,1,Format(' Sub-solar Pt = %s/%s  Sub-Earth Pt = %s/%s  Center = %s/%s  Zoom = %0.3f',
-                        [LongitudeString(RadToDeg(ImageSubSolLon),3), LatitudeString(RadToDeg(ImageSubSolLat),3),
-                         LongitudeString(RadToDeg(ImageSubObsLon),3), LatitudeString(RadToDeg(ImageSubObsLat),3),
-                         LongitudeString(RadToDeg(CenterLon),3), LatitudeString(RadToDeg(CenterLat),3), ImageZoom]));
+                        [PlanetaryLongitudeString(RadToDeg(ImageSubSolLon),3), LatitudeString(RadToDeg(ImageSubSolLat),3),
+                         PlanetaryLongitudeString(RadToDeg(ImageSubObsLon),3), LatitudeString(RadToDeg(ImageSubObsLat),3),
+                         PlanetaryLongitudeString(RadToDeg(CenterLon),3), LatitudeString(RadToDeg(CenterLat),3), ImageZoom]));
                     end;
 
                   OutString := ' Vertical axis : ';
@@ -4338,13 +4497,13 @@ begin
                     OutString := OutString + '    Inverted up-down';
 
                   if ManualRotationDegrees<>0 then
-                    OutString := OutString + Format('    Additional CW rotation: %0.3f deg',[ManualRotationDegrees]);
+                    OutString := OutString + Format('    Additional CW rotation: %0.3f°',[ManualRotationDegrees]);
                 end;
 
-                TextOut(0,16,OutString);
+                TextOut(0,AnnotationLineHeight+1,OutString);
 
                 OutString := '      LTVT v'+ProgramVersion+' ';
-                TextOut(LabeledImage.Width-TextWidth(OutString)-2,16,OutString);
+                TextOut(LabeledImage.Width-TextWidth(OutString)-2,AnnotationLineHeight+1,OutString);
 
                 Font.Color := SavedImageLowerLabelsColor;
 
@@ -4354,7 +4513,7 @@ begin
                   DEM_ShadowMode := ImagePhotometricMode+' without cast shadows';
 
                 if DemGridStepMultiplier<>1 then
-                  DEM_ShadowMode := Format('%0.2f grid steps, ',[DemGridStepMultiplier]) + DEM_ShadowMode;
+                  DEM_ShadowMode := Format('%0.2f grid steps, ',[ImageDemGridStepMultiplier]) + DEM_ShadowMode;
 
                 case DrawingMode of
                   DEM_2D: TextureID := '2D DEM simulation ('+DEM_ShadowMode+'): ';
@@ -4362,24 +4521,36 @@ begin
                 else
                   TextureID := 'Texture file: ';
                 end;
-                
-                TextureID := TextureID+ExtractFileName(TextureFilename);
+
+                if DrawingMode=DotMode then
+                  TextureID := TextureID+' none (Dots mode)'
+                else if (DrawingMode=DEM_2D) or (DrawingMode=DEM_3D) then
+                  TextureID := TextureID+ExtractFileName(DemTextureFilename)
+                else
+                  TextureID := TextureID+ExtractFileName(TextureFilename);
+
                 if (DrawingMode<>DotMode) and (ImageGamma<>1) then TextureID := TextureID+Format('    (Gamma = %0.2f)',[1/ImageGamma]);
 
-                if ImageManual and not((DrawingMode=EarthView) or (OrientationMode=Equatorial) or (OrientationMode=AltAz)) then
-                  begin
-                    TextStartRow := LabeledImage.Height - 15;
-                    TextOut(0,TextStartRow,TextureID);
-                  end
-                else
-                  begin
-                    TextStartRow := LabeledImage.Height - 30;
-                    TextOut(0,TextStartRow,TextureID);
+                TextStartRow := LabeledImage.Height - AnnotationLineHeight*NumAnnotationLinesAtBottom;
+                TextOut(0,TextStartRow,TextureID);
 
+                if DisplayingDemMultipliedByTexture then
+                  begin
+                    TextStartRow := TextStartRow+AnnotationLineHeight;
+                    if ImageMultipliedDemIntensitiesBoost<>1 then
+                      TextureID := Format('DEM (after boosting intensities by %0.2fx)',[ImageMultipliedDemIntensitiesBoost])
+                    else
+                      TextureID := 'DEM';
+                    TextureID := TextureID+' multiplied into '+ExtractFileName(TextureFilename);
+                    TextOut(0,TextStartRow,TextureID);
+                  end;
+
+                if not (ImageManual and not((DrawingMode=EarthView) or (OrientationMode=Equatorial) or (OrientationMode=AltAz))) then
+                  begin
+                    TextStartRow := TextStartRow+AnnotationLineHeight;
                     DateTimeString := DateToStr(ImageDate)+' at  '+TimeToStr(ImageTime)+' UT';
-                    TextStartRow := LabeledImage.Height - 15;
                     if DrawingMode=EarthView then
-                      TextOut(0,TextStartRow,Format('Earth viewed from center of Moon on %s',[DateTimeString]))
+                      TextOut(0,TextStartRow,Format('Earth viewed from center of %s on %s',[PlanetName[ImagePlanet],DateTimeString]))
                     else
                       begin
                         if ImageGeocentric then
@@ -4392,11 +4563,11 @@ begin
                                   TextOut(0,TextStartRow,Format('Celestial north polar direction for %s',[DateTimeString]))
                                 else
                                   TextOut(0,TextStartRow,Format('Zenith direction for an observer on Earth at %s/%s and %0.0f m elev on %s',
-                                    [LongitudeString(ImageObsLon,3),LatitudeString(ImageObsLat,3),ImageObsElev,DateTimeString]));
+                                    [EarthLongitudeString(ImageObsLon,3),LatitudeString(ImageObsLat,3),ImageObsElev,DateTimeString]));
                               end
                             else
                               TextOut(0,TextStartRow,Format('This view is predicted for an observer on Earth at %s/%s and %0.0f m elev on ',
-                                [LongitudeString(ImageObsLon,3),LatitudeString(ImageObsLat,3),ImageObsElev])+DateTimeString);
+                                [EarthLongitudeString(ImageObsLon,3),LatitudeString(ImageObsLat,3),ImageObsElev])+DateTimeString);
                           end;
                       end;
                   end;
@@ -4433,6 +4604,14 @@ begin
         LabeledImage.Free;
     end;
 
+end;
+
+procedure TLTVT_Form.ExportTexture_MainMenuItemClick(Sender: TObject);
+begin
+  if not UserPhotoLoaded then
+    ShowMessage('A user photo needs to be loaded before its texture can be exported')
+  else
+    ExportTexture_Form.ShowModal;
 end;
 
 procedure TLTVT_Form.FindAndLoadJPL_File(const TrialFilename : string);
@@ -4693,47 +4872,6 @@ begin
     end;
 end;
 
-function TLTVT_Form.UpperCaseParentName(const FeatureName, FT_Code : String) : String;
-{attempts to extract uppercase version of parent part of FeatureName based on USGS Feature Type code; returns FeatureName if unsuccessful}
-var
-  TrialName, USGS_Code : String;
-  SpacePos : Integer;
-begin
-  Result := FeatureName;
-
-  TrialName := UpperCase(Trim(FeatureName));
-  USGS_Code := UpperCase(FT_Code);
-
-  if USGS_Code='LF' then
-    Exit // don't process landing site names
-  else if USGS_Code='AA' then
-    // do nothing : Trial Name = parent name
-  else if USGS_Code='SF' then
-    begin
-      SpacePos := Length(TrialName);
-      while (SpacePos>1) and (TrialName[SpacePos]<>' ') do Dec(SpacePos);
-      if TrialName[SpacePos]<>' ' then Exit;   // not a satellite feature name
-      TrialName := Trim(Substring(TrialName,1,SpacePos-1));
-    end
-  else // assume name is a one word descriptor followed by parent name plus possible Greek suffix
-    begin
-      SpacePos := Pos(' ',TrialName);
-      if SpacePos=0 then Exit;
-      TrialName := Substring(TrialName,SpacePos+1,MaxInt);
-
-      SpacePos := Pos('DELTA',TrialName);   // possible suffix for Mons
-      if SpacePos<>0 then TrialName := Trim(Substring(TrialName,1,SpacePos-1));
-
-      SpacePos := Pos('GAMMA',TrialName);
-      if SpacePos<>0 then TrialName := Trim(Substring(TrialName,1,SpacePos-1));
-
-      TrialName := Trim(TrialName);
-    end;
-
-  if TrialName<>'' then Result := TrialName;
-
-end;
-
 procedure TLTVT_Form.LabelDot(const DotInfo : TCraterInfo);
 var
   LabelXPix, LabelYPix, PrimaryIndex,
@@ -4741,25 +4879,23 @@ var
   FeatureVector, ParentVector, DirectionVector : TVector;
   DiffSqrd, Diff, XMultiplier, YMultiplier : Extended;
 
-function ParentIndex(const FeatureName : String) : Integer;
-// returns index of feature with same primary name in PrimaryFeatureList array
+function ParentIndex(const ParentFeatureName : String) : Integer;
+// returns index of feature with same primary name in PrimaryFeatureList array as satellite feature
   var
-    ParentFeatureName : String;
+    ParentName : String;
     I : Integer;
     NameFound : Boolean;
   begin {ParentIndex}
     Result := -999;
 
-    ParentFeatureName := UpperCaseParentName(FeatureName,'SF');
-    if ParentFeatureName=FeatureName then Exit;
-
+    ParentName := UpperCase(ParentFeatureName);
     NameFound := False;
 
     I := -1;
     while (I<(Length(PrimaryCraterList)-2)) and not NameFound do
       begin
         Inc(I);
-        NameFound := ParentFeatureName=UpperCase(PrimaryCraterList[I].Name);
+        NameFound := ParentName=UpperCase(PrimaryCraterList[I].Name);
       end;
 
     if NameFound then
@@ -4788,9 +4924,7 @@ begin {LabelDot}
           XMultiplier := 0;  // if parent can't be located plot name over dot
           YMultiplier := 0;
 
-//          ShowMessage(Name);
-//          PrimaryIndex := ParentIndex('Seeliger A');
-          PrimaryIndex := ParentIndex(Name);
+          PrimaryIndex := ParentIndex(LetteredCraterParentName(Name));
           if PrimaryIndex<>-999 then
             begin
 
@@ -4878,13 +5012,138 @@ end;  {FindClosestDot}
 
 procedure TLTVT_Form.LabelNearestDot_RightClickMenuItemClick(Sender: TObject);
 var
-  ClosestDot : integer;
+  ClosestDot : Integer;
 begin {TLTVT_Form.LabelNearestDot_RightClickMenuItemClick}
   if FindClosestDot(ClosestDot) then
     LabelDot(CraterInfo[ClosestDot])
   else
     ShowMessage('There are no dots to label');
 end;  {TLTVT_Form.LabelNearestDot_RightClickMenuItemClick}
+
+procedure TLTVT_Form.NearestDotAdditionalInfo_RightClickMenuItemClick(Sender: TObject);
+var
+  IAU_code_number, ClosestDotNumber : Integer;
+  IAU_code_found : Boolean;
+  FT_Code, ParentName : String;
+begin
+  if FindClosestDot(ClosestDotNumber) then with PopupMemo do
+    begin
+      WebLink_URL := '';  // hides web-link button unless data is supplied for this string
+      ClearMemoArea;
+      Caption := 'Additional feature information';
+      with Memo.Lines do with CraterInfo[ClosestDotNumber].CraterData do
+        begin
+          FT_Code := UpperCase(USGS_Code);
+
+          IAU_code_found := False;
+          IAU_code_number := 0;
+          while (IAU_code_number<(Length(IAU_FeatureTypeList))) and (not IAU_code_found) do
+            begin
+              Inc(IAU_code_number);
+              IAU_code_found := FT_Code=IAU_FeatureTypeList[IAU_code_number].FT_code;
+            end;
+
+          if IAU_code_found then
+            begin
+              Add('IAU name :  '+Name);
+              Add('Longitude (E=+,W=-) :  '+LonStr+'°     Latitude (N=+,S=-) : '+LatStr+'°');
+              Add('Diameter :  '+NumericData+' km');
+              Add('');
+              Add('IAU feature type (singluar, plural) :  '+IAU_FeatureTypeList[IAU_code_number].Names);
+              Add('IAU description of feature type :  '+IAU_FeatureTypeList[IAU_code_number].Description);
+              Add('');
+              if AdditionalInfo1<>'' then
+                Add('Name origin :  '+AdditionalInfo1)
+              else if FT_Code='SF' then
+                Add('Name origin :  Named after nearby feature ('+LetteredCraterParentName(Name)+')');
+
+              if CurrentTargetPlanet=Moon then
+                begin // generate link to the-Moon Wiki
+                  ParentName := Name;
+                  if FT_Code='SF' then ParentName := LetteredCraterParentName(Name);
+                  WebLink_URL := 'http://the-moon.wikispaces.com/'+ParentName;
+                end;
+            end
+          else
+            begin
+              if (FT_Code='CN') and (Length(AdditionalInfo2)>1) then FT_Code := 'CN5'; // copying code from LabelString()
+
+              if FT_Code='GD' then
+                begin
+                  Add('Name (non-IAU):  '+Name);
+                  Add('Longitude (E=+,W=-) :  '+LonStr+'°     Latitude (N=+,S=-) : '+LatStr+'°');
+                  Add('');
+                  Add('Feature type: Dome from Geological Researches Group (GLR) list');
+                  Add('');
+                  Add('Dimensions: '+NumericData+' km');
+                end
+              else if FT_Code='CD' then
+                begin
+                  Add('Name :  '+Name);
+                  Add('Longitude (E=+,W=-) :  '+LonStr+'°     Latitude (N=+,S=-) : '+LatStr+'°');
+                  Add('');
+                  Add('Data type: Crater depth estimate');
+                  Add('');
+                  Add('Depth: '+NumericData+' km');
+                end
+              else if FT_Code='CN' then
+                begin
+                  Add('Control point name (non-IAU):  '+Name);
+                  Add('Longitude (E=+,W=-) :  '+LonStr+'°     Latitude (N=+,S=-) : '+LatStr+'°');
+                  Add('');
+                  Add('Feature type: 1994 Unified Lunar Control Network (ULCN) control point');
+                  Add('1994 ULCN catalog number: '+AdditionalInfo1);
+                  if AdditionalInfo2='1' then
+                    Add('Data set: 1 (Apollo Network)')
+                  else if AdditionalInfo2='2' then
+                    Add('Data set: 2 (Telescopic Network)')
+                  else if AdditionalInfo2='3' then
+                    Add('Data set: 3 (Mariner 10 Network)')
+                  else if AdditionalInfo2='4' then
+                    Add('Data set: 4 (Galileo Network)')
+                  else
+                    Add('Data set: '+AdditionalInfo2);
+                  Add('');
+                  Add('Radial distance from center of Moon: '+NumericData+' km');
+                end
+              else if FT_Code='CN5' then
+                begin
+                  Add('Control point name (non-IAU):  '+Name);
+                  Add('Longitude (E=+,W=-) :  '+LonStr+'°     Latitude (N=+,S=-) : '+LatStr+'°');
+                  Add('');
+                  Add('Feature type: Unified Lunar Control Network 2005 (ULCN2005) control point');
+                  if AdditionalInfo1='1' then
+                    Add('Data set: 1 (Apollo Network)')
+                  else if AdditionalInfo1='2' then
+                    Add('Data set: 2 (Telescopic Network)')
+                  else if AdditionalInfo1='3' then
+                    Add('Data set: 3 (Mariner 10 Network)')
+                  else if AdditionalInfo1='4' then
+                    Add('Data set: 4 (Galileo Network)')
+                  else if AdditionalInfo1='5' then
+                    Add('Data set: 5 (Clementine Control Network)')
+                  else
+                    Add('Data set: '+AdditionalInfo1);
+                  Add('');
+                  Add('Radial distance from center of Moon: '+NumericData+' km');
+                  if AdditionalInfo2<>'999999' then
+                    Add('Estimated vertical precision: '+AdditionalInfo2+' meters');
+                end
+              else if FT_Code='AT' then
+                begin
+                  Add('Feature type: Clementine LIDAR elevation');
+                  Add('Longitude (E=+,W=-) :  '+LonStr+'°     Latitude (N=+,S=-) : '+LatStr+'°');
+                  Add('');
+                  Add('Orbital revolution number: '+NumericData);
+                  Add('');
+                  Add('Elevation relative to 1738 km reference sphere:  '+Name+' meters');
+                end;
+            end;
+        end;
+      ShowModal;
+      WebLink_URL := '';  // hides web-link button next time form is displayed
+    end;
+end;
 
 procedure TLTVT_Form.AddLabel_RightClickMenuItemClick(Sender: TObject);
 var
@@ -4962,7 +5221,10 @@ begin
             ObserverElevation_LabeledNumericEdit.NumericEdit.Text := ObserverElevationText;
           end;
 
-        Colongitude_LabeledNumericEdit.NumericEdit.Text := Colongitude_Label.Caption;
+        if CurrentTargetPlanet=Moon then
+          Colongitude_LabeledNumericEdit.NumericEdit.Text := Colongitude_Label.Caption
+        else
+          Colongitude_LabeledNumericEdit.NumericEdit.Text := Format('%0.3f',[PosNegDegrees(SubObs_Lon_LabeledNumericEdit.NumericEdit.ExtendedValue,LTVT_Form.PlanetaryLongitudeConvention)]);
         SolarLatitude_LabeledNumericEdit.NumericEdit.Text := SubSol_Lat_LabeledNumericEdit.NumericEdit.Text;
 
         if ConvertXYtoLonLat(ImageCenterX,ImageCenterY,ImageCenterLon,ImageCenterLat) then
@@ -4988,6 +5250,7 @@ procedure TLTVT_Form.TabulateLibrations_MainMenuItemClick(Sender: TObject);
 var
   ImageCenterLon, ImageCenterLat : extended;
 begin
+
   if not EphemerisFileLoaded then
     begin
       FindAndLoadJPL_File(JPL_Filename);  // load default file if it has not yet been done
@@ -5071,8 +5334,6 @@ begin
             ObserverLatitude_LabeledNumericEdit.NumericEdit.Text := ObserverLatitudeText;
             ObserverElevation_LabeledNumericEdit.NumericEdit.Text := ObserverElevationText;
           end;
-        Colongitude_LabeledNumericEdit.NumericEdit.Text := Colongitude_Label.Caption;
-        SolarLatitude_LabeledNumericEdit.NumericEdit.Text := SubSol_Lat_LabeledNumericEdit.NumericEdit.Text;
 
         if ConvertXYtoLonLat(ImageCenterX,ImageCenterY,ImageCenterLon,ImageCenterLat) then
           begin
@@ -5080,6 +5341,8 @@ begin
             Crater_Lat_LabeledNumericEdit.NumericEdit.Text := Format('%0.2f',[RadToDeg(ImageCenterLat)]);
           end;
 
+//        Colongitude_LabeledNumericEdit.NumericEdit.Text := Colongitude_Label.Caption;
+//        SolarLatitude_LabeledNumericEdit.NumericEdit.Text := SubSol_Lat_LabeledNumericEdit.NumericEdit.Text;
         CalculateCircumstances_Button.Click;
 
         PhotosessionSearch_Form.Show;
@@ -5107,11 +5370,14 @@ begin
     Lunar_Lambert : IniFile.WriteString('LTVT Defaults','DEM_Photometric_Mode','Lunar_Lambert');
     end;
   IniFile.WriteString('LTVT Defaults','DEM_cast_shadow_color',Format('$%6.6x',[DemCastShadowColor]));
+  IniFile.WriteString('LTVT Defaults','LommelSeeliger_NoData_color',Format('$%6.6x',[LommelSeeligerNoDataColor]));
 //  IniFile.WriteString('LTVT Defaults','DEM_in_3D',BooleanToYesNo(DemIn3D));
   IniFile.WriteString('LTVT Defaults','DEM_multiplied_by_texture',BooleanToYesNo(MultiplyDemByTexture3));
+  IniFile.WriteFloat('LTVT Defaults','Multiplied_DEM_gamma_boost',MultipliedDemGammaBoost);
+  IniFile.WriteFloat('LTVT Defaults','Multiplied_DEM_intensities_boost',MultipliedDemIntensitiesBoost);
   IniFile.WriteString('LTVT Defaults','Display_DEM_computation_times',BooleanToYesNo(DisplayDemComputationTimes));
+  IniFile.WriteString('LTVT Defaults','Show_DEM_info',BooleanToYesNo(ShowDEMinfo));
   IniFile.WriteString('LTVT Defaults','Stay_in_DEM_mode_on_refresh',BooleanToYesNo(StayInDemModeOnRefresh));
-  IniFile.WriteString('LTVT Defaults','Rigorous_DEM_normals',BooleanToYesNo(RigorousDemNormals));
   IniFile.WriteString('LTVT Defaults','Draw_terminator_on_DEM',BooleanToYesNo(DrawTerminatorOnDem));
   IniFile.WriteFloat('LTVT Defaults','DEM_grid_step_multiplier',DemGridStepMultiplier);
   IniFile.Free;
@@ -5128,7 +5394,7 @@ begin
   DEM_Filename := FullFilename(IniFile.ReadString('LTVT Defaults','DEM_File','LALT_GGT_MAP.IMG'));
   if TempDEMName<>DEM_Filename then with DEM_data do
     begin
-      Clear;
+      ClearStorage;
       FileOpen := False;
     end;
 
@@ -5138,20 +5404,27 @@ begin
   except
     DemCastShadowColor := clBlack;
   end;
+  try
+    LommelSeeligerNoDataColor := StrToInt(IniFile.ReadString('LTVT Defaults','LommelSeeliger_NoData_color',IntToStr(clBlack)));
+  except
+    LommelSeeligerNoDataColor := clBlack;
+  end;
 //  DemIn3D := YesNoToBoolean(IniFile.ReadString('LTVT Defaults','DEM_in_3D','no'));
 
-  PhotometricModeString := UpperCase(IniFile.ReadString('LTVT Defaults','DEM_Photometric_Mode','Lambertian'));
-  if PhotometricModeString=UpperCase('Lommel_Seeliger') then
+  PhotometricModeString := UpperCase(IniFile.ReadString('LTVT Defaults','DEM_Photometric_Mode','Lunar_Lambert'));
+  if PhotometricModeString=UpperCase('Lambertian') then
+    DemPhotometricMode := Lambertian
+  else if PhotometricModeString=UpperCase('Lommel_Seeliger') then
     DemPhotometricMode := Lommel_Seeliger
-  else if PhotometricModeString=UpperCase('Lunar_Lambert') then
-    DemPhotometricMode := Lunar_Lambert
   else
-    DemPhotometricMode := Lambertian;
+    DemPhotometricMode := Lunar_Lambert;
 
   MultiplyDemByTexture3 := YesNoToBoolean(IniFile.ReadString('LTVT Defaults','DEM_multiplied_by_texture','no'));
+  MultipliedDemGammaBoost := Abs(IniFile.ReadFloat('LTVT Defaults','Multiplied_DEM_gamma_boost',1));
+  MultipliedDemIntensitiesBoost := Abs(IniFile.ReadFloat('LTVT Defaults','Multiplied_DEM_intensities_boost',1));
   DisplayDemComputationTimes := YesNoToBoolean(IniFile.ReadString('LTVT Defaults','Display_DEM_computation_times','no'));
+  ShowDemInfo := YesNoToBoolean(IniFile.ReadString('LTVT Defaults','Show_DEM_info','no'));
   StayInDemModeOnRefresh := YesNoToBoolean(IniFile.ReadString('LTVT Defaults','Stay_in_DEM_mode_on_refresh','no'));
-  RigorousDemNormals := YesNoToBoolean(IniFile.ReadString('LTVT Defaults','Rigorous_DEM_normals','yes'));
   DrawTerminatorOnDem := YesNoToBoolean(IniFile.ReadString('LTVT Defaults','Draw_terminator_on_DEM','no'));
   DemGridStepMultiplier := IniFile.ReadFloat('LTVT Defaults','DEM_grid_step_multiplier',1);
 
@@ -5165,6 +5438,7 @@ begin
       TempDEMFilename := DEM_Filename;
       ComputeCastShadows_CheckBox.Checked := DemIncludesCastShadows;
       CastShadow_ColorBox.Selected := DemCastShadowColor;
+      LommelSeeligerNoDataColor_ColorBox.Selected := LommelSeeligerNoDataColor;
 //      ThreeD_CheckBox.Checked := DemIn3D;
 
       case DemPhotometricMode of
@@ -5175,9 +5449,11 @@ begin
         end;
 
       MultiplyByAlbedoCheckBox.Checked := MultiplyDemByTexture3;
+      MultipliedDemGammaBoost_LabeledNumericEdit.NumericEdit.Text := Format('%0.2f',[MultipliedDemGammaBoost]);
+      MultipliedDemIntensitiesBoost_LabeledNumericEdit.NumericEdit.Text := Format('%0.2f',[MultipliedDemIntensitiesBoost]);
       DisplayComputationTimes_CheckBox.Checked := DisplayDemComputationTimes;
+      ShowDemInfo_CheckBox.Checked := ShowDemInfo;
       RecalculateDEMonRecenter_CheckBox.Checked := StayInDemModeOnRefresh;
-      RigorousNormals_CheckBox.Checked := RigorousDemNormals;
       DrawTerminatorOnDEM_CheckBox.Checked := DrawTerminatorOnDem;
       GridStepMultiplier_LabeledNumericEdit.NumericEdit.Text := Format('%0.2f',[DemGridStepMultiplier]);
     end;
@@ -5189,7 +5465,7 @@ begin
     begin
       if TempDEMFilename<>DEM_Filename then
         begin
-          DEM_data.Clear;
+          DEM_data.ClearStorage;
           DEM_data.FileOpen := False;
           DEM_Filename := TempDEMFilename;
 //          FileSettingsChanged := True;  //  DEM file not saved/restored with others
@@ -5197,6 +5473,7 @@ begin
 
       DemIncludesCastShadows := ComputeCastShadows_CheckBox.Checked;
       DemCastShadowColor := CastShadow_ColorBox.Selected;
+      LommelSeeligerNoDataColor := LommelSeeligerNoDataColor_ColorBox.Selected;
 //      DemIn3D := ThreeD_CheckBox.Checked;
 
       if LommelSeeliger_RadioButton.Checked then
@@ -5207,9 +5484,11 @@ begin
         DemPhotometricMode := Lambertian;
 
       MultiplyDemByTexture3 := MultiplyByAlbedoCheckBox.Checked;
+      MultipliedDemGammaBoost := Abs(MultipliedDemGammaBoost_LabeledNumericEdit.NumericEdit.ExtendedValue);
+      MultipliedDemIntensitiesBoost := Abs(MultipliedDemIntensitiesBoost_LabeledNumericEdit.NumericEdit.ExtendedValue);
       DisplayDemComputationTimes := DisplayComputationTimes_CheckBox.Checked;
+      ShowDemInfo := ShowDemInfo_CheckBox.Checked;
       StayInDemModeOnRefresh := RecalculateDEMonRecenter_CheckBox.Checked;
-      RigorousDemNormals := RigorousNormals_CheckBox.Checked;
       DrawTerminatorOnDem := DrawTerminatorOnDEM_CheckBox.Checked;
       DemGridStepMultiplier := GridStepMultiplier_LabeledNumericEdit.NumericEdit.ExtendedValue;
     end;
@@ -5247,20 +5526,14 @@ begin
   IniFile.WriteString('LTVT Defaults','DotMode_ShadowedColor',Format('$%6.6x',[DotModeShadowedColor]));
   IniFile.WriteString('LTVT Defaults','NoData_Color',Format('$%6.6x',[NoDataColor]));
   IniFile.WriteInteger('LTVT Defaults','ShadowLineLength_pixels',ShadowLineLength_pixels);
-  IniFile.WriteString('LTVT Defaults','SelenographicAxes_p1Angle_arcsec',p1Text);
-  IniFile.WriteString('LTVT Defaults','SelenographicAxes_p2Angle_arcsec',p2Text);
-  IniFile.WriteString('LTVT Defaults','SelenographicAxes_tauAngle_arcsec',tauText);
+
   IniFile.Free;
 end;
 
 procedure TLTVT_Form.RestoreCartographicOptions;
-const
-  p1_DefaultText = '-78.9316';
-  p2_DefaultText = '0.2902';
-  tau_DefaultText = '66.1898';
 var
   IniFile : TIniFile;
-  OrientationString : String;
+  OrientationString, p1Text, p2Text, tauText : String;
 begin
   IniFile := TIniFile.Create(IniFileName);
   StartWithCurrentUT := YesNoToBoolean(IniFile.ReadString('LTVT Defaults','Start_with_current_UT','no'));
@@ -5285,7 +5558,7 @@ begin
     ManualRotationDegrees := 0;
   end;
 }
-  IncludeLibrationCircle := YesNoToBoolean(IniFile.ReadString('LTVT Defaults','Libration_circle','yes'));
+  IncludeLibrationCircle := YesNoToBoolean(IniFile.ReadString('LTVT Defaults','Libration_circle','no'));
   IncludeTerminatorLines := YesNoToBoolean(IniFile.ReadString('LTVT Defaults','Terminator_lines','yes'));
   try
     LibrationCircleColor := StrToInt(IniFile.ReadString('LTVT Defaults','Libration_Circle_Color',IntToStr(clWhite)));
@@ -5324,25 +5597,23 @@ begin
   IniFile.DeleteKey('LTVT Defaults','MeanEarthAxes_p2Angle_arcsec');
   IniFile.DeleteKey('LTVT Defaults','MeanEarthAxes_tauAngle_arcsec');
   IniFile.DeleteKey('LTVT Defaults','Use_black_sky');
+  IniFile.DeleteKey('LTVT Defaults','SelenographicAxes_p1Angle_arcsec');
+  IniFile.DeleteKey('LTVT Defaults','SelenographicAxes_p2Angle_arcsec');
+  IniFile.DeleteKey('LTVT Defaults','SelenographicAxes_tauAngle_arcsec');
 
-// Note: it is not possible to enter these into the SetObserverLocation form at this point because
-// the form has not been created!
+  p1Text := Trim(IniFile.ReadString('LTVT Defaults','SelenographicAxisCorrection_p1_arcsec',''));
+  p2Text := Trim(IniFile.ReadString('LTVT Defaults','SelenographicAxisCorrection_p2_arcsec',''));
+  tauText := Trim(IniFile.ReadString('LTVT Defaults','SelenographicAxisCorrection_tau_arcsec',''));
 
-  p1Text := Trim(IniFile.ReadString('LTVT Defaults','SelenographicAxes_p1Angle_arcsec',p1_DefaultText));
-  p2Text := Trim(IniFile.ReadString('LTVT Defaults','SelenographicAxes_p2Angle_arcsec',p2_DefaultText));
-  tauText := Trim(IniFile.ReadString('LTVT Defaults','SelenographicAxes_tauAngle_arcsec',tau_DefaultText));
-
-  if p1Text='' then p1Text := p1_DefaultText;
-  if p2Text='' then p2Text := p2_DefaultText;
-  if tauText='' then tauText := tau_DefaultText;
-
-  MoonPosition.p1 := OneArcSecond*ExtendedValue(p1Text);
-  MoonPosition.p2 := OneArcSecond*ExtendedValue(p2Text);
-  MoonPosition.tau := OneArcSecond*ExtendedValue(tauText);
+  if p1Text<>'' then MoonPosition.p1 := ExtendedValue(p1Text);
+  if p2Text<>'' then MoonPosition.p2 := ExtendedValue(p2Text);
+  if tauText<>'' then MoonPosition.tau := ExtendedValue(tauText);
 
   AdjustToMeanEarthSystem := (MoonPosition.p1<>0) or (MoonPosition.p2<>0) or (MoonPosition.tau<>0);
 
-  if AdjustToMeanEarthSystem then ComputeMeanEarthSystemOffsetMatix;  // replace default with that specified in ini file
+  if not AdjustToMeanEarthSystem then ShowMessage('Making no PA --> MA correction');
+
+  if AdjustToMeanEarthSystem then RefreshCorrectionAngles;  // replace default with that specified in ini file
 
   IniFile.Free;
 end;
@@ -5636,6 +5907,13 @@ begin
   else
     IniFile.WriteString('LTVT Defaults','Cursor_Type','normal');
 
+  case PlanetaryLongitudeConvention of
+    West: IniFile.WriteString('LTVT Defaults','Longitude_Convention','west');
+    East: IniFile.WriteString('LTVT Defaults','Longitude_Convention','east');
+    else
+      IniFile.WriteString('LTVT Defaults','Longitude_Convention','centered');
+    end;
+      
   if RefPtReadoutMode=NoRefPtReadout then
     IniFile.WriteString('LTVT Defaults','RefPt_readout','none')
   else if RefPtReadoutMode=DistanceAndBearingRefPtMode then
@@ -5654,7 +5932,7 @@ end;
 procedure TLTVT_Form.RestoreMouseOptions;
 var
   IniFile : TIniFile;
-  CursorMode, RefMode : String;
+  CursorMode, LongitudeMode, RefMode : String;
 begin
   IniFile := TIniFile.Create(IniFileName);
 
@@ -5668,6 +5946,20 @@ begin
     begin
       Image1.Cursor := crDefault;
       CursorType := UseDefaultCursor;
+    end;
+
+  LongitudeMode := UpperCase(Trim(IniFile.ReadString('LTVT Defaults','Longitude_Convention','centered')));
+  if LongitudeMode='WEST' then
+    begin
+      PlanetaryLongitudeConvention := West;
+    end
+  else if LongitudeMode='EAST' then
+    begin
+      PlanetaryLongitudeConvention := East;
+    end
+  else
+    begin
+      PlanetaryLongitudeConvention := Centered;
     end;
 
   RefMode := UpperCase(Trim(IniFile.ReadString('LTVT Defaults','RefPt_readout','none')));
@@ -5693,6 +5985,13 @@ begin
     begin
       NormalCursor_RadioButton.Checked := (CursorType=UseDefaultCursor);
       CrosshairCursor_RadioButton.Checked := (CursorType=UseCrosshairCursor);
+
+      case PlanetaryLongitudeConvention of
+        West : WestLongitudes_RadioButton.Checked := True;
+        East : EastLongitudes_RadioButton.Checked := True;
+        else
+          CenteredLongitudes_RadioButton.Checked := True;
+        end;
 
       case RefPtReadoutMode of
         DistanceAndBearingRefPtMode : DistanceAndBearingFromRefPt_RadioButton.Checked := True;
@@ -5721,6 +6020,13 @@ begin
           Image1.Cursor := crDefault;
           CursorType := UseDefaultCursor;
         end;
+
+      if WestLongitudes_RadioButton.Checked then
+        PlanetaryLongitudeConvention := West
+      else if EastLongitudes_RadioButton.Checked then
+        PlanetaryLongitudeConvention := East
+      else
+        PlanetaryLongitudeConvention := Centered;
 
       if DistanceAndBearingFromRefPt_RadioButton.Checked then
         RefPtReadoutMode := DistanceAndBearingRefPtMode
@@ -5856,7 +6162,7 @@ begin  {TLTVT_Form.RestoreFileOptions}
   LoResFilename  := FullFilename(IniFile.ReadString('LTVT Defaults','Texture1_File','lores.jpg'));
   if TempTexture1Name<>LoResFilename then
     begin
-      LoRes_TextureMap.Free;
+      if LoRes_Texture_Loaded then LoRes_TextureMap.Free;
       LoRes_Texture_Loaded := False;
       LoResUSGS_RadioButton.Font.Color := clGray;
     end;
@@ -5873,7 +6179,7 @@ begin  {TLTVT_Form.RestoreFileOptions}
   HiResFilename  := FullFilename(IniFile.ReadString('LTVT Defaults','Texture2_File','hires.jpg'));
   if TempTexture2Name<>HiResFilename then
     begin
-      HiRes_TextureMap.Free;
+      if HiRes_Texture_Loaded then HiRes_TextureMap.Free;
       HiRes_Texture_Loaded := False;
       HiResUSGS_RadioButton.Font.Color := clGray;
     end;
@@ -5890,7 +6196,7 @@ begin  {TLTVT_Form.RestoreFileOptions}
   ClementineFilename := FullFilename(IniFile.ReadString('LTVT Defaults','Texture3_File','hires_clem.jpg'));
   if TempTexture3Name<>ClementineFilename then
     begin
-      Clementine_TextureMap.Free;
+      if Clementine_Texture_Loaded then Clementine_TextureMap.Free;
       Clementine_Texture_Loaded := False;
       Clementine_RadioButton.Font.Color := clGray;
     end;
@@ -5904,7 +6210,7 @@ begin  {TLTVT_Form.RestoreFileOptions}
   EarthTextureFilename := FullFilename(IniFile.ReadString('LTVT Defaults','EarthTexture_File','land_shallow_topo_2048.jpg'));
   if TempEarthTextureName<>EarthTextureFilename then
     begin
-      Earth_TextureMap.Free;
+      if Earth_Texture_Loaded then Earth_TextureMap.Free;
       Earth_Texture_Loaded := False;
     end;
 
@@ -5963,7 +6269,7 @@ begin
       LoResUSGS_RadioButton.Caption := Texture1Description_Edit.Text;
       if TempTexture1Name<>LoResFilename then
         begin
-          LoRes_TextureMap.Free;
+          if LoRes_Texture_Loaded then LoRes_TextureMap.Free;
           LoRes_Texture_Loaded := False;
           LoResUSGS_RadioButton.Font.Color := clGray;
           LoResFilename := TempTexture1Name;
@@ -5973,7 +6279,7 @@ begin
       HiResUSGS_RadioButton.Caption := Texture2Description_Edit.Text;
       if TempTexture2Name<>HiResFilename then
         begin
-          HiRes_TextureMap.Free;
+          if HiRes_Texture_Loaded then HiRes_TextureMap.Free;
           HiRes_Texture_Loaded := False;
           HiResUSGS_RadioButton.Font.Color := clGray;
           HiResFilename := TempTexture2Name;
@@ -5983,7 +6289,7 @@ begin
       Clementine_RadioButton.Caption := Texture3Description_Edit.Text;
       if TempTexture3Name<>ClementineFilename then
         begin
-          Clementine_TextureMap.Free;
+          if Clementine_Texture_Loaded then Clementine_TextureMap.Free;
           Clementine_Texture_Loaded := False;
           Clementine_RadioButton.Font.Color := clGray;
           ClementineFilename := TempTexture3Name;
@@ -5997,7 +6303,7 @@ begin
 
       if TempEarthTextureName<>EarthTextureFilename then
         begin
-          Earth_TextureMap.Free;
+          if Earth_Texture_Loaded then Earth_TextureMap.Free;
           Earth_Texture_Loaded := False;
           EarthTextureFilename := TempEarthTextureName;
           FileSettingsChanged := True;
@@ -6113,33 +6419,125 @@ begin
     end;
 end;
 
+procedure TLTVT_Form.RefreshOptionsFromIniFile;
+var
+  IniFile : TIniFile;
+  DesiredPlanetString : String;
+  CandidatePlanet : Planet;
+  PlanetFound : Boolean;
+begin {TLTVT_Form.RefreshOptionsFromIniFile}
+  IniFile := TIniFile.Create(IniFileName);
+
+  DesiredPlanetString := UpperCase(IniFile.ReadString('LTVT Defaults','TargetPlanet',PlanetName[Moon]));
+
+  CandidatePlanet := Sun;
+  repeat
+    Inc(CandidatePlanet);
+    PlanetFound := DesiredPlanetString=UpperCase(PlanetName[CandidatePlanet])
+  until PlanetFound or (CandidatePlanet=High(Planet));
+
+  if PlanetFound then
+    ChangeTargetPlanet(CandidatePlanet)
+  else
+    begin
+      ShowMessage('Unable to set target planet to "'+DesiredPlanetString+'"; setting to "Moon"');
+      ChangeTargetPlanet(Moon);
+    end;
+
+
+  ShowEarth_MainMenuItem.Caption := 'Show &Earth viewed from '+CurrentPlanetName;
+
+  if CreatingForm then
+    begin
+      if YesNoToBoolean(IniFile.ReadString('LTVT Defaults','Draw_Dots_on_Startup','no')) then
+        DrawingMode := DotMode
+      else
+        DrawingMode := TextureMode;
+    end;
+
+  CraterThreshold_LabeledNumericEdit.NumericEdit.Text := IniFile.ReadString('LTVT Defaults','Feature_size_threshold','-1');
+
+  Top := StrToInt(IniFile.ReadString('LTVT Defaults','LTVT_Window_Top','0'));
+  Left := StrToInt(IniFile.ReadString('LTVT Defaults','LTVT_Window_Left','11'));
+  Height := StrToInt(IniFile.ReadString('LTVT Defaults','LTVT_Window_Height','744'));
+  Width := StrToInt(IniFile.ReadString('LTVT Defaults','LTVT_Window_Width','994'));
+
+  FormResize(Self);
+
+  IniFile.Free;
+
+  RestoreLocationOptions;
+  RestoreFileOptions;
+  RestoreDefaultLabelOptions;
+  RestoreCartographicOptions;
+  RestoreDemOptions;
+  RestoreMouseOptions;
+
+  if not CreatingForm then RefreshImage;  // may produce unwanted effects depending on purpose of changing *.ini file?
+
+  FileSettingsChanged := False;
+end;  {TLTVT_Form.RefreshOptionsFromIniFile}
+
 procedure TLTVT_Form.Saveoptions_MainMenuItemClick(Sender: TObject);
 var
   IniFile : TIniFile;
 
 begin  {Saveoptions_MainMenuItemClick}
-  if MessageDlg('Save all current settings as defaults?',mtConfirmation,[mbYes,mbNo],0)=mrYes then
+  with SaveDialog1 do
     begin
-      IniFile := TIniFile.Create(IniFileName);
+      Title := 'Choose INI file in which to save current options';
+      FileName := IniFileName;
+      Filter := 'INI files (*.ini)|*.ini|All Files|*.*';
+      if Execute then
+        begin
+          IniFileName := FileName;
+          if ExtractFileExt(IniFileName)='' then IniFileName := IniFileName+'.ini';
 
-      if DrawingMode=DotMode then
-        IniFile.WriteString('LTVT Defaults','Draw_Dots_on_Startup','yes')
-      else
-        IniFile.WriteString('LTVT Defaults','Draw_Dots_on_Startup','no');
+          IniFile := TIniFile.Create(IniFileName);
 
-      IniFile.WriteString('LTVT Defaults','Feature_size_threshold',CraterThreshold_LabeledNumericEdit.NumericEdit.Text);
+          if CurrentTargetPlanet<>Moon then
+            IniFile.WriteString('LTVT Defaults','TargetPlanet',CurrentPlanetName);
 
-      IniFile.Free;
+          if DrawingMode=DotMode then
+            IniFile.WriteString('LTVT Defaults','Draw_Dots_on_Startup','yes')
+          else
+            IniFile.WriteString('LTVT Defaults','Draw_Dots_on_Startup','no');
 
-      SaveDemOptions;
-      SaveCartographicOptions;
-      SaveDefaultLabelOptions;
-      SaveMouseOptions;
-      SaveFileOptions;
-      SaveLocationOptions;
+          IniFile.WriteString('LTVT Defaults','Feature_size_threshold',CraterThreshold_LabeledNumericEdit.NumericEdit.Text);
 
+          IniFile.WriteString('LTVT Defaults','LTVT_Window_Top',IntToStr(Top));
+          IniFile.WriteString('LTVT Defaults','LTVT_Window_Left',IntToStr(Left));
+          IniFile.WriteString('LTVT Defaults','LTVT_Window_Height',IntToStr(Height));
+          IniFile.WriteString('LTVT Defaults','LTVT_Window_Width',IntToStr(Width));
+
+          IniFile.Free;
+
+          SaveDemOptions;
+          SaveCartographicOptions;
+          SaveDefaultLabelOptions;
+          SaveMouseOptions;
+          SaveFileOptions;
+          SaveLocationOptions;
+
+        end;
     end;
 end;   {Saveoptions_MainMenuItemClick}
+
+procedure TLTVT_Form.ChangeIniFile_MainMenuItemClick(Sender: TObject);
+begin
+  with OpenDialog1 do
+    begin
+      Title := 'Overwrite current options with those in this INI file (and use it to save new defaults)';
+      FileName := IniFileName;
+      Filter := 'INI files (*.ini)|*.ini|All Files|*.*';
+      if Execute then
+        begin
+          IniFileName := FileName;
+          RefreshOptionsFromIniFile;
+          SetManualGeometryLabels;
+        end;
+    end;
+end;
 
 procedure TLTVT_Form.CalibratePhoto_MainMenuItemClick(Sender: TObject);
 begin
@@ -6257,7 +6655,7 @@ begin  {TLTVT_Form.LoadCalibratedPhoto_MainMenuItemClick}
               SubObsLonDeg := RadToDeg(ArcTan2(-UserPhoto_ZPrime_Unit_Vector[x],-UserPhoto_ZPrime_Unit_Vector[z]));
 
               SubObsLat := Format('%0.3f',[SubObsLatDeg]);
-              SubObsLon := Format('%0.3f',[PosNegDegrees(SubObsLonDeg)]);
+              SubObsLon := Format('%0.3f',[PosNegDegrees(SubObsLonDeg,LTVT_Form.PlanetaryLongitudeConvention)]);
 //                  ShowMessage('Sub-obs lon = '+SubObsLon);
             end;
 
@@ -6513,6 +6911,17 @@ begin
 }
 end;
 
+procedure TLTVT_Form.DrawDEMheightcontours_MainMenuItemClick(Sender: TObject);
+begin
+  if DrawingMode=EarthView then
+    begin
+      ShowMessage('This tool is not intended for use with Earth images');
+      Exit;
+    end;
+
+  DEM_ContourDrawing_Form.Show;
+end;
+
 procedure TLTVT_Form.DrawLimb_MainMenuItemClick(Sender: TObject);
 var
   Theta : Extended;
@@ -6620,7 +7029,7 @@ procedure TLTVT_Form.Image_PopupMenuPopup(Sender: TObject);
       NearestDotToReferencePoint_RightClickMenuItem.Visible := DesiredState;
       Recordshadowmeasurement_RightClickMenuItem.Visible := DesiredState;
     end;
-    
+
 begin
   if DrawingMode=EarthView then
     SetItems(False)  // hide most options
@@ -6632,245 +7041,15 @@ begin
     end;
 end;
 
-procedure TLTVT_Form.ShowEarth_MainMenuItemClick(Sender: TObject);
-var
-  UT_MJD : extended;
-  SubLunar, SubSolar : TPolarCoordinates;
-  TempPicture : TPicture;
-  ScaledMap : TBitMap;
+procedure TLTVT_Form.CountDots_RightClickMenuItemClick(Sender: TObject);
+begin
+  ShowMessage('Number of dots in current display: '+IntToStr(Length(CraterInfo)));
+end;
 
-  MapPtr : ^TBitmap;
-
-  i, j,                {screen coords}
-  RawXPix, RawYPix  : Integer;
-
-  Lat, Lon,            {selenographic latitude, longitude [radians]}
-  MinLon, MaxLon, MinLat, MaxLat,  {of TextureMap}
-  XPixPerRad, YPixPerRad,  {of TextureMap}
-  Y  : Extended;
-
-  RawRow, ScaledRow  :  pRGBArray;
-
-  SkyPixel, NoDataPixel : TRGBTriple;
-
-function GeographicLatitude(const VectorLatitude : Extended) : Extended;
-  const
-  // WGS-84 values from http://www.movable-type.co.uk/scripts/latlong-vincenty.html
-  // for others see http://en.wikipedia.org/wiki/Figure_of_the_Earth
-    a = 6378137.0;    // [km]
-    b = 6356752.3142;
-    ab_ratio_sqrd = (a*a)/(b*b);
-  begin
-    if VectorLatitude>=PiByTwo then
-      Result := PiByTwo
-    else if VectorLatitude<=-PiByTwo then
-      Result := -PiByTwo
-    else
-    // formula verified at  http://bse.unl.edu/adamchuk/web_ssm/web_GPS_eq.html
-      Result := ArcTan(ab_ratio_sqrd*Tan(VectorLatitude));
-  end;
-
-begin {TLTVT_Form.ShowEarth_MainMenuItemClick}
-  ImageDate := DateOf(Date_DateTimePicker.Date);
-  ImageTime := TimeOf(Time_DateTimePicker.Time);
-
-// Note time correction is needed to make results agree with JPL Ephemeris and maximum zenith elevation in mouseover
-  UT_MJD := DateTimeToModifiedJulianDate(ImageDate + ImageTime) - 1.5*OneMinute/OneDay; // add empirical time correction
-
-  if not EphemerisDataAvailable(UT_MJD) then
-    begin
-      ShowMessage('Cannot estimate geometry -- ephemeris file not loaded');
-      Exit;
-    end;
-
-  SubLunar := SubLunarPointOnEarth(UT_MJD);
-  SubSolar := SubSolarPointOnEarth(UT_MJD);
-
-  PolarToVector(SubLunar.Longitude,SubLunar.Latitude,1,SubObsvrVector);
-  PolarToVector(SubSolar.Longitude,SubSolar.Latitude,1,SubSolarVector);
-
-  with SubLunar do   // for labeling if image is saved
-    begin
-      ImageSubObsLon := Longitude;
-      ImageSubObsLat := GeographicLatitude(Latitude);
-    end;
-
-  with SubSolar do
-    begin
-      ImageSubSolLon := Longitude;
-      ImageSubSolLat := GeographicLatitude(Latitude);
-    end;
-
-{
-  ShowMessage(Format('Sun at %0.3f, %0.3f (%0.3f)'+CR+'Moon at %0.3f, %0.3f (%0.3f)',
-    [RadToDeg(SubSolar.Longitude),RadToDeg(SubSolar.Latitude),RadToDeg(GeographicLatitude(SubSolar.Latitude)),
-    RadToDeg(SubLunar.Longitude),RadToDeg(SubLunar.Latitude),RadToDeg(GeographicLatitude(SubLunar.Latitude))]));
-}
-
-  PolarToVector(SubLunar.Longitude, GeographicLatitude(SubLunar.Latitude), 1, ZPrime_UnitVector); {sub-observer point}
-
-  NormalizeVector(ZPrime_UnitVector);
-
-  CrossProduct(Uy,ZPrime_UnitVector,XPrime_UnitVector);
-  if VectorMagnitude(XPrime_UnitVector)=0 then XPrime_UnitVector := Ux;  //ZPrime_UnitVector parallel to Uy (looking from over north or south pole)
-  NormalizeVector(XPrime_UnitVector);
-  CrossProduct(ZPrime_UnitVector,XPrime_UnitVector,YPrime_UnitVector);
-
-  ClearImage;
-
-  SkyPixel := ColorToRGBTriple(SkyColor);
-  NoDataPixel := ColorToRGBTriple(NoDataColor);
-
-  if not Earth_Texture_Loaded then
-    begin
-      OldFilename := EarthTextureFilename;
-      Earth_TextureMap := TBitmap.Create;
-
-      if (not FileExists(EarthTextureFilename)) and (MessageDlg('LTVT cannot find the Earth texture map'+CR
-                        +'   Do you want help with this?',
-          mtWarning,[mbYes,mbNo],0)=mrYes) then
-            begin
-              HtmlHelp(0,PChar(Application.HelpFile+'::/Help Topics/TextureFilesStepByStep.htm'),HH_DISPLAY_TOPIC, 0);
-            end;
-
-      if FileExists(EarthTextureFilename) or PictureFileFound('Earth Texture File','land_shallow_topo_2048.jpg',EarthTextureFilename) then
-        begin
-          Screen.Cursor := crHourGlass;
-          StatusLine_Label.Caption := 'Please wait, reading texture file...';
-          ThreeD_CheckBox.Hide;
-          Application.ProcessMessages;
-          TempPicture := TPicture.Create;
-          TempPicture.OnProgress := ImageLoadProgress;
-//          TempPicture.Bitmap.PixelFormat := pf24bit; // doesn't help
-          TRY
-            TRY
-              TempPicture.LoadFromFile(EarthTextureFilename);
-              if LinuxCompatibilityMode then
-                begin
-                  Earth_TextureMap.Width  := TempPicture.Graphic.Width;
-                  Earth_TextureMap.Height := TempPicture.Graphic.Height;
-                  Earth_TextureMap.PixelFormat := pf24bit;
-                  Earth_TextureMap.Canvas.Draw(0,0, TempPicture.Graphic);
-                end
-              else
-                begin
-                  Earth_TextureMap.Assign(TempPicture.Graphic);
-                  Earth_TextureMap.PixelFormat := pf24bit;  // Note: this seems essential and needs to be done AFTER loading the graphic
-                    // but it significantly slows down the loading of the image, particularly if it is already in BMP format.
-                end;
-              Earth_Texture_Loaded := true;
-            EXCEPT
-              ShowMessage('Unable to load "'+EarthTextureFilename+'"');
-            END;
-
-          FINALLY
-            TempPicture.Free;
-            StatusLine_Label.Caption := '';
-            ThreeD_CheckBox.Show;
-            Application.ProcessMessages;
-            Screen.Cursor := DefaultCursor;
-          END;
-        end;
-
-      if EarthTextureFilename<>OldFilename then FileSettingsChanged := True;
-    end;
-
-  MapPtr := @Earth_TextureMap;
-  TextureFilename := EarthTextureFilename;
-
-  if MapPtr=nil then
-    begin
-      ShowMessage('No texture map loaded -- drawing map in Dots mode');
-      DrawDots_Button.Click;
-    end
-  else
-    begin
-      DrawingMap_Label.Caption := 'Drawing texture map...';
-      Screen.Cursor := crHourGlass;
-      ProgressBar1.Max := Image1.Height-1;
-      ProgressBar1.Step := 1;
-      ProgressBar1.Show;
-      DrawCircles_CheckBox.Hide;
-      MarkCenter_CheckBox.Hide;
-      ThreeD_CheckBox.Hide;
-      Application.ProcessMessages;
-
-      MinLon := DegToRad(-180);
-      MaxLon := DegToRad(180);
-      MinLat := DegToRad(-90);
-      MaxLat := DegToRad(90);
-
-      XPixPerRad := MapPtr^.Width/(MaxLon - MinLon);
-      YPixPerRad := MapPtr^.Height/(MaxLat - MinLat);
-
-      with Image1 do
-        begin
-          if Width>Height then
-            SetRange(-Width/Height,Width/Height,-1,1)
-          else
-            SetRange(-1,1,-Height/Width,Height/Width);
-        end;
-
-//      ShowMessage(Format('Min lon: %0.3f  Max Lon: %0.3f  ppd: %0.3f',[RadToDeg(MinLon),RadToDeg(MaxLon),XPixPerRad*DegToRad(1)]));
-
-      ScaledMap := TBitmap.Create;
-      ScaledMap.PixelFormat := pf24bit;
-      ScaledMap.Height := Image1.Height;
-      ScaledMap.Width := Image1.Width;
-
-      for j := 0 to Image1.Height-1 do with Image1 do
-        begin
-    //      Application.ProcessMessages;
-          ProgressBar1.StepIt;
-          Y := YValue(j);
-          ScaledRow := ScaledMap.ScanLine[j];
-
-          for i := 0 to Image1.Width-1 do
-            begin
-              if ConvertXYtoLonLat(XValue(i),Y,Lon,Lat) then {point is inside circle, want to draw}
-                begin
-                      RawXPix := Trunc((Lon - MinLon)*XPixPerRad);
-                      RawYPix := Trunc((MaxLat - Lat)*YPixPerRad);
-
-                   // wrap around if necessary
-                      while RawXPix<0 do RawXPix := RawXPix + MapPtr^.Width;
-                      while RawXPix>(MapPtr^.Width-1) do RawXPix := RawXPix - MapPtr^.Width;
-                      while RawYPix<0 do RawYPix := RawYPix + MapPtr^.Height;
-                      while RawYPix>(MapPtr^.Height-1) do RawYPix := RawYPix - MapPtr^.Height;
-
-                      RawRow := MapPtr^.ScanLine[RawYPix];
-                      ScaledRow[i] := RawRow[RawXPix];
-                      GammaCorrectPixelValue(ScaledRow[i],ImageGamma);
-                end
-              else if SkyColor<>clWhite then
-                begin
-                  ScaledRow[i] := SkyPixel;  // generates background of specified color outside image area
-                end;
-            end;
-
-        end;
-
-      Image1.Canvas.Draw(0,0,ScaledMap);
-
-      ScaledMap.Free;
-
-      DrawCircle(RadToDeg(SubSolar.Longitude),RadToDeg(SubSolar.Latitude),RadToDeg(Pi/2-SunRad),clRed); // Evening terminator
-      DrawCircle(RadToDeg(SubSolar.Longitude),RadToDeg(SubSolar.Latitude),RadToDeg(Pi/2+SunRad),clBlue); // Morning terminator
-
-      MarkXY(0,0,ReferencePointColor);
-
-      ProgressBar1.Hide;
-      DrawCircles_CheckBox.Show;
-      MarkCenter_CheckBox.Show;
-      ThreeD_CheckBox.Show;
-      DrawingMap_Label.Caption := '';
-      Screen.Cursor := DefaultCursor;
-
-      DrawingMode := EarthView;
-    end;
-
-
-end;  {TLTVT_Form.ShowEarth_MainMenuItemClick}
+procedure TLTVT_Form.Abort_ButtonClick(Sender: TObject);
+begin
+  AbortKeyPressed := True;
+end;
 
 function TLTVT_Form.EphemerisDataAvailable(const MJD : Extended) : Boolean;
 var
@@ -6928,6 +7107,40 @@ begin {TLTVT_Form.EphemerisDataAvailable}
 
 end;   {TLTVT_Form.EphemerisDataAvailable}
 
+procedure TLTVT_Form.ChangeTargetPlanet_MainMenuItemClick(Sender: TObject);
+var
+  PossessiveS : String;
+begin
+  with TargetSelection_Form do
+    begin
+      PlanetSelected := False;
+      ShowModal;
+      if PlanetSelected then
+        begin
+          ChangeTargetPlanet(SelectedPlanet);
+          MoonDiameter_Label.Hint :=
+            Format('Angular size of an idealized %0.1f km radius %s as seen from the observation site at the requested time ',[MoonRadius,CurrentPlanetName]);
+          MoonElev_Label.Hint := 'Altitude (above horizontal) and azimuth (CW from north) of '+CurrentPlanetName+' and Sun from observation site at requested time';
+          ShowEarth_MainMenuItem.Caption := 'Show &Earth viewed from '+CurrentPlanetName;
+          if CurrentPlanetName[Length(CurrentPlanetName)]='s' then
+            PossessiveS := ''
+          else
+            PossessiveS := 's';
+          DrawLinesToPoleAndSun_RightClickMenuItem.Caption := 'Draw lines towards sub-solar point  (red) and '+CurrentPlanetName+''''+PossessiveS+' north pole (blue)';
+          if CurrentTargetPlanet=Moon then
+            begin
+              Colongitude_Label.Hint := '90° - Selenographic longitude of Subsolar Point';
+              MousePosition_GroupBox.Hint := 'Information related to current mouse position; in top caption, "Map" is IAU format LTO zone number; "Rnn" is Rükl sheet number';
+            end
+          else
+            begin
+              Colongitude_Label.Hint := 'Longitude of Central Meridian';
+              MousePosition_GroupBox.Hint := 'Information related to current mouse position';
+            end;
+        end;
+    end;
+end;
+
 procedure TLTVT_Form.DisplayF1Help(const PressedKey : Word; const ShiftState : TShiftState; const HelpFileName : String);
 {launches .chm help on indicated page if PressedKey=F1}
 type
@@ -6983,11 +7196,12 @@ begin
             end; {case}
         end;
     end;
+
 end;
 
-procedure TLTVT_Form.Abort_ButtonClick(Sender: TObject);
+procedure TLTVT_Form.FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  AbortDrawing := True;
+  DisplayF1Help(Key,Shift,'MainForm.htm');
 end;
 
 procedure TLTVT_Form.Now_ButtonKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
@@ -7149,12 +7363,6 @@ begin
   DisplayF1Help(Key,Shift,'MainForm.htm#MarkCenter');
 end;
 
-procedure TLTVT_Form.FormKeyDown(Sender: TObject; var Key: Word;
-  Shift: TShiftState);
-begin
-  DisplayF1Help(Key,Shift,'MainForm.htm');
-end;
-
 procedure TLTVT_Form.DrawDEM_ButtonKeyDown(Sender: TObject; var Key: Word;
   Shift: TShiftState);
 begin
@@ -7172,10 +7380,243 @@ begin
   HtmlHelp(0,PChar(Application.HelpFile+'::/Help Topics/MainForm.htm#Right_Click_Menu'),HH_DISPLAY_TOPIC, 0);
 end;
 
-procedure TLTVT_Form.CountDots_RightClickMenuItemClick(
-  Sender: TObject);
-begin
-  ShowMessage('Number of dots in current display: '+IntToStr(Length(CraterInfo)));
-end;
+procedure TLTVT_Form.ShowEarth_MainMenuItemClick(Sender: TObject);
+var
+  UT_MJD : extended;
+  SubLunar, SubSolar : TPolarCoordinates;
+  TempPicture : TPicture;
+  ScaledMap : TBitMap;
+
+  MapPtr : ^TBitmap;
+
+  i, j,                {screen coords}
+  RawXPix, RawYPix  : Integer;
+
+  Lat, Lon,            {selenographic latitude, longitude [radians]}
+  MinLon, MaxLon, MinLat, MaxLat,  {of TextureMap}
+  XPixPerRad, YPixPerRad,  {of TextureMap}
+  Y  : Extended;
+
+  RawRow, ScaledRow  :  pRGBArray;
+
+  SkyPixel, NoDataPixel : TRGBTriple;
+
+function GeographicLatitude(const VectorLatitude : Extended) : Extended;
+  const
+  // WGS-84 values from http://www.movable-type.co.uk/scripts/latlong-vincenty.html
+  // for others see http://en.wikipedia.org/wiki/Figure_of_the_Earth
+    a = 6378137.0;    // [km]
+    b = 6356752.3142;
+    ab_ratio_sqrd = (a*a)/(b*b);
+  begin
+    if VectorLatitude>=PiByTwo then
+      Result := PiByTwo
+    else if VectorLatitude<=-PiByTwo then
+      Result := -PiByTwo
+    else
+    // formula verified at  http://bse.unl.edu/adamchuk/web_ssm/web_GPS_eq.html
+      Result := ArcTan(ab_ratio_sqrd*Tan(VectorLatitude));
+  end;
+
+begin {TLTVT_Form.ShowEarth_MainMenuItemClick}
+  ImageDate := DateOf(Date_DateTimePicker.Date);
+  ImageTime := TimeOf(Time_DateTimePicker.Time);
+
+// Note time correction is needed to make results agree with JPL Ephemeris and maximum zenith elevation in mouseover
+  UT_MJD := DateTimeToModifiedJulianDate(ImageDate + ImageTime) - 1.5*OneMinute/OneDay; // add empirical time correction
+
+  if not EphemerisDataAvailable(UT_MJD) then
+    begin
+      ShowMessage('Cannot estimate geometry -- ephemeris file not loaded');
+      Exit;
+    end;
+
+  SubLunar := SubLunarPointOnEarth(UT_MJD);
+  SubSolar := SubSolarPointOnEarth(UT_MJD);
+
+  PolarToVector(SubLunar.Longitude,SubLunar.Latitude,1,SubObsvrVector);
+  PolarToVector(SubSolar.Longitude,SubSolar.Latitude,1,SubSolarVector);
+
+  with SubLunar do   // for labeling if image is saved
+    begin
+      ImageSubObsLon := Longitude;
+      ImageSubObsLat := GeographicLatitude(Latitude);
+    end;
+
+  with SubSolar do
+    begin
+      ImageSubSolLon := Longitude;
+      ImageSubSolLat := GeographicLatitude(Latitude);
+    end;
+
+{
+  ShowMessage(Format('Sun at %0.3f, %0.3f (%0.3f)'+CR+'Moon at %0.3f, %0.3f (%0.3f)',
+    [RadToDeg(SubSolar.Longitude),RadToDeg(SubSolar.Latitude),RadToDeg(GeographicLatitude(SubSolar.Latitude)),
+    RadToDeg(SubLunar.Longitude),RadToDeg(SubLunar.Latitude),RadToDeg(GeographicLatitude(SubLunar.Latitude))]));
+}
+
+  PolarToVector(SubLunar.Longitude, GeographicLatitude(SubLunar.Latitude), 1, ZPrime_UnitVector); {sub-observer point}
+
+  NormalizeVector(ZPrime_UnitVector);
+
+  CrossProduct(Uy,ZPrime_UnitVector,XPrime_UnitVector);
+  if VectorMagnitude(XPrime_UnitVector)=0 then XPrime_UnitVector := Ux;  //ZPrime_UnitVector parallel to Uy (looking from over north or south pole)
+  NormalizeVector(XPrime_UnitVector);
+  CrossProduct(ZPrime_UnitVector,XPrime_UnitVector,YPrime_UnitVector);
+
+  ClearImage;
+
+  SkyPixel := ColorToRGBTriple(SkyColor);
+  NoDataPixel := ColorToRGBTriple(NoDataColor);
+
+  if not Earth_Texture_Loaded then
+    begin
+      OldFilename := EarthTextureFilename;
+      Earth_TextureMap := TBitmap.Create;
+
+      if (not FileExists(EarthTextureFilename)) and (MessageDlg('LTVT cannot find the Earth texture map'+CR
+                        +'   Do you want help with this?',
+          mtWarning,[mbYes,mbNo],0)=mrYes) then
+            begin
+              HtmlHelp(0,PChar(Application.HelpFile+'::/Help Topics/TextureFilesStepByStep.htm'),HH_DISPLAY_TOPIC, 0);
+            end;
+
+      if FileExists(EarthTextureFilename) or PictureFileFound('Earth Texture File','land_shallow_topo_2048.jpg',EarthTextureFilename) then
+        begin
+          Screen.Cursor := crHourGlass;
+          ThreeD_CheckBox.Hide;
+          StatusLine_Label.Caption := 'Please wait, reading texture file...';
+          Application.ProcessMessages;
+          TempPicture := TPicture.Create;
+          TempPicture.OnProgress := ImageLoadProgress;
+//          TempPicture.Bitmap.PixelFormat := pf24bit; // doesn't help
+          TRY
+            TRY
+              TempPicture.LoadFromFile(EarthTextureFilename);
+              if LinuxCompatibilityMode then
+                begin
+                  Earth_TextureMap.Width  := TempPicture.Graphic.Width;
+                  Earth_TextureMap.Height := TempPicture.Graphic.Height;
+                  Earth_TextureMap.PixelFormat := pf24bit;
+                  Earth_TextureMap.Canvas.Draw(0,0, TempPicture.Graphic);
+                end
+              else
+                begin
+                  Earth_TextureMap.Assign(TempPicture.Graphic);
+                  Earth_TextureMap.PixelFormat := pf24bit;  // Note: this seems essential and needs to be done AFTER loading the graphic
+                    // but it significantly slows down the loading of the image, particularly if it is already in BMP format.
+                end;
+              Earth_Texture_Loaded := true;
+            EXCEPT
+              ShowMessage('Unable to load "'+EarthTextureFilename+'"');
+            END;
+
+          FINALLY
+            TempPicture.Free;
+            StatusLine_Label.Caption := '';
+            ThreeD_CheckBox.Show;
+            Application.ProcessMessages;
+            Screen.Cursor := DefaultCursor;
+          END;
+        end;
+
+      if EarthTextureFilename<>OldFilename then FileSettingsChanged := True;
+    end;
+
+  MapPtr := @Earth_TextureMap;
+  TextureFilename := EarthTextureFilename;
+
+  if MapPtr=nil then
+    begin
+      ShowMessage('No texture map loaded -- drawing map in Dots mode');
+      DrawDots_Button.Click;
+    end
+  else
+    begin
+      DrawingMap_Label.Caption := 'Drawing texture map...';
+      Screen.Cursor := crHourGlass;
+      ProgressBar1.Max := Image1.Height-1;
+      ProgressBar1.Step := 1;
+      ProgressBar1.Show;
+      DrawCircles_CheckBox.Hide;
+      MarkCenter_CheckBox.Hide;
+      ThreeD_CheckBox.Hide;
+      Application.ProcessMessages;
+
+      MinLon := DegToRad(-180);
+      MaxLon := DegToRad(180);
+      MinLat := DegToRad(-90);
+      MaxLat := DegToRad(90);
+
+      XPixPerRad := MapPtr^.Width/(MaxLon - MinLon);
+      YPixPerRad := MapPtr^.Height/(MaxLat - MinLat);
+
+      with Image1 do
+        begin
+          if Width>Height then
+            SetRange(-Width/Height,Width/Height,-1,1)
+          else
+            SetRange(-1,1,-Height/Width,Height/Width);
+        end;
+
+//      ShowMessage(Format('Min lon: %0.3f  Max Lon: %0.3f  ppd: %0.3f',[RadToDeg(MinLon),RadToDeg(MaxLon),XPixPerRad*DegToRad(1)]));
+
+      ScaledMap := TBitmap.Create;
+      ScaledMap.PixelFormat := pf24bit;
+      ScaledMap.Height := Image1.Height;
+      ScaledMap.Width := Image1.Width;
+
+      for j := 0 to Image1.Height-1 do with Image1 do
+        begin
+    //      Application.ProcessMessages;
+          ProgressBar1.StepIt;
+          Y := YValue(j);
+          ScaledRow := ScaledMap.ScanLine[j];
+
+          for i := 0 to Image1.Width-1 do
+            begin
+              if ConvertXYtoLonLat(XValue(i),Y,Lon,Lat) then {point is inside circle, want to draw}
+                begin
+                      RawXPix := Trunc((Lon - MinLon)*XPixPerRad);
+                      RawYPix := Trunc((MaxLat - Lat)*YPixPerRad);
+
+                   // wrap around if necessary
+                      while RawXPix<0 do RawXPix := RawXPix + MapPtr^.Width;
+                      while RawXPix>(MapPtr^.Width-1) do RawXPix := RawXPix - MapPtr^.Width;
+                      while RawYPix<0 do RawYPix := RawYPix + MapPtr^.Height;
+                      while RawYPix>(MapPtr^.Height-1) do RawYPix := RawYPix - MapPtr^.Height;
+
+                      RawRow := MapPtr^.ScanLine[RawYPix];
+                      ScaledRow[i] := RawRow[RawXPix];
+                      GammaCorrectPixelValue(ScaledRow[i],ImageGamma);
+                end
+              else if SkyColor<>clWhite then
+                begin
+                  ScaledRow[i] := SkyPixel;  // generates background of specified color outside image area
+                end;
+            end;
+
+        end;
+
+      Image1.Canvas.Draw(0,0,ScaledMap);
+
+      ScaledMap.Free;
+
+      DrawCircle(RadToDeg(SubSolar.Longitude),RadToDeg(SubSolar.Latitude),RadToDeg(Pi/2-SunRad),clRed); // Evening terminator
+      DrawCircle(RadToDeg(SubSolar.Longitude),RadToDeg(SubSolar.Latitude),RadToDeg(Pi/2+SunRad),clBlue); // Morning terminator
+
+      MarkXY(0,0,ReferencePointColor);
+
+      ProgressBar1.Hide;
+      DrawCircles_CheckBox.Show;
+      MarkCenter_CheckBox.Show;
+      ThreeD_CheckBox.Show;
+      DrawingMap_Label.Caption := '';
+      Screen.Cursor := DefaultCursor;
+
+      DrawingMode := EarthView;
+    end;
+
+end;  {TLTVT_Form.ShowEarth_MainMenuItemClick}
 
 end.

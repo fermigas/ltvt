@@ -666,10 +666,13 @@ procedure PolarToVector(const Lon_radians, Lat_radians, Radius : extended;  var 
   z-axis = origin of Longitude (which is measured CCW about y-axis)
   x-axis = y cross z
  Lat, Lon are in radians }
+  var
+    CosLat : Extended;
   begin
-    VectorResult[x] := Radius*Sin(Lon_radians)*Cos(Lat_radians);
+    CosLat := Cos(Lat_radians);
+    VectorResult[x] := Radius*Sin(Lon_radians)*CosLat;
     VectorResult[y] := Radius*Sin(Lat_radians);
-    VectorResult[z] := Radius*Cos(Lon_radians)*Cos(Lat_radians);
+    VectorResult[z] := Radius*Cos(Lon_radians)*CosLat;
   end;
 
 function VectorToPolar(const InputVector : TVector): TPolarCoordinates;

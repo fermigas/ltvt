@@ -1,10 +1,10 @@
 object MoonEventPredictor_Form: TMoonEventPredictor_Form
-  Left = 60
+  Left = 67
   Top = 37
   Width = 945
   Height = 696
   ActiveControl = Tabulate_Button
-  Caption = 'LTVT Moon Event Predictor v0.8'
+  Caption = 'LTVT Moon Event Predictor v0.11'
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -13,6 +13,7 @@ object MoonEventPredictor_Form: TMoonEventPredictor_Form
   Font.Style = []
   OldCreateOrder = False
   ShowHint = True
+  OnActivate = FormActivate
   OnCreate = FormCreate
   OnDestroy = FormDestroy
   OnShow = FormShow
@@ -90,7 +91,9 @@ object MoonEventPredictor_Form: TMoonEventPredictor_Form
       Top = 16
       Width = 138
       Height = 19
-      Hint = 'Sun'#39's selenographic colongitude -- DD.ddd format'
+      Hint = 
+        'Sun'#39's latitude with respect to equator in decimal degrees (DD.dd' +
+        'd format; N=+/S=-)'
       AutoSize = True
       TabOrder = 1
       inherited Item_Label: TLabel
@@ -117,8 +120,8 @@ object MoonEventPredictor_Form: TMoonEventPredictor_Form
       Width = 194
       Height = 19
       Hint = 
-        'Flag cases where Solar Inclination is this close to target event' +
-        ' -- DD.ddd format'
+        'Flag/filter cases where Sun'#39's latitude is within this range of t' +
+        'arget value -- DD.ddd format'
       AutoSize = True
       TabOrder = 2
       inherited Item_Label: TLabel
@@ -156,8 +159,8 @@ object MoonEventPredictor_Form: TMoonEventPredictor_Form
       Width = 123
       Height = 19
       Hint = 
-        'Selenographic North Latitude  of Target Point in Degrees -- DD.d' +
-        'dd format'
+        'Latitude  of target point in decimal degrees (DD.ddd format; Eas' +
+        't=+/West=-)'
       AutoSize = True
       TabOrder = 0
       inherited Item_Label: TLabel
@@ -182,8 +185,8 @@ object MoonEventPredictor_Form: TMoonEventPredictor_Form
       Width = 123
       Height = 19
       Hint = 
-        'Selenographic East Longitude of Target Point in Degrees  -- DD.d' +
-        'dd format'
+        'Longitude of target point in decimal degrees  (DDD.ddd format; E' +
+        'ast =+/West=-)'
       AutoSize = True
       TabOrder = 1
       inherited Item_Label: TLabel
@@ -235,8 +238,8 @@ object MoonEventPredictor_Form: TMoonEventPredictor_Form
       Width = 194
       Height = 19
       Hint = 
-        'Flag cases where solar azimuth is this close to target event -- ' +
-        'DD.ddd format'
+        'Flag/filter cases where solar azimuth is this close to target ev' +
+        'ent -- DD.ddd format'
       AutoSize = True
       TabOrder = 3
       inherited Item_Label: TLabel
@@ -358,7 +361,7 @@ object MoonEventPredictor_Form: TMoonEventPredictor_Form
   object ColongitudeMode_RadioButton: TRadioButton
     Left = 16
     Top = 48
-    Width = 113
+    Width = 145
     Height = 17
     Hint = 'Select events with specified colongitude'
     Caption = 'Colongitude Mode'

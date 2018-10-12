@@ -65,10 +65,14 @@ interface
       ('Sun'    ,'Mercury','Venus'  ,'Earth'  ,'Mars'   ,'Jupiter',
        'Saturn' ,'Uranus' ,'Neptune','Pluto'  ,'Moon'   ,'Star' );
     PlanetRadius : array[Sun..Star] of extended =
-     {radii in [m] from Physics Vade Mecum, pp. 71 (Sun, Earth),
-       75-Table 3.07 (Mercury-Pluto), and JPL Horizons (Moon)}
-      ( RSun,     2439e3,   6052e3,   REarth,   3393.4e3, 71398e3,
-        60000e3,  25400e3, 24300e3,   2000e3,   1737.4e3, 0 );
+     {radii in [m] from Physics Vade Mecum, pp. 71 (Sun, Earth), 75-Table 3.07 (Mercury-Pluto),
+      and JPL Horizons/IAU (Moon) and MGCWG paper by Duxbury et al. (Mars)
+     ( RSun,     2439e3,   6052e3,   REarth,   3389.5e3, 71398e3,
+        60000e3,  25400e3, 24300e3,   2000e3,   1737.4e3, 0 );   }
+ // updated with mean radii from  Seidelmann et al. 2007 :
+// Report of the IAU/IAGWorking Group on cartographic coordinates and rotational elements: 2006
+     ( RSun,     2439.7e3,   6051.8e3,   REarth,   3389.5e3, 69911e3,
+        58232e3,  25362e3, 24622e3,   1195e3,   1737.4e3, 0 );
     ObserverDescription : array [Jim..Special] of string =
       ('Private Road',
        'Ensign View Park',

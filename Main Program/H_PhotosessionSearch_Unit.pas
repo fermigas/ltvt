@@ -1,27 +1,4 @@
 unit H_PhotosessionSearch_Unit;
-{
-v1.4:
-  1. Added box for observer elevation.
-  2. Reduce tabulation to two shades of gray (Moon up or Moon down).
-
-v0.0: (= v1.5 renamed)
-  1. Corrected JPL routine so it can silently cross 50-year boundaries.
-  2. Corrected Sub-observer point lon/lat display (librations) which was reversed!
-
-v0.3
-  1. Allow comment lines in .csv file
-
-v0.4  
-  1. Improved longitude/latitude tooltips to indicate E=+ W=- N=+ S = -.
-
-v0.5
-  1. In tabulation an ExtractFilename() is now applied to the File Description
-     to make this more compatible with the Photo Calibration data file.
-
-v0.6
-  1. Add Abort button and "search completed" messages.
-
-                                                                   3/6/09}
 
 interface
 
@@ -46,7 +23,6 @@ type
     Memo1: TRichEdit;
     ClearMemo_Button: TButton;
     Tabulate_Button: TButton;
-    SolarLatitude_LabeledNumericEdit: TLabeledNumericEdit;
     Font_Button: TButton;
     FontDialog1: TFontDialog;
     ColongitudeTolerance_LabeledNumericEdit: TLabeledNumericEdit;
@@ -66,6 +42,7 @@ type
     Abort_Button: TButton;
     ObservatoryList_ComboBox: TComboBox;
     AddLocation_Button: TButton;
+    SunAzimuthTolerance_LabeledNumericEdit: TLabeledNumericEdit;
     procedure CalculateCircumstances_ButtonClick(Sender: TObject);
     procedure ClearMemo_ButtonClick(Sender: TObject);
     procedure Tabulate_ButtonClick(Sender: TObject);
@@ -136,6 +113,9 @@ type
     procedure AddLocation_ButtonKeyDown(Sender: TObject; var Key: Word;
       Shift: TShiftState);
     procedure AddLocation_ButtonClick(Sender: TObject);
+    procedure FormActivate(Sender: TObject);
+    procedure SunAzimuthTolerance_LabeledNumericEditNumericEditKeyDown(
+      Sender: TObject; var Key: Word; Shift: TShiftState);
   private
     { Private declarations }
   public
@@ -148,12 +128,6 @@ type
 
     SubSolarPoint : TPolarCoordinates;
     SolarColongitude : extended;  {in rad}
-
-    function EW_Tag(const Longitude : extended): string;
-    {returns 'E' or 'W'}
-
-    function NS_Tag(const Latitude : extended): string;
-    {returns 'N' or 'S'}
 
     function JPL_File_Valid(const Desired_MJD : extended) : boolean;
     {returns true if Desired_MJD falls within range of current ephemeris file;
@@ -206,6 +180,22 @@ begin
   ObsElevList.Free;;
 end;
 
+procedure TPhotosessionSearch_Form.FormActivate(Sender: TObject);
+begin
+  if CurrentTargetPlanet=Moon then
+    begin
+      ColongitudeMode_RadioButton.Caption := 'Colongitude Mode';
+      Colongitude_LabeledNumericEdit.Item_Label.Caption := 'Colongitude:';
+      Colongitude_LabeledNumericEdit.Hint := 'Desired selenographic colongitude of Sun in decimal degrees (DD.ddd format)'
+    end
+  else
+    begin
+      ColongitudeMode_RadioButton.Caption := 'Central Meridian Mode';
+      Colongitude_LabeledNumericEdit.Item_Label.Caption := '        CM :';
+      Colongitude_LabeledNumericEdit.Hint := 'Desired central meridian longitude in decimal degrees (DD.ddd format; East=+/West=-)'
+    end;
+end;
+
 procedure TPhotosessionSearch_Form.RefreshSelection;
 var
   i : Integer;
@@ -237,8 +227,7 @@ begin
     end;
 end;
 
-procedure TPhotosessionSearch_Form.ObservatoryList_ComboBoxSelect(
-  Sender: TObject);
+procedure TPhotosessionSearch_Form.ObservatoryList_ComboBoxSelect(Sender: TObject);
 begin
   with ObservatoryList_ComboBox do if ItemIndex>=0 then
     begin
@@ -305,7 +294,7 @@ begin
     Trim(ObserverLongitude_LabeledNumericEdit.NumericEdit.Text)+', '+
     Trim(ObserverLatitude_LabeledNumericEdit.NumericEdit.Text)+', '+
     Trim(ObserverElevation_LabeledNumericEdit.NumericEdit.Text)+', '+
-    NameToAdd);
+    CSV_formatted_string(NameToAdd));
   CloseFile(ObsListFile);
 
   ObsLonList.Add(Trim(ObserverLongitude_LabeledNumericEdit.NumericEdit.Text));
@@ -318,22 +307,6 @@ begin
 //  ShowMessage('Location added to '+LTVT_Form.ObservatoryListFilename);
   RefreshSelection;
 end;
-
-function TPhotosessionSearch_Form.EW_Tag(const Longitude : extended): string;
-  begin
-    if Longitude>=0 then
-      Result := 'E'
-    else
-      Result := 'W';
-  end;
-
-function TPhotosessionSearch_Form.NS_Tag(const Latitude : extended): string;
-  begin
-    if Latitude>=0 then
-      Result := 'N'
-    else
-      Result := 'S';
-  end;
 
 function TPhotosessionSearch_Form.JPL_File_Valid(const Desired_MJD : extended) : boolean;
 {returns true if Desired_MJD falls within range of current ephemeris file;
@@ -393,11 +366,20 @@ begin {CalculateCircumstances_ButtonClick}
       CalculateSolarColongitude(UT_MJD);
 
       Memo1.Lines.Add('');
-      Memo1.Lines.Add('Lunar lighting conditions calculated for:  '+
-        LTVT_Form.CorrectedDateTimeToStr(ModifiedJulianDateToDateTime(UT_MJD))+' UT');
+      if CurrentTargetPlanet=Moon then
+        begin
+          Memo1.Lines.Add('Lunar lighting conditions calculated for:  '+
+            LTVT_Form.CorrectedDateTimeToStr(ModifiedJulianDateToDateTime(UT_MJD))+' UT');
+          Colongitude_LabeledNumericEdit.NumericEdit.Text := Format('%0.4f',[RadToDeg(SolarColongitude)]);
+        end
+      else
+        begin
+          Memo1.Lines.Add('Conditions calculated for '+CurrentPlanetName+' :  '+
+            LTVT_Form.CorrectedDateTimeToStr(ModifiedJulianDateToDateTime(UT_MJD))+' UT');
+          Colongitude_LabeledNumericEdit.NumericEdit.Text := Format('%0.4f',[LTVT_Form.PosNegDegrees(RadToDeg(SolarColongitude),LTVT_Form.PlanetaryLongitudeConvention)]);
+        end;
 
-      Colongitude_LabeledNumericEdit.NumericEdit.Text := Format('%0.4f',[RadToDeg(SolarColongitude)]);
-      SolarLatitude_LabeledNumericEdit.NumericEdit.Text := Format('%0.3f',[RadToDeg(SubSolarPoint.Latitude)]);
+//      SolarLatitude_LabeledNumericEdit.NumericEdit.Text := Format('%0.3f',[RadToDeg(SubSolarPoint.Latitude)]);
 
       CraterLon := DegToRad(Crater_Lon_LabeledNumericEdit.NumericEdit.ExtendedValue);
       CraterLat := DegToRad(Crater_Lat_LabeledNumericEdit.NumericEdit.ExtendedValue);
@@ -418,15 +400,26 @@ begin
 end;
 
 procedure TPhotosessionSearch_Form.CalculateSolarColongitude(const MJD_for_CL :extended);
+  var
+    SubObserverPoint : TPolarCoordinates;
   begin
+    if not JPL_File_Valid(MJD_for_CL) then exit;
+
     SubSolarPoint := SubSolarPointOnMoon(MJD_for_CL);
 
-    SolarColongitude := PiByTwo - SubSolarPoint.Longitude;
-    while SolarColongitude>TwoPi do SolarColongitude := SolarColongitude - TwoPi;
-    while SolarColongitude<0     do SolarColongitude := SolarColongitude + TwoPi;
+    if CurrentTargetPlanet=Moon then
+      begin
+        SolarColongitude := PiByTwo - SubSolarPoint.Longitude;
+        while SolarColongitude>TwoPi do SolarColongitude := SolarColongitude - TwoPi;
+        while SolarColongitude<0     do SolarColongitude := SolarColongitude + TwoPi;
+      end
+    else
+      begin
+        SubObserverPoint := SubEarthPointOnMoon(MJD_for_CL);
+        SolarColongitude := SubObserverPoint.Longitude;
+      end;
 
 //    ShowMessage(Format('Calculating for MJD = %0.3f  CL= %0.3f',[MJD_for_CL,RadToDeg(SolarColongitude)]));
-
   end;
 
 procedure TPhotosessionSearch_Form.Tabulate_ButtonClick(Sender: TObject);
@@ -445,10 +438,10 @@ var
 
   LinesPrinted : integer;
 
-  MJD, TargetSolarElevation, {angles in rad}
-  TargetCL, CL_Error,
-  CraterLonDeg, CraterLatDeg, SunAngleDeg,
-  AllowableColongitudeErrorDegrees, AllowableSunElevationErrorDegrees : Extended;
+  MJD, TargetSolarElevation, TargetSolarAzimuth, {angles in rad}
+  TargetCL, CraterLonDeg, CraterLatDeg, SunAngleDeg, SunAzimuthDeg,
+  AllowableColongitudeErrorDegrees, AllowableSunElevationErrorDegrees,
+  AllowableSunAzimuthErrorDegrees : Extended;
 
 procedure ConvertSemicolonsToCommas(var StringToConvert : string);
   var
@@ -467,19 +460,34 @@ procedure PrintHeader;
     if GeocentricSubEarthMode then
       Memo1.Lines.Add('Librations calculated for a geocentric observer')
     else
-      Memo1.Lines.Add(Format('Librations calculated for observer at %0.4f %s  %0.4f %s  %0.0f m',
-        [Abs(-ObserverLongitude),EW_Tag(-ObserverLongitude),Abs(ObserverLatitude),NS_Tag(ObserverLatitude),
-         ObserverElevation]));
+      Memo1.Lines.Add(Format('Librations calculated for observer at %s  %s  %0.0f m',
+        [LTVT_Form.EarthLongitudeString(-ObserverLongitude,4),LTVT_Form.LatitudeString(ObserverLatitude,4),ObserverElevation]));
     Memo1.Lines.Add('');
     if ColongitudeMode_RadioButton.Checked then
       begin
-        Memo1.Lines.Add('                          Terminators      Sub-Solar Point     Librations');
-        Memo1.Lines.Add('   Date      Time UT   Morning   Evening    Colong    Lat.    Long.   Lat.    Photo Name');
+        if CurrentTargetPlanet=Moon then
+          begin
+            Memo1.Lines.Add('                          Terminators      Sub-Solar Point      Librations');
+            Memo1.Lines.Add('   Date      Time UT   Morning   Evening    Colong    Lat.     Long.   Lat.    Photo Name');
+          end
+        else
+          begin
+            Memo1.Lines.Add('                          Terminators                Solar   Sub-Earth Point');
+            Memo1.Lines.Add('   Date      Time UT   Morning   Evening      CM      Lat.     Long.   Lat.    Photo Name');
+          end;
       end
     else
       begin
-        Memo1.Lines.Add('                           Sun Angle       Sub-Solar Point     Librations ');
-        Memo1.Lines.Add('   Date      Time UT   Altitude  Azimuth    Colong    Lat.    Long.   Lat.     Photo Name');
+        if CurrentTargetPlanet=Moon then
+          begin
+            Memo1.Lines.Add('                           Sun Angle       Sub-Solar Point      Librations ');
+            Memo1.Lines.Add('   Date      Time UT   Altitude  Azimuth    Colong    Lat.     Long.   Lat.     Photo Name');
+          end
+        else
+          begin
+            Memo1.Lines.Add('                           Sun Angle       Sub-Solar Point   Sub-Earth Point ');
+            Memo1.Lines.Add('   Date      Time UT   Altitude  Azimuth     Long     Lat.     Long.   Lat.     Photo Name');
+          end;
       end;
   end;
 
@@ -488,36 +496,41 @@ procedure PrintData;
     SunPosition, MoonPosition : PositionResultRecord;
     MoonUpSunDownCode, TargetVisibleCode : String;
     CraterLat, CraterLon, SunLat, SunLon, AngleToSun, SolarElevation, SolarAzimuth : Extended;
-    TargetDistance, TargetAzimuth : Extended;
-    CL, MT, ET : extended;
+    TargetDistance, TargetAzimuth, AzimuthError : Extended;
+    CL, MT, ET, CL_SearchResult, CL_SearchResult_Error : Extended; // [deg]
     PrintDateTime : TDateTime;
     SubEarthPoint : TPolarCoordinates;
 
   begin {PrintData}
   if JPL_File_Valid(MJD) then
     begin
-      CalculateSolarColongitude(MJD);
+      CalculateSolarColongitude(MJD); // returns SubSolarPoint and "SolarColongitude" which may be Colongitude or Central Meridian
 
-      CL_Error := TargetCL - SolarColongitude;
-      while CL_Error>Pi  do CL_Error := CL_Error - TwoPi;
-      while CL_Error<-Pi do CL_Error := CL_Error + TwoPi;
+      CL := PiByTwo - SubSolarPoint.Longitude;
+      while CL>TwoPi do CL := CL - TwoPi;
+      while CL<0     do CL := CL + TwoPi;
+      CL := RadToDeg(CL);
+      ET := 180 - CL;
+      MT := -CL;
+      if CurrentTargetPlanet<>Moon then CL := LTVT_Form.PosNegDegrees(CL,LTVT_Form.PlanetaryLongitudeConvention);
+
+      CL_SearchResult := RadToDeg(SolarColongitude);
+      if CurrentTargetPlanet<>Moon then CL_SearchResult := LTVT_Form.PosNegDegrees(CL_SearchResult,LTVT_Form.PlanetaryLongitudeConvention);
+
+      CL_SearchResult_Error := TargetCL - SolarColongitude;
+      while CL_SearchResult_Error>Pi  do CL_SearchResult_Error := CL_SearchResult_Error - TwoPi;
+      while CL_SearchResult_Error<-Pi do CL_SearchResult_Error := CL_SearchResult_Error + TwoPi;
 
       SubEarthPoint := SubEarthPointOnMoon(MJD);
       while SubEarthPoint.Longitude>Pi do SubEarthPoint.Longitude := SubEarthPoint.Longitude - TwoPi;
 
-      CalculatePosition(MJD,Moon,BlankStarDataRecord,MoonPosition);
+      CalculatePosition(MJD,CurrentTargetPlanet,BlankStarDataRecord,MoonPosition);
       CalculatePosition(MJD,Sun, BlankStarDataRecord,SunPosition);
 
       if (MoonPosition.TopocentricAlt>0) and (SunPosition.TopocentricAlt<0) and not GeocentricSubEarthMode then
         MoonUpSunDownCode := MoonUpSunDownSymbol
       else
         MoonUpSunDownCode := ' ';
-
-      CL := RadToDeg(SolarColongitude);
-
-      ET := 180 - CL;
-      MT := -CL;
-      if MT<-180 then MT := MT + 360;
 
       PrintDateTime := ModifiedJulianDateToDateTime(MJD);
       while Length(FileDescription)<30 do FileDescription := FileDescription + ' ';
@@ -531,31 +544,39 @@ procedure PrintData;
 
           ComputeDistanceAndBearing(CraterLon, CraterLat, SunLon, SunLat, AngleToSun, SolarAzimuth);
           SolarElevation := PiByTwo - AngleToSun;
+          AzimuthError := SolarAzimuth - TargetSolarAzimuth;
+          while AzimuthError<Pi do AzimuthError := AzimuthError + TwoPi;
+          while AzimuthError>Pi do AzimuthError := AzimuthError - TwoPi;
 
-          ComputeDistanceAndBearing(SubEarthPoint.Longitude, SubEarthPoint.Latitude, CraterLon, CraterLat, TargetDistance, TargetAzimuth);
-          if TargetDistance<PiByTwo then
-            TargetVisibleCode := TargetVisibleSymbol
-          else
-            TargetVisibleCode := ' ';
-
-          if Abs(RadToDeg(SolarElevation-TargetSolarElevation))<AllowableSunElevationErrorDegrees then
+          if (Abs(RadToDeg(SolarElevation-TargetSolarElevation))<AllowableSunElevationErrorDegrees)
+            and (Abs(RadToDeg(AzimuthError))<AllowableSunAzimuthErrorDegrees) then
             begin
-              Memo1.Lines.Add(Format('%10s%10s%10.4f%10.4f%10.3f%8.3f%8.3f%8.3f %1s%1s  %30.30s',
+              ComputeDistanceAndBearing(SubEarthPoint.Longitude, SubEarthPoint.Latitude, CraterLon, CraterLat, TargetDistance, TargetAzimuth);
+              if TargetDistance<PiByTwo then
+                TargetVisibleCode := TargetVisibleSymbol
+              else
+                TargetVisibleCode := ' ';
+
+              Memo1.Lines.Add(Format('%10s%10s%10.4f%10.4f%10.3f%8.3f%9.3f%8.3f %1s%1s  %30.30s',
                 [DateToStr(PrintDateTime),TimeToStr(PrintDateTime),RadToDeg(SolarElevation),
-                RadToDeg(SolarAzimuth),CL,RadToDeg(SubSolarPoint.Latitude),
-                RadToDeg(SubEarthPoint.Longitude),RadToDeg(SubEarthPoint.Latitude),
+                RadToDeg(SolarAzimuth),CL,
+                RadToDeg(SubSolarPoint.Latitude),
+                LTVT_Form.PosNegDegrees(RadToDeg(SubEarthPoint.Longitude),LTVT_Form.PlanetaryLongitudeConvention),
+                RadToDeg(SubEarthPoint.Latitude),
                 TargetVisibleCode,MoonUpSunDownCode,FileDescription]));
               Inc(LinesPrinted);
             end;
         end
-      else
+      else // ColongitudeMode
         begin
-          if Abs(RadToDeg(CL_Error))<AllowableColongitudeErrorDegrees then
+          if Abs(RadToDeg(CL_SearchResult_Error))<AllowableColongitudeErrorDegrees then
             begin
-              Memo1.Lines.Add(Format('%10s%10s%9.3f%1s%9.3f%1s%10.3f%8.3f%8.3f%8.3f %1s  %30.30s',
-                [DateToStr(PrintDateTime),TimeToStr(PrintDateTime),Abs(MT),EW_Tag(MT),Abs(ET),EW_Tag(ET),
-                CL,RadToDeg(SubSolarPoint.Latitude),
-                RadToDeg(SubEarthPoint.Longitude),RadToDeg(SubEarthPoint.Latitude),
+              Memo1.Lines.Add(Format('%10s%10s%10s%10s%10.3f%8.3f%9.3f%8.3f %1s  %30.30s',
+                [DateToStr(PrintDateTime),TimeToStr(PrintDateTime),LTVT_Form.PlanetaryLongitudeString(MT,3),
+                LTVT_Form.PlanetaryLongitudeString(ET,3),CL_SearchResult,
+                RadToDeg(SubSolarPoint.Latitude),
+                LTVT_Form.PosNegDegrees(RadToDeg(SubEarthPoint.Longitude),LTVT_Form.PlanetaryLongitudeConvention),
+                RadToDeg(SubEarthPoint.Latitude),
                 MoonUpSunDownCode,FileDescription]));
 
               Inc(LinesPrinted);
@@ -589,20 +610,28 @@ begin {Tabulate_ButtonClick}
       TargetCL := DegToRad(Colongitude_LabeledNumericEdit.NumericEdit.ExtendedValue);
       AllowableColongitudeErrorDegrees := Abs(ColongitudeTolerance_LabeledNumericEdit.NumericEdit.ExtendedValue);
 
-      Memo1.Lines.Add(Format('Searching for Colong = %0.3f +/- %0.3f deg',
-        [RadToDeg(TargetCL),AllowableColongitudeErrorDegrees]));
+      if CurrentTargetPlanet=Moon then
+        Memo1.Lines.Add(Format('Searching for Colong = %0.3f +/- %0.3f°',
+          [RadToDeg(TargetCL),AllowableColongitudeErrorDegrees]))
+      else
+        Memo1.Lines.Add(Format('Searching for Central Meridian = %0.3f +/- %0.3f°',
+          [RadToDeg(TargetCL),AllowableColongitudeErrorDegrees]));
     end
   else {Altitude mode}
     begin
       CraterLonDeg := Crater_Lon_LabeledNumericEdit.NumericEdit.ExtendedValue;
       CraterLatDeg := Crater_Lat_LabeledNumericEdit.NumericEdit.ExtendedValue;
       SunAngleDeg  := SunAngle_LabeledNumericEdit.NumericEdit.ExtendedValue;
+      SunAzimuthDeg  := SunAzimuth_LabeledNumericEdit.NumericEdit.ExtendedValue;
 
       TargetSolarElevation := DegToRad(SunAngleDeg);
+      TargetSolarAzimuth   := DegToRad(SunAzimuthDeg);
       AllowableSunElevationErrorDegrees := Abs(SunElevationTolerance_LabeledNumericEdit.NumericEdit.ExtendedValue);
+      AllowableSunAzimuthErrorDegrees := Abs(SunAzimuthTolerance_LabeledNumericEdit.NumericEdit.ExtendedValue);
 
-      Memo1.Lines.Add(Format('Searching for Sun Angle = %0.4f  +/- %0.3f deg over feature at %0.3f %s   %0.3f %s',
-        [SunAngleDeg,AllowableSunElevationErrorDegrees,Abs(CraterLonDeg),EW_Tag(CraterLonDeg),Abs(CraterLatDeg),NS_Tag(CraterLatDeg)]));
+      Memo1.Lines.Add(Format('Searching for Sun Angle = %0.4f+/-%0.3f° with Azimuth = %0.4f+/-%0.3f° over feature at %s   %s',
+        [SunAngleDeg,AllowableSunElevationErrorDegrees,SunAzimuthDeg,AllowableSunAzimuthErrorDegrees,
+        LTVT_Form.PlanetaryLongitudeString(CraterLonDeg,3),LTVT_Form.LatitudeString(CraterLatDeg,3)]));
     end;
 
   LinesPrinted := 0;
@@ -618,7 +647,7 @@ begin {Tabulate_ButtonClick}
       if PhotosessionsFilename<>TrialFilename then
         PhotoFilename_Label.Caption := MinimizeName(PhotoSessionsFilename,PhotoFilename_Label.Canvas,PhotoFilename_Label.Width);
 
-      Memo1.Lines.Add('In: '+PhotoSessionsFilename);
+      Memo1.Lines.Add('Using times in: '+PhotoSessionsFilename);
       PrintHeader;
 
       AbortTabulation := False;
@@ -660,7 +689,7 @@ begin {Tabulate_ButtonClick}
       if SunAngleMode_RadioButton.Checked then
           Memo1.Lines.Add(Format('  %s = Target feature on visible disk',[TargetVisibleSymbol]));
 
-      if not GeocentricSubEarthMode then Memo1.Lines.Add(Format('  %s = Moon above horizon/Sun below horizon',[MoonUpSunDownSymbol]));
+      if not GeocentricSubEarthMode then Memo1.Lines.Add(Format('  %s = '+CurrentPlanetName+' above horizon/Sun below horizon',[MoonUpSunDownSymbol]));
       Memo1.Lines.Add('');
       if AbortTabulation then
         Memo1.Lines.Add('                     *** tabulation aborted ***')
@@ -719,7 +748,7 @@ begin
               ObsLonList.Add(LeadingElement(DataLine,','));
               ObsLatList.Add(LeadingElement(DataLine,','));
               ObsElevList.Add(LeadingElement(DataLine,','));
-              ObsNameList.Add(Trim(DataLine));
+              ObsNameList.Add(ExtractCSV_item(DataLine));
             end;
         end;
       CloseFile(ObsListFile);
@@ -912,6 +941,12 @@ begin
 end;
 
 procedure TPhotosessionSearch_Form.AddLocation_ButtonKeyDown(
+  Sender: TObject; var Key: Word; Shift: TShiftState);
+begin
+  LTVT_Form.DisplayF1Help(Key,Shift,'PhotosessionsSearchForm.htm');
+end;
+
+procedure TPhotosessionSearch_Form.SunAzimuthTolerance_LabeledNumericEditNumericEditKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
   LTVT_Form.DisplayF1Help(Key,Shift,'PhotosessionsSearchForm.htm');

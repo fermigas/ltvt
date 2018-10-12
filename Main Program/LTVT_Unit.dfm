@@ -1,8 +1,8 @@
 object LTVT_Form: TLTVT_Form
   Left = 11
-  Top = -1
+  Top = 0
   Width = 994
-  Height = 744
+  Height = 724
   Caption = 'Lunar Terminator Visualization Tool'
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -27,8 +27,8 @@ object LTVT_Form: TLTVT_Form
     Caption = '------------------ Time of Observation -------------'
   end
   object Image1: TImage
-    Left = 0
-    Top = 45
+    Left = -5
+    Top = 39
     Width = 641
     Height = 641
     Align = alCustom
@@ -58,10 +58,11 @@ object LTVT_Form: TLTVT_Form
       Top = 21
       Width = 117
       Height = 13
+      Hint = 'Location on Earth used to compute geometry'
       Caption = 'From observer'#39's location:'
     end
     object MoonElev_Label: TLabel
-      Left = 18
+      Left = 10
       Top = 42
       Width = 103
       Height = 13
@@ -98,7 +99,7 @@ object LTVT_Form: TLTVT_Form
       Top = 208
       Width = 88
       Height = 13
-      Hint = '90 - Selenographic longitude of Subsolar Point'
+      Hint = '90'#176' - Selenographic longitude of Subsolar Point'
       Caption = 'Colongitude_Label'
     end
     object PercentIlluminated_Label: TLabel
@@ -114,7 +115,7 @@ object LTVT_Form: TLTVT_Form
       Top = 232
       Width = 48
       Height = 13
-      Hint = 'Location of Morning Terminator in selenographic longitude'
+      Hint = 'Longitude of Morning Terminator'
       Caption = 'MT_Label'
     end
     object ET_Label: TLabel
@@ -122,18 +123,11 @@ object LTVT_Form: TLTVT_Form
       Top = 232
       Width = 46
       Height = 13
-      Hint = 'Location of Evening Terminator in selenographic longitude'
+      Hint = 'Longitude of Evening Terminator'
       Caption = 'ET_Label'
     end
-    object Label4: TLabel
-      Left = 24
-      Top = 208
-      Width = 45
-      Height = 13
-      Caption = 'Colong = '
-    end
     object MoonDiameter_Label: TLabel
-      Left = 18
+      Left = 10
       Top = 62
       Width = 101
       Height = 13
@@ -142,12 +136,19 @@ object LTVT_Form: TLTVT_Form
         'the observation site at the requested time '
       Caption = 'MoonDiameter_Label'
     end
+    object ColonIdentifier_Label: TLabel
+      Left = 24
+      Top = 208
+      Width = 45
+      Height = 13
+      Caption = 'Colong = '
+    end
     inline SubSol_Lon_LabeledNumericEdit: TLabeledNumericEdit
       Left = 182
       Top = 136
       Width = 123
       Height = 19
-      Hint = 'Selenographic longitude in decimal degrees (E=+  W=-)'
+      Hint = 'Longitude in decimal degrees (E=+  W=-)'
       AutoSize = True
       TabOrder = 2
       inherited Item_Label: TLabel
@@ -172,7 +173,7 @@ object LTVT_Form: TLTVT_Form
       Top = 168
       Width = 123
       Height = 19
-      Hint = 'Selenographic latitude in decimal degrees (N=+  S=-)'
+      Hint = 'Latitude in decimal degrees (N=+  S=-)'
       AutoSize = True
       TabOrder = 3
       inherited Item_Label: TLabel
@@ -199,7 +200,7 @@ object LTVT_Form: TLTVT_Form
       Top = 136
       Width = 123
       Height = 19
-      Hint = 'Selenographic longitude in decimal degrees (E=+  W=-)'
+      Hint = 'Longitude in decimal degrees (E=+  W=-)'
       AutoSize = True
       TabOrder = 0
       inherited Item_Label: TLabel
@@ -224,7 +225,7 @@ object LTVT_Form: TLTVT_Form
       Top = 168
       Width = 123
       Height = 19
-      Hint = 'Selenographic latitude in decimal degrees (N=+  S=-)'
+      Hint = 'Latitude in decimal degrees (N=+  S=-)'
       AutoSize = True
       TabOrder = 1
       inherited Item_Label: TLabel
@@ -289,7 +290,7 @@ object LTVT_Form: TLTVT_Form
       Top = 20
       Width = 97
       Height = 13
-      Hint = 'Selenographic longitude and latitude of current mouse point'
+      Hint = 'Longitude and latitude of current mouse point'
       Caption = 'MouseLonLat_Label'
     end
   end
@@ -708,6 +709,7 @@ object LTVT_Form: TLTVT_Form
       Top = 80
       Width = 41
       Height = 25
+      Hint = 'Create simulated image based on Digital Elevation Model'
       Caption = 'DEM'
       TabOrder = 18
       OnClick = DrawDEM_ButtonClick
@@ -790,7 +792,7 @@ object LTVT_Form: TLTVT_Form
   object OpenDialog1: TOpenDialog
     Filter = 'Text Files (*.txt)|*.txt|All Files|*.*'
     InitialDir = '.'
-    Left = 264
+    Left = 176
     Top = 96
   end
   object SavePictureDialog1: TSavePictureDialog
@@ -799,7 +801,7 @@ object LTVT_Form: TLTVT_Form
       'Bitmaps (*.bmp)|*.bmp|JPEG Image File (*.jpg)|*.jpg|JPEG Image F' +
       'ile (*.jpeg)|*.jpeg|All (*.bmp;*.jpg;*.jpeg)|*.bmp;*.jpg;*.jpeg'
     Options = [ofOverwritePrompt, ofHideReadOnly, ofEnableSizing]
-    Left = 224
+    Left = 216
     Top = 96
   end
   object MainMenu1: TMainMenu
@@ -808,7 +810,7 @@ object LTVT_Form: TLTVT_Form
     object Files1: TMenuItem
       Caption = '&Files'
       object ChangeExternalFiles_MainMenuItem: TMenuItem
-        Caption = 'Change &external file associations...'
+        Caption = 'Change external &file associations...'
         OnClick = ChangeExternalFiles_MainMenuItemClick
       end
       object OpenAnLTOchart1: TMenuItem
@@ -816,7 +818,7 @@ object LTVT_Form: TLTVT_Form
         OnClick = OpenAnLTOchart1Click
       end
       object CalibratePhoto_MainMenuItem: TMenuItem
-        Caption = 'Calibrate a &user photo...'
+        Caption = '&Calibrate a user photo...'
         OnClick = CalibratePhoto_MainMenuItemClick
       end
       object Calibrateasatellitephoto1: TMenuItem
@@ -832,15 +834,23 @@ object LTVT_Form: TLTVT_Form
         OnClick = SearchUncalibratedPhotos_MainMenuItemClick
       end
       object Saveoptions_MainMenuItem: TMenuItem
-        Caption = '&Save all options...'
+        Caption = 'S&ave all options...'
         Hint = 
           'Save current observer location, etc. as defaults for next start ' +
           'up'
         OnClick = Saveoptions_MainMenuItemClick
       end
+      object ChangeIniFile_MainMenuItem: TMenuItem
+        Caption = 'Change *.&ini file...'
+        OnClick = ChangeIniFile_MainMenuItemClick
+      end
       object SaveImage_MainMenuItem: TMenuItem
-        Caption = 'Save &image...'
+        Caption = '&Save image...'
         OnClick = SaveImage_MainMenuItemClick
+      end
+      object ExportTexture_MainMenuItem: TMenuItem
+        Caption = '&Export texture...'
+        OnClick = ExportTexture_MainMenuItemClick
       end
       object Exit_MainMenuItem: TMenuItem
         Caption = 'E&xit'
@@ -871,9 +881,17 @@ object LTVT_Form: TLTVT_Form
         Caption = 'Change &cartographic options...'
         OnClick = ChangeCartographicOptions_MainMenuItemClick
       end
+      object ChangeTargetPlanet_MainMenuItem: TMenuItem
+        Caption = 'Ch&ange target planet...'
+        OnClick = ChangeTargetPlanet_MainMenuItemClick
+      end
       object ChangeDemOptions_MainMenuItem: TMenuItem
-        Caption = 'Change DEM &options'
+        Caption = 'Change DEM &options...'
         OnClick = ChangeDemOptions_MainMenuItemClick
+      end
+      object DrawDEMheightcontours_MainMenuItem: TMenuItem
+        Caption = 'Draw DEM &height contours...'
+        OnClick = DrawDEMheightcontours_MainMenuItemClick
       end
       object ChangeMouseOptions_MainMenuItem: TMenuItem
         Caption = 'Change &mouse options...'
@@ -925,8 +943,8 @@ object LTVT_Form: TLTVT_Form
     end
     object DrawLinesToPoleAndSun_RightClickMenuItem: TMenuItem
       Caption = 
-        'Draw lines towards sub-solar point  (red) and Moon'#39's north pole ' +
-        '(blue)'
+        'Draw lines towards sub-solar point (red) and Moon'#39's north pole (' +
+        'blue)'
       OnClick = DrawLinesToPoleAndSun_RightClickMenuItemClick
     end
     object Goto_RightClickMenuItem: TMenuItem
@@ -934,16 +952,20 @@ object LTVT_Form: TLTVT_Form
       OnClick = Goto_RightClickMenuItemClick
     end
     object IdentifyNearestFeature_RightClickMenuItem: TMenuItem
-      Caption = 'Identify nearest named feature'
+      Caption = 'Identify and label nearest named feature'
       OnClick = IdentifyNearestFeature_RightClickMenuItemClick
     end
     object LabelFeatureAndSatellites_RightClickMenuItem: TMenuItem
-      Caption = 'Label nearest feature and all features with same parent'
+      Caption = 'Identify nearest named feature and all features sharing name'
       OnClick = LabelFeatureAndSatellites_RightClickMenuItemClick
     end
     object LabelNearestDot_RightClickMenuItem: TMenuItem
       Caption = 'Label nearest dot'
       OnClick = LabelNearestDot_RightClickMenuItemClick
+    end
+    object NearestDotAdditionalInfo_RightClickMenuItem: TMenuItem
+      Caption = 'Additional information regarding nearest dot'
+      OnClick = NearestDotAdditionalInfo_RightClickMenuItemClick
     end
     object CountDots_RightClickMenuItem: TMenuItem
       Caption = 'Count dots'
@@ -957,6 +979,10 @@ object LTVT_Form: TLTVT_Form
     object DrawCircle_RightClickMenuItem: TMenuItem
       Caption = 'Draw circle...'
       OnClick = DrawCircle_RightClickMenuItemClick
+    end
+    object DrawContours_RightClickMenuItem: TMenuItem
+      Caption = 'Draw contours...'
+      OnClick = DrawDEMheightcontours_MainMenuItemClick
     end
     object SetRefPt_RightClickMenuItem: TMenuItem
       Caption = 'Set reference point'
@@ -977,5 +1003,10 @@ object LTVT_Form: TLTVT_Form
     object ESCkeytocancel_RightClickMenuItem: TMenuItem
       Caption = 'Cancel (click here or press ESC key)'
     end
+  end
+  object SaveDialog1: TSaveDialog
+    Options = [ofOverwritePrompt, ofHideReadOnly, ofEnableSizing]
+    Left = 136
+    Top = 96
   end
 end

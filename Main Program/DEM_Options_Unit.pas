@@ -20,7 +20,6 @@ type
     Label4: TLabel;
     MultiplyByAlbedoCheckBox: TCheckBox;
     RecalculateDEMonRecenter_CheckBox: TCheckBox;
-    RigorousNormals_CheckBox: TCheckBox;
     DrawTerminatorOnDEM_CheckBox: TCheckBox;
     ChangeDEM_Button: TButton;
     DEMFilename_Label: TLabel;
@@ -29,38 +28,20 @@ type
     LommelSeeliger_RadioButton: TRadioButton;
     LunarLambert_RadioButton: TRadioButton;
     PhotometricModel_GroupBox: TGroupBox;
+    LommelSeeligerNoDataColor_ColorBox: TColorBox;
+    Label1: TLabel;
+    ShowDemInfo_CheckBox: TCheckBox;
+    MultipliedDemGammaBoost_LabeledNumericEdit: TLabeledNumericEdit;
+    MultipliedDemIntensitiesBoost_LabeledNumericEdit: TLabeledNumericEdit;
     procedure OK_ButtonClick(Sender: TObject);
     procedure Cancel_ButtonClick(Sender: TObject);
     procedure Save_ButtonClick(Sender: TObject);
     procedure Restore_ButtonClick(Sender: TObject);
-    procedure ThreeD_CheckBoxKeyDown(Sender: TObject; var Key: Word;
-      Shift: TShiftState);
-    procedure DisplayComputationTimes_CheckBoxKeyDown(Sender: TObject; var Key: Word;
-      Shift: TShiftState);
-    procedure ComputeCastShadows_CheckBoxKeyDown(Sender: TObject;
-      var Key: Word; Shift: TShiftState);
-    procedure CastShadow_ColorBoxKeyDown(Sender: TObject; var Key: Word;
-      Shift: TShiftState);
-    procedure Save_ButtonKeyDown(Sender: TObject; var Key: Word;
-      Shift: TShiftState);
-    procedure Restore_ButtonKeyDown(Sender: TObject; var Key: Word;
-      Shift: TShiftState);
-    procedure OK_ButtonKeyDown(Sender: TObject; var Key: Word;
-      Shift: TShiftState);
-    procedure Cancel_ButtonKeyDown(Sender: TObject; var Key: Word;
-      Shift: TShiftState);
-    procedure RecalculateDEMonRecenter_CheckBoxKeyDown(Sender: TObject;
-      var Key: Word; Shift: TShiftState);
-    procedure ChangeDEM_ButtonKeyDown(Sender: TObject; var Key: Word;
-      Shift: TShiftState);
     procedure FormShow(Sender: TObject);
     procedure ChangeDEM_ButtonClick(Sender: TObject);
-    procedure Lambertian_RadioButtonKeyDown(Sender: TObject; var Key: Word;
+    procedure FormKeyDown(Sender: TObject; var Key: Word;
       Shift: TShiftState);
-    procedure LommelSeeliger_RadioButtonKeyDown(Sender: TObject;
-      var Key: Word; Shift: TShiftState);
-    procedure LunarLambert_RadioButtonKeyDown(Sender: TObject;
-      var Key: Word; Shift: TShiftState);
+    procedure MultiplyByAlbedoCheckBoxClick(Sender: TObject);
   private
     { Private declarations }
   public
@@ -100,7 +81,7 @@ begin
         FileName := LTVT_Form.FullFilename('LALT_GGT_MAP.IMG')
       else
         FileName := TempDEMFilename;
-      Filter := 'PDS image array (*.IMG)|*.IMG|All files|*.*';
+      Filter := 'PDS image array (*.IMG)|*.IMG|ISIS data cube (*.CUB)|*.CUB|USGS BIL format with supporting files (*.BIL)|*.BIL|All files|*.*';
       if Execute then
         begin
           TempDEMFilename := FileName;
@@ -139,82 +120,18 @@ begin
   RefreshLabels;
 end;
 
-procedure TDEM_Options_Form.ThreeD_CheckBoxKeyDown(
-  Sender: TObject; var Key: Word; Shift: TShiftState);
+procedure TDEM_Options_Form.MultiplyByAlbedoCheckBoxClick(Sender: TObject);
 begin
-   LTVT_Form.DisplayF1Help(Key,Shift,'DemOptionsForm.htm');
+  MultipliedDemGammaBoost_LabeledNumericEdit.Visible := MultiplyByAlbedoCheckBox.Checked;
+  MultipliedDemIntensitiesBoost_LabeledNumericEdit.Visible := MultiplyByAlbedoCheckBox.Checked;
 end;
 
-procedure TDEM_Options_Form.DisplayComputationTimes_CheckBoxKeyDown(
-  Sender: TObject; var Key: Word; Shift: TShiftState);
+procedure TDEM_Options_Form.FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-   LTVT_Form.DisplayF1Help(Key,Shift,'DemOptionsForm.htm');
-end;
-
-procedure TDEM_Options_Form.ComputeCastShadows_CheckBoxKeyDown(
-  Sender: TObject; var Key: Word; Shift: TShiftState);
-begin
-   LTVT_Form.DisplayF1Help(Key,Shift,'DemOptionsForm.htm');
-end;
-
-procedure TDEM_Options_Form.CastShadow_ColorBoxKeyDown(Sender: TObject;
-  var Key: Word; Shift: TShiftState);
-begin
-   LTVT_Form.DisplayF1Help(Key,Shift,'DemOptionsForm.htm');
-end;
-
-procedure TDEM_Options_Form.Save_ButtonKeyDown(Sender: TObject;
-  var Key: Word; Shift: TShiftState);
-begin
-   LTVT_Form.DisplayF1Help(Key,Shift,'DemOptionsForm.htm');
-end;
-
-procedure TDEM_Options_Form.Restore_ButtonKeyDown(Sender: TObject;
-  var Key: Word; Shift: TShiftState);
-begin
-   LTVT_Form.DisplayF1Help(Key,Shift,'DemOptionsForm.htm');
-end;
-
-procedure TDEM_Options_Form.OK_ButtonKeyDown(Sender: TObject;
-  var Key: Word; Shift: TShiftState);
-begin
-   LTVT_Form.DisplayF1Help(Key,Shift,'DemOptionsForm.htm');
-end;
-
-procedure TDEM_Options_Form.Cancel_ButtonKeyDown(Sender: TObject;
-  var Key: Word; Shift: TShiftState);
-begin
-   LTVT_Form.DisplayF1Help(Key,Shift,'DemOptionsForm.htm');
-end;
-
-procedure TDEM_Options_Form.RecalculateDEMonRecenter_CheckBoxKeyDown(
-  Sender: TObject; var Key: Word; Shift: TShiftState);
-begin
-  LTVT_Form.DisplayF1Help(Key,Shift,'DemOptionsForm.htm');
-end;
-
-procedure TDEM_Options_Form.ChangeDEM_ButtonKeyDown(Sender: TObject;
-  var Key: Word; Shift: TShiftState);
-begin
-  LTVT_Form.DisplayF1Help(Key,Shift,'DemOptionsForm.htm');
-end;
-
-procedure TDEM_Options_Form.Lambertian_RadioButtonKeyDown(Sender: TObject;
-  var Key: Word; Shift: TShiftState);
-begin
-  LTVT_Form.DisplayF1Help(Key,Shift,'DemOptionsForm.htm');
-end;
-
-procedure TDEM_Options_Form.LommelSeeliger_RadioButtonKeyDown(
-  Sender: TObject; var Key: Word; Shift: TShiftState);
-begin
-  LTVT_Form.DisplayF1Help(Key,Shift,'DemOptionsForm.htm');
-end;
-
-procedure TDEM_Options_Form.LunarLambert_RadioButtonKeyDown(
-  Sender: TObject; var Key: Word; Shift: TShiftState);
-begin
-  LTVT_Form.DisplayF1Help(Key,Shift,'DemOptionsForm.htm');
+  if Key=VK_ESCAPE then
+    Cancel_Button.Click
+  else
+    LTVT_Form.DisplayF1Help(Key,Shift,'DemOptionsForm.htm');
 end;
 
 end.

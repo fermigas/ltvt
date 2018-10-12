@@ -133,7 +133,7 @@ var
 
 implementation
 
-uses LTVT_Unit, MPVectors, Math, Win_Ops, JimsGraph, MapFns_Unit;
+uses MoonPosition {MoonRadius}, LTVT_Unit, MPVectors, Math, Win_Ops, JimsGraph, MapFns_Unit;
 
 {$R *.dfm}
 
@@ -177,7 +177,7 @@ end;
 
 procedure TH_Terminator_Goto_Form.ResetRadius_ButtonClick(Sender: TObject);
 begin
-  ResetRadius(LTVT_Form.MoonRadius);
+  ResetRadius(MoonRadius);
 end;
 
 procedure TH_Terminator_Goto_Form.AerialView_ButtonClick(Sender: TObject);

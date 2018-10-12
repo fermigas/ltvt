@@ -293,7 +293,7 @@ object ExternalFileSelection_Form: TExternalFileSelection_Form
       Top = 240
       Width = 130
       Height = 19
-      Hint = 'Enter lunar longitude along left margin of Texture 3 map'
+      Hint = 'Enter longitude along left margin of Texture 3 map'
       AutoSize = True
       TabOrder = 8
       inherited Item_Label: TLabel
@@ -315,7 +315,7 @@ object ExternalFileSelection_Form: TExternalFileSelection_Form
       Top = 240
       Width = 138
       Height = 19
-      Hint = 'Enter lunar longitude along right margin of Texture 3 map'
+      Hint = 'Enter longitude along right margin of Texture 3 map'
       AutoSize = True
       TabOrder = 9
       inherited Item_Label: TLabel
@@ -339,9 +339,9 @@ object ExternalFileSelection_Form: TExternalFileSelection_Form
       Top = 240
       Width = 138
       Height = 19
-      Hint = 'Enter lunar laitude along bottom margin of Texture 3 map'
+      Hint = 'Enter latitude along bottom margin of Texture 3 map'
       AutoSize = True
-      TabOrder = 10
+      TabOrder = 11
       inherited Item_Label: TLabel
         Width = 57
         Caption = 'Bottom Lat.:'
@@ -363,9 +363,9 @@ object ExternalFileSelection_Form: TExternalFileSelection_Form
       Top = 240
       Width = 130
       Height = 19
-      Hint = 'Enter lunar laitude along bottom margin of Texture 3 map'
+      Hint = 'Enter latitude along top margin of Texture 3 map'
       AutoSize = True
-      TabOrder = 11
+      TabOrder = 10
       inherited Item_Label: TLabel
         Width = 43
         Caption = 'Top Lat.:'

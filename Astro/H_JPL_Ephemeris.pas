@@ -32,9 +32,10 @@ uses
 type
   TPV = array[1..6] of extended;  {position-velocity array}
 
-  TTargetOptions = (DontCare, Mercury, Venus, Earth, Mars, Jupiter, Saturn, Uranus,
-    Neptune, Pluto, Moon, Sun, SolarSystemBarycenter, EarthMoonBarycenter, Nutations,
-    Librations );  {This sequences maps Ord(TTargetOptions) --> NTARG, NCENT in PLEPH}
+  TJPL_TargetOptions = (DontCare, JPL_Mercury, JPL_Venus, JPL_Earth, JPL_Mars,
+    JPL_Jupiter, JPL_Saturn, JPL_Uranus, JPL_Neptune, JPL_Pluto, JPL_Moon, JPL_Sun,
+    SolarSystemBarycenter, EarthMoonBarycenter,
+    Nutations, Librations );  {This sequences maps Ord(TJPL_TargetOptions) --> NTARG, NCENT in PLEPH}
 
   TVelocityOptions = (PositionsOnly, PositionsAndVelocities);
 
@@ -135,7 +136,7 @@ procedure LoadJPL_File(const SuggestedName : string);
 Generates a file-opening dialog if it cannot be found. Check EphemerisFileLoaded
 and EphemerisFile name to find what actually happened.}
 
-procedure ReadEphemeris(const TDB : extended; const Target, Center : TTargetOptions;
+procedure ReadEphemeris(const TDB : extended; const Target, Center : TJPL_TargetOptions;
   const OutputType : TVelocityOptions; const OutputUnits : TUnitsOptions;
   var EphemerisValues : TEphemerisOutput);
 {user-friendly interface to JPL function PLEPH}
@@ -739,7 +740,7 @@ procedure PLEPH(const ET : extended; const NTARG, NCENT : integer; var RRD : TPV
 
   end;  {PLEPH}
 
-procedure ReadEphemeris(const TDB : extended; const Target, Center : TTargetOptions;
+procedure ReadEphemeris(const TDB : extended; const Target, Center : TJPL_TargetOptions;
   const OutputType : TVelocityOptions; const OutputUnits : TUnitsOptions;
   var EphemerisValues : TEphemerisOutput);
 {user-friendly interface to JPL function PLEPH}

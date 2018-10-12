@@ -2,7 +2,7 @@ object LTO_Viewer_Form: TLTO_Viewer_Form
   Left = 7
   Top = 31
   Width = 1012
-  Height = 692
+  Height = 685
   Caption = 'Lunar Map Loader'
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET

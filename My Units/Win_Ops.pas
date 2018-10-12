@@ -11,7 +11,6 @@ Changes:
     1. Add code to ExtendedValue() to replace commas with decimal points.
 
                                                                      }
-
  interface
    const
      Tab = char(9);
@@ -20,6 +19,8 @@ Changes:
      CtrlZ = char(26);
      Escape = char(27);
 
+  function MemoryAvailable(const BytesNeeded : Currency) : Boolean;
+  {tests if enough memory can be allocated; returns false if BytesNeeded>MaxInt}
 
    function Int2Str(L : LongInt; FieldWidth : integer) : string;
    function Real2Str(E : extended; FieldWidth, DecPlaces : integer) : string;
@@ -62,6 +63,7 @@ Changes:
      {returns string stripped of leading and trailing blanks and tabs}
    function FixedLengthString(S:string; const DesiredLength: integer):string;
      {truncates or adds trailing blanks to bring length to DesiredLength}
+
    function LeadingElement(var StringToProcess: string; const DividingChars: string): string;
      {LeadingElement = first segment up to DividingChars and stripped of
       leading blanks and tabs;  StringToProcess = remainder of string beyond
@@ -70,6 +72,15 @@ Changes:
       StringToProcess is set to null}
    function LeadingTabbedElement(var StringToProcess: string): string;
      {same except it uses the Tab character as the DividingChars}
+
+   function ExtractCSV_item(var CSV_line: String): String;
+     {returns first item in CSV_line (stripped of delimiting characters), with CSV_line replaced by remainder}
+
+   function CSV_formatted_string(const StringToFormat : String): String;
+
+   function SubstitutedString(const ExistingString, OldPattern, NewPattern : String): String;
+   {returns ExistingString with all occurrences of OldPattern replaced by NewPattern}
+
    function IntegerValue(StringToConvert: string): integer;
    function LongIntValue(StringToConvert: string): longint;
    function ExtendedValue(StringToConvert: string): extended;
@@ -95,6 +106,45 @@ implementation
 uses Windows, Dialogs, ExtDlgs, SysUtils, DateUtils;
 
 {Note: functions "Floor" .. "RoundDown" were formerly in GRAPHOPS unit}
+
+function MemoryAvailable(const BytesNeeded : Currency) : Boolean;
+{tests if enough memory can be allocated}
+var
+  Buffer : PByteArray;
+{  DynamicArray : array of Byte;}
+begin
+  if BytesNeeded>MaxInt then
+    begin
+      Result := False;
+      Exit;
+    end;
+
+  Result := True;
+
+// this method seems to instantly determine if virtual memory is available
+  New(Buffer);
+  try
+    try
+      GetMem(Buffer,Round(BytesNeeded));
+    except
+      Result := False;
+    end;
+  finally
+    Dispose(Buffer);
+  end;
+
+{ // this is much slower, and seems to actually clear out the disk space
+  try
+    try
+      SetLength(DynamicArray,Round(BytesNeeded));
+    except
+      Result := False;
+    end;
+  finally
+    SetLength(DynamicArray,0);
+  end;
+}
+end;
 
 function Floor(X : extended): longint;
 {returns 1st integer <= X;  due to rounding errors it is possible that, e.g.,
@@ -396,6 +446,120 @@ function UpperCaseString(S: string) : string;
           StringToProcess := '';
         end;
     end;
+
+   function ExtractCSV_item(var CSV_line: String): String;
+     {returns first item in CSV_line (stripped of delimiting characters), with CSV_line replaced by remainder}
+     const
+       DividingChar = ',';
+       LiteralDelimiter = '"';
+     var
+       Literal, EndFound : Boolean;
+       CurrentChar : Char;
+       CharPos : Integer;
+     begin {ExtractCSV_item}
+       CSV_line := StrippedString(CSV_line);
+
+       if CSV_line='' then
+         Result := ''
+       else if CSV_line[1]=LiteralDelimiter then
+         begin // parse item designated as a literal
+           CharPos := 1;
+           Result := '';
+           Literal := True;
+           EndFound := False;
+           while (CharPos<Length(CSV_line)) and not EndFound do
+             begin
+               Inc(CharPos);
+               CurrentChar := CSV_line[CharPos];
+               if Literal then
+                 begin
+                   if CurrentChar=LiteralDelimiter then
+                     begin
+                       if Substring(CSV_line,CharPos+1,CharPos+1)=LiteralDelimiter then
+                         begin // double delimiter to be interpretted as single literal instance of it
+                           Result := Result + CurrentChar;
+                           Inc(CharPos);
+                         end
+                       else
+                         Literal := False;
+                     end
+                   else
+                     Result := Result + CurrentChar;  // echo literal text
+                 end
+               else // CurrentChar is not to be taken as a literal
+                 case CurrentChar of
+                   DividingChar : EndFound := True;    // acknowledge without echoing
+                   LiteralDelimiter : Literal := True; // switch mode back without echoing
+                   ' ' : ; // ignore whitespace while looking for DividingChar
+                   else
+                     Result := Result + CurrentChar;  // there should be no other text here, but echo it in event of faulty syntax
+                   end;
+             end;
+
+// Note: Result is not stripped of leading and trailing blanks if delimited as literal
+
+           if EndFound then
+             CSV_line := StrippedString(Substring(CSV_line,CharPos+1,MaxInt))  // remaining CSV items
+           else
+             CSV_line := ''; // everything has been echoed to Result
+         end
+       else // straight item (not delimited)
+         begin
+           CharPos := Pos(DividingChar,CSV_line);
+           if CharPos>0 then
+             begin
+               Result := StrippedString(Substring(CSV_line,1,CharPos-1));
+               CSV_line := StrippedString(Substring(CSV_line,CharPos+1,MaxInt));
+             end
+           else // DividingChar not found, this is last item
+             begin
+               Result := CSV_line; // already stripped at start of function
+               CSV_line := '';
+             end;
+
+         end;
+     end;  {ExtractCSV_item}
+
+   function CSV_formatted_string(const StringToFormat : String): String;
+     begin
+       Result := SubstitutedString(StringToFormat,'"','""');
+       if (Pos(',',Result)>0) or (Pos('"',Result)>0) then Result := '"'+Result+'"';
+     end;
+
+   function SubstitutedString(const ExistingString, OldPattern, NewPattern : String): String;
+   {returns ExistingString with all occurrences of OldPattern replaced by NewPattern}
+     var
+       MatchPos : array of Integer;
+       SearchPos, StringPos, I : Integer;
+
+     begin
+       SetLength(MatchPos,0);
+       SearchPos := 1;
+       while SearchPos<Length(ExistingString) do
+         begin
+           StringPos := Pos(OldPattern,Substring(ExistingString,SearchPos,MaxInt));
+           if StringPos=0 then
+             SearchPos := Length(ExistingString)
+           else
+             begin
+               StringPos := SearchPos + StringPos - 1;
+//               ShowMessage(Format('Match found at %d',[StringPos]));
+               SetLength(MatchPos,Length(MatchPos)+1);
+               MatchPos[Length(MatchPos)-1] := StringPos;
+               SearchPos := StringPos + Length(OldPattern);
+             end;
+         end;
+
+       Result := ExistingString;
+       I := Length(MatchPos) - 1; // highest index
+       while I>=0 do
+         begin
+//           ShowMessage(Format('Replacing match at %d',[MatchPos[I]]));
+           Result := Substring(Result,1,MatchPos[I]-1)+NewPattern+Substring(Result,MatchPos[I]+Length(OldPattern),Length(Result));
+           Dec(I);
+         end;
+
+     end;
 
    function NonBlankString(S: string): boolean;
      begin

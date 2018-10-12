@@ -107,7 +107,7 @@ begin
               ObsLonList.Add(Trim(LeadingElement(DataLine,',')));
               ObsLatList.Add(Trim(LeadingElement(DataLine,',')));
               ObsElevList.Add(Trim(LeadingElement(DataLine,',')));
-              ObsNameList.Add(Trim(DataLine));
+              ObsNameList.Add(ExtractCSV_item(DataLine));
             end;
         end;
       CloseFile(ObsListFile);
@@ -173,7 +173,7 @@ begin
     Trim(ObserverLongitude_LabeledNumericEdit.NumericEdit.Text)+', '+
     Trim(ObserverLatitude_LabeledNumericEdit.NumericEdit.Text)+', '+
     Trim(ObserverElevation_LabeledNumericEdit.NumericEdit.Text)+', '+
-    NameToAdd);
+    CSV_formatted_string(NameToAdd));
   CloseFile(ObsListFile);
 
   ObsLonList.Add(Trim(ObserverLongitude_LabeledNumericEdit.NumericEdit.Text));

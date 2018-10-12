@@ -23,6 +23,10 @@ type
     Restore_Button: TButton;
     InverseShadowLengthRefPtReadout_RadioButton: TRadioButton;
     PixelDataReadout_RadioButton: TRadioButton;
+    LongitudeReadout_GroupBox: TGroupBox;
+    WestLongitudes_RadioButton: TRadioButton;
+    EastLongitudes_RadioButton: TRadioButton;
+    CenteredLongitudes_RadioButton: TRadioButton;
     procedure OK_ButtonClick(Sender: TObject);
     procedure Cancel_ButtonClick(Sender: TObject);
     procedure Save_ButtonClick(Sender: TObject);

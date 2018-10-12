@@ -62,7 +62,7 @@ implementation
 
 {$R *.dfm}
 
-uses LTVT_Unit, MPVectors, Math;
+uses MoonPosition {MoonRadius}, LTVT_Unit, MPVectors, Math;
 
 procedure TCircleDrawing_Form.FormShow(Sender: TObject);
 begin
@@ -86,7 +86,7 @@ var
 begin
   LonDeg := LonDeg_LabeledNumericEdit.NumericEdit.ExtendedValue;
   LatDeg := LatDeg_LabeledNumericEdit.NumericEdit.ExtendedValue;
-  RadiusDeg := RadToDeg(Diam_LabeledNumericEdit.NumericEdit.ExtendedValue/LTVT_Form.MoonRadius/2);
+  RadiusDeg := RadToDeg(Diam_LabeledNumericEdit.NumericEdit.ExtendedValue/MoonRadius/2);
 
   with LTVT_Form do
     begin

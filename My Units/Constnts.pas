@@ -7,6 +7,14 @@ interface
   {Turbo Pascal 7.0 constants:}
     MaxExpArgument = 11300.0;  {larger values cause overflow of exp(x)>(max. extended)}
 
+  {Computers}
+    OneBit = 1/8; {bytes}
+    OneByte = 1;
+    OneKB = 1024; {bytes}
+    OneMB = OneKB*OneKB;
+    OneGB = OneKB*OneMB;
+    OneTB = 1.0*OneKB*OneGB; {too large for Integer format}
+
   {math}
     TwoPi = 2.0*pi;
     PiByTwo = Pi/2;

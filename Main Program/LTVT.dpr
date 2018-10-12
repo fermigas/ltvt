@@ -23,7 +23,12 @@ uses
   H_CalibratedPhotoSelector_Unit in 'H_CalibratedPhotoSelector_Unit.pas' {CalibratedPhotoLoader_Form},
   MapFns_Unit in 'MapFns_Unit.pas',
   ObserverLocationName_Unit in 'ObserverLocationName_Unit.pas' {ObserverLocationName_Form},
-  H_CartographicOptions_Unit in 'H_CartographicOptions_Unit.pas' {CartographicOptions_Form};
+  H_CartographicOptions_Unit in 'H_CartographicOptions_Unit.pas' {CartographicOptions_Form},
+  DEM_ContourDrawing_Unit in 'DEM_ContourDrawing_Unit.pas' {DEM_ContourDrawing_Form},
+  TargetSelection_Unit in 'TargetSelection_Unit.pas' {TargetSelection_Form},
+  DEM_Data_Unit in 'DEM_Data_Unit.pas',
+  ExportTexture_Unit in 'ExportTexture_Unit.pas' {ExportTexture_Form},
+  CommentEntry_Unit in 'CommentEntry_Unit.pas' {CommentEntry_Form};
 
 {$R *.res}
 
@@ -50,5 +55,9 @@ begin
   Application.CreateForm(TCalibratedPhotoLoader_Form, CalibratedPhotoLoader_Form);
   Application.CreateForm(TObserverLocationName_Form, ObserverLocationName_Form);
   Application.CreateForm(TCartographicOptions_Form, CartographicOptions_Form);
+  Application.CreateForm(TDEM_ContourDrawing_Form, DEM_ContourDrawing_Form);
+  Application.CreateForm(TTargetSelection_Form, TargetSelection_Form);
+  Application.CreateForm(TExportTexture_Form, ExportTexture_Form);
+  Application.CreateForm(TCommentEntry_Form, CommentEntry_Form);
   Application.Run;
 end.

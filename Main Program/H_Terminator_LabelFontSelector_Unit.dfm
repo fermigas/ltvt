@@ -2,7 +2,7 @@ object LabelFontSelector_Form: TLabelFontSelector_Form
   Left = 223
   Top = 99
   Width = 528
-  Height = 545
+  Height = 551
   Caption = 'Dot/Label Options'
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -63,22 +63,22 @@ object LabelFontSelector_Form: TLabelFontSelector_Form
     object FontSample_Label: TLabel
       Left = 152
       Top = 18
-      Width = 55
+      Width = 93
       Height = 13
       Hint = 
         'This is a sample label -- when you have what you want, click "OK' +
         '"'
-      Caption = 'Ptolemaeus'
+      Caption = 'Primary crater name'
     end
     object SatelliteFontSample_Label: TLabel
       Left = 152
       Top = 38
-      Width = 65
+      Width = 96
       Height = 13
       Hint = 
         'This is a sample label -- when you have what you want, click "OK' +
         '"'
-      Caption = 'Ptolemaeus B'
+      Caption = 'Satellite crater name'
     end
     object RadialDotOffset_CheckBox: TCheckBox
       Left = 96

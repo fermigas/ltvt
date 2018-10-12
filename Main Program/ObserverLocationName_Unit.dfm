@@ -3,7 +3,7 @@ object ObserverLocationName_Form: TObserverLocationName_Form
   Top = 362
   Width = 467
   Height = 171
-  Caption = 'Observer Location Name'
+  Caption = 'Add Observer Location Name'
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -39,7 +39,7 @@ object ObserverLocationName_Form: TObserverLocationName_Form
     Width = 57
     Height = 25
     Hint = 'Add entry to list'
-    Caption = 'OK'
+    Caption = 'Add'
     TabOrder = 1
     OnClick = OK_ButtonClick
     OnKeyDown = ShowHelp

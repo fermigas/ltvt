@@ -1,8 +1,8 @@
 object MouseOptions_Form: TMouseOptions_Form
   Left = 191
   Top = 89
-  Width = 620
-  Height = 400
+  Width = 643
+  Height = 487
   Caption = 'Mouse Options'
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -18,7 +18,7 @@ object MouseOptions_Form: TMouseOptions_Form
     Left = 16
     Top = 16
     Width = 313
-    Height = 65
+    Height = 57
     Caption = 'Cursor'
     Ctl3D = False
     ParentCtl3D = False
@@ -30,7 +30,9 @@ object MouseOptions_Form: TMouseOptions_Form
       Height = 17
       Hint = 'Use default cursor when mouse is over image area'
       Caption = 'Normal Cursor'
+      Checked = True
       TabOrder = 0
+      TabStop = True
       OnKeyDown = NormalCursor_RadioButtonKeyDown
     end
     object CrosshairCursor_RadioButton: TRadioButton
@@ -46,9 +48,9 @@ object MouseOptions_Form: TMouseOptions_Form
   end
   object RefPtOptions_GroupBox: TGroupBox
     Left = 16
-    Top = 104
+    Top = 168
     Width = 585
-    Height = 209
+    Height = 217
     Hint = 
       'As mouse is moved into shadow area beyond reference point, displ' +
       'ay height of the Sun'#39's rays relative to the reference point heig' +
@@ -68,7 +70,7 @@ object MouseOptions_Form: TMouseOptions_Form
     end
     object DistanceAndBearingFromRefPt_RadioButton: TRadioButton
       Left = 32
-      Top = 72
+      Top = 96
       Width = 409
       Height = 17
       Hint = 
@@ -85,13 +87,15 @@ object MouseOptions_Form: TMouseOptions_Form
       Width = 393
       Height = 17
       Hint = 'Display nothing'
-      Caption = 'Blank  (do not display anything related to the  reference point)'
+      Caption = 'Display elevation at mouse point as read from current DEM'
+      Checked = True
       TabOrder = 0
+      TabStop = True
       OnKeyDown = NoRefPtReadout_RadioButtonKeyDown
     end
     object ShadowLengthRefPtReadout_RadioButton: TRadioButton
       Left = 32
-      Top = 104
+      Top = 128
       Width = 441
       Height = 17
       Hint = 
@@ -106,7 +110,7 @@ object MouseOptions_Form: TMouseOptions_Form
     end
     object PointOfLightRefPtReadout_RadioButton: TRadioButton
       Left = 32
-      Top = 168
+      Top = 176
       Width = 505
       Height = 17
       Hint = 
@@ -121,7 +125,7 @@ object MouseOptions_Form: TMouseOptions_Form
     end
     object InverseShadowLengthRefPtReadout_RadioButton: TRadioButton
       Left = 32
-      Top = 136
+      Top = 152
       Width = 545
       Height = 17
       Hint = 
@@ -134,10 +138,24 @@ object MouseOptions_Form: TMouseOptions_Form
       TabOrder = 3
       OnKeyDown = InverseShadowLengthRefPtReadout_RadioButtonKeyDown
     end
+    object PixelDataReadout_RadioButton: TRadioButton
+      Left = 32
+      Top = 72
+      Width = 425
+      Height = 17
+      Hint = 
+        'ShowRGB intensities ofcurrent pixel  or of pixel used for drawin' +
+        'g it'
+      Caption = 
+        'Display mouse point pixel location and intensity value(s) in sou' +
+        'rce or displayed image'
+      TabOrder = 5
+      OnKeyDown = PixelDataReadout_RadioButtonKeyDown
+    end
   end
   object OK_Button: TButton
     Left = 464
-    Top = 336
+    Top = 408
     Width = 49
     Height = 25
     Hint = 'Close form and make changes'
@@ -148,7 +166,7 @@ object MouseOptions_Form: TMouseOptions_Form
   end
   object Cancel_Button: TButton
     Left = 528
-    Top = 336
+    Top = 408
     Width = 65
     Height = 25
     Hint = 'Close form without making any changes'
@@ -159,7 +177,7 @@ object MouseOptions_Form: TMouseOptions_Form
   end
   object Save_Button: TButton
     Left = 16
-    Top = 337
+    Top = 409
     Width = 89
     Height = 25
     Hint = 'Save these settings as the new defaults'
@@ -170,7 +188,7 @@ object MouseOptions_Form: TMouseOptions_Form
   end
   object Restore_Button: TButton
     Left = 112
-    Top = 337
+    Top = 409
     Width = 89
     Height = 25
     Hint = 'Restore the last saved settings'
@@ -178,5 +196,39 @@ object MouseOptions_Form: TMouseOptions_Form
     TabOrder = 3
     OnClick = Restore_ButtonClick
     OnKeyDown = Restore_ButtonKeyDown
+  end
+  object LongitudeReadout_GroupBox: TGroupBox
+    Left = 16
+    Top = 88
+    Width = 585
+    Height = 57
+    Caption = 'Longitude Convention'
+    TabOrder = 6
+    object WestLongitudes_RadioButton: TRadioButton
+      Left = 16
+      Top = 24
+      Width = 153
+      Height = 17
+      Caption = '-360'#176' to 0'#176' West Longitudes'
+      TabOrder = 0
+    end
+    object EastLongitudes_RadioButton: TRadioButton
+      Left = 392
+      Top = 24
+      Width = 153
+      Height = 17
+      Caption = '0 to +360'#176' East Longitudes'
+      TabOrder = 1
+    end
+    object CenteredLongitudes_RadioButton: TRadioButton
+      Left = 192
+      Top = 24
+      Width = 169
+      Height = 17
+      Caption = '-180'#176' to +180'#176' W/E Longitudes'
+      Checked = True
+      TabOrder = 2
+      TabStop = True
+    end
   end
 end

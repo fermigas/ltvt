@@ -46,38 +46,42 @@ type
 const
   GeocentricSubEarthMode : boolean = False;  {if True, ignores corrections for observer position on Earth in SubEarthPointOnMoon}
 
-  AdjustToMeanEarthSystem : boolean = True;  {if False, returns SelenographicCoordinateSystem in native JPL principal axis system;
+  AdjustToMeanEarthSystem : boolean = True;  {applies only to Moon --
+                                              if False, returns SelenographicCoordinateSystem in native JPL principal axis system;
                                               if True, applies a fixed rotation based on p1, p2 and tau}
 
 {offset angles from J. Chapront, M. Chapront-Touze, and G. Francou, "Determination
 of the lunar orbital and rotational parameters and of the ecliptic reference system
 orientation from LLR measurements and IERS data," Astron. Astrophys. 343, 624–633 (1999)
-used to ComputeMeanEarthSystemOffsetMatix used to AdjustToMeanEarthSystem}
-  p1 : extended = -78.9316*OneArcSec;
-  p2 : extended = 0.2902*OneArcSec;
-  tau : extended = 66.1898*OneArcSec;
+used to ComputeMeanEarthSystemOffsetMatrix used to AdjustToMeanEarthSystem}
+  p1 : extended = -78.9316;  //unit : OneArcSec
+  p2 : extended = 0.2902;
+  tau : extended = 66.1898;
 
 var
-  DaviesMatrix : array[1..3,1..3] of extended;  // Merton Davies matrix to transform Mean-Earth vectors to Prinicpal Axis vectors
+  CurrentTargetPlanet : Planet;
+  CurrentPlanetName : String;
+  MoonRadius : Extended;
 
   SelenographicCoordinateSystem : TCoordinateSystem;  {set by SetSelenographicSystem;
     used by SelenographicCoordinates}
   TerrestrialCoordinateSystem : TCoordinateSystem;  {set by SetTerrestrialSystem;
     used by TerrestrialCoordinates}
 
-  MoonToSunAU : extended;  // from center of Moon to center of Sun at moment of observation -- set by SubSolarPointOnMoon
-  ObserverToMoonAU : extended;  // from observer to center of Moon at moment of observation -- set by SubEarthPointOnMoon
+  MoonToSunAU : extended;  // from center of JPL_TargetBody to center of Sun at moment of observation -- set by SubSolarPointOnMoon
+  ObserverToMoonAU : extended;  // from observer to center of JPL_TargetBody at moment of observation -- set by SubEarthPointOnMoon
 
   EarthAxisVector, ObserverZenithVector : TVector;  // set by CalculatePosition
 
-procedure ComputeMeanEarthSystemOffsetMatix;
+function ChangeTargetPlanet(const DesiredPlanet : Planet) : Boolean;
+
+procedure RefreshCorrectionAngles;
 
 procedure CalculatePosition(const UTC_MJD : extended; const SelectedPlanet : Planet;
   const SelectedStarData: StarDataRecord; var PositionResults: PositionResultRecord);
 {The argument UTC_MJD is the desired UTC Modified Julian Date.  It will be internally
 corrected for the IERS values of DUT and EUT (see above) before returning a topocentric
 position for the observer location defined in MP_Defs}
-
 
 procedure SetSelenographicSystem(const TDB: extended);
 {note: this previously took as input the UT_MJD}
@@ -111,36 +115,38 @@ uses Zeroes, TimLib, Trig_fns,
      Win_Ops, SysUtils, H_ClockError, H_NOVAS, H_JPL_Ephemeris, Dialogs;
 
 var
+  JPL_TargetBody : TJPL_TargetOptions;
   EclipticCoordinateSystem : TCoordinateSystem;
+  p1_rad, p2_rad, tau_rad : Extended;
 
-procedure ComputeMeanEarthSystemOffsetMatix;
-  var
-    sinp1, cosp1, sinp2, cosp2, sintau, costau : extended;
+function ChangeTargetPlanet(const DesiredPlanet : Planet) : Boolean;
   begin
-  {matrix from M.E. Davies, T.R. Colvin and D.L. Meyer,
-  "A Unified Lunar Control Network -- The Near Side," (A Rand Note) N-2664-NASA
-  (October 1987) --  this matrix transforms the components of a vector in the
-  lunar mean Earth/rotation axis into the components in the principal axis system.
-  Direction 1 (x) is towards the Earth, direction 2 (y) is towards Mare Crisium,
-  direction 3 (z) is northwards.}
-    sinp1 := Sin(p1);
-    cosp1 := Cos(p1);
-    sinp2 := Sin(p2);
-    cosp2 := Cos(p2);
-    sintau := Sin(tau);
-    costau := Cos(tau);
-
-    DaviesMatrix[1,1] := cosp1*costau;
-    DaviesMatrix[1,2] := cosp1*sintau;
-    DaviesMatrix[1,3] := sinp1;
-    DaviesMatrix[2,1] := -sinp1*sinp2*costau - cosp2*sintau;
-    DaviesMatrix[2,2] := -sinp1*sinp2*sintau + cosp2*costau;
-    DaviesMatrix[2,3] := sinp2*cosp1;
-    DaviesMatrix[3,1] := -sinp1*cosp2*costau + sinp2*sintau;
-    DaviesMatrix[3,2] := -sinp1*cosp2*sintau - sinp2*costau;
-    DaviesMatrix[3,3] := cosp2*cosp1;
+    Result := True;
+    CurrentTargetPlanet := DesiredPlanet;
+    CurrentPlanetName := PlanetName[CurrentTargetPlanet];
+    MoonRadius := PlanetRadius[CurrentTargetPlanet]/OneKm;
+    case DesiredPlanet of
+       Moon :  JPL_TargetBody :=  JPL_Moon;
+       Mercury : JPL_TargetBody :=  JPL_Mercury;
+       Venus : JPL_TargetBody :=  JPL_Venus;
+       Mars : JPL_TargetBody :=  JPL_Mars;
+       Jupiter : JPL_TargetBody :=  JPL_Jupiter;
+       Saturn : JPL_TargetBody :=  JPL_Saturn;
+       Uranus : JPL_TargetBody :=  JPL_Uranus;
+       Neptune : JPL_TargetBody :=  JPL_Neptune;
+       Pluto : JPL_TargetBody :=  JPL_Pluto;
+       else
+         ShowMessage('Unable to initialize coordinate system for '+PlanetName[DesiredPlanet]);
+         Result := False;
+     end; {case}
   end;
 
+procedure RefreshCorrectionAngles;
+  begin
+    p1_rad  := p1*OneArcSec;
+    p2_rad  := p2*OneArcSec;
+    tau_rad := tau*OneArcSec;
+  end;
 
 {Note: the following two routines are normally in ClockErr}
 {
@@ -167,7 +173,7 @@ procedure CalculatePosition;
     JD, UT1_Offset_secs, TDT_Offset_secs, UT1_JD, TDT_JD,
     drdt, zd, rar, decr, Cusps_X_component, Cusps_Y_component : extended;
     pout,vout : TVector;
-    lplan : TTargetOptions;
+    lplan : TJPL_TargetOptions;
 
   begin {CalculatePosition}  with PositionResults do begin
 
@@ -198,17 +204,17 @@ procedure CalculatePosition;
     else
      begin
        case SelectedPlanet of
-         MP_Defs.Sun:     lplan :=  H_JPL_Ephemeris.Sun;
-         MP_Defs.Mercury: lplan :=  H_JPL_Ephemeris.Mercury;
-         MP_Defs.Venus:   lplan :=  H_JPL_Ephemeris.Venus;
-         MP_Defs.Earth:   lplan :=  H_JPL_Ephemeris.Earth;
-         MP_Defs.Mars:    lplan :=  H_JPL_Ephemeris.Mars;
-         MP_Defs.Jupiter: lplan :=  H_JPL_Ephemeris.Jupiter;
-         MP_Defs.Saturn:  lplan :=  H_JPL_Ephemeris.Saturn;
-         MP_Defs.Uranus:  lplan :=  H_JPL_Ephemeris.Uranus;
-         MP_Defs.Neptune: lplan :=  H_JPL_Ephemeris.Neptune;
-         MP_Defs.Pluto:   lplan :=  H_JPL_Ephemeris.Pluto;
-         MP_Defs.Moon:    lplan :=  H_JPL_Ephemeris.Moon;
+         Sun:     lplan :=  JPL_Sun;
+         Mercury: lplan :=  JPL_Mercury;
+         Venus:   lplan :=  JPL_Venus;
+         Earth:   lplan :=  JPL_Earth;
+         Mars:    lplan :=  JPL_Mars;
+         Jupiter: lplan :=  JPL_Jupiter;
+         Saturn:  lplan :=  JPL_Saturn;
+         Uranus:  lplan :=  JPL_Uranus;
+         Neptune: lplan :=  JPL_Neptune;
+         Pluto:   lplan :=  JPL_Pluto;
+         Moon:    lplan :=  JPL_Moon;
          else
            ShowMessage('Calculate position:  unknown planet selection requested');
            exit;
@@ -272,65 +278,177 @@ procedure SetSelenographicSystem(const TDB: extended);
 {note: this previously took as input the UT_MJD}
   var
     JPL_Data : TEphemerisOutput;
-    Angle3 : extended;
-    PA_System, Dummy_Vectors : TCoordinateSystem;
+    Angle3 : Extended;
+    PA_System : TCoordinateSystem;
+//for Targets other than Moon:
+    T, d, RA_rad, Dec_rad, W_rad, W_dot {[deg per day]}, CosLat,
+    Ja, Jb, Jc, Jd, Je, N : Extended;
+
+  procedure CorrectAxis(const InputVector : TVector; var OutputVector : TVector);
+  // this is the procedure for correcting vectors from Mean-axis *to* Principal axis
+  // in Williams, Boggs and Folkner (2008): de421_lunar_ephemeris_and_orientation.pdf
+    begin
+      OutputVector := InputVector;
+// rotates vector from Mean Earth to Principal Axis components
+// signs reversed from reference to give CW rotations
+      RotateVector(OutputVector,-p2_rad,PA_System.UnitX);
+      RotateVector(OutputVector,p1_rad,PA_System.UnitY);
+      RotateVector(OutputVector,-tau_rad,PA_System.UnitZ);
+    end;
+
+  procedure SetPlanetocentricAxes;
+    begin
+      with SelenographicCoordinateSystem do
+        begin
+  // locate north pole
+          CosLat := Cos(Dec_rad);
+          UnitZ[x] := Cos(RA_rad)*CosLat;
+          UnitZ[y] := Sin(RA_rad)*CosLat;
+          UnitZ[z] := Sin(Dec_rad);
+
+          CrossProduct(Uz,UnitZ,UnitX);  // intersection of planet equator with ICRF equator
+          if VectorMagnitude(UnitX)=0 then
+            UnitX := Ux
+          else
+            NormalizeVector(UnitX);
+
+          RotateVector(UnitX,W_rad,UnitZ);
+          CrossProduct(UnitZ,UnitX,UnitY);
+          NormalizeVector(UnitY);
+        end;
+
+    end;
+
   begin {SetSelenographicSystem}
-    ReadEphemeris(TDB,Librations,DontCare,PositionsAndVelocities,AU_day,JPL_Data);
-
-  {JPL ephemeris expresses offset from ICRF to Selenographic system by three
-   Euler angles}
-
-  {JPL Angle3 tends to be very large plus or minus-- it is total lunar
-   rotations wrt. ICRF from some reference date --
-   Doesn't seem to be necessary, but bring it into range 0..2pi before
-   computing signs and cosines}
-    Angle3 := JPL_Data.Angle3;
-    while Angle3>TwoPi do Angle3 := Angle3 - TwoPi;
-    while Angle3<0     do Angle3 := Angle3 + TwoPi;
-
-    with SelenographicCoordinateSystem do
+  case CurrentTargetPlanet of
+    Moon :
       begin
-        UnitX := Ux;
-        UnitY := Uy;
-        UnitZ := Uz;
+        ReadEphemeris(TDB,Librations,DontCare,PositionsAndVelocities,AU_day,JPL_Data);
+
+      {JPL ephemeris expresses offset from ICRF to Selenographic system by three
+       Euler angles}
+
+      {JPL Angle3 tends to be very large plus or minus-- it is total lunar
+       rotations wrt. ICRF from some reference date --
+       Doesn't seem to be necessary, but bring it into range 0..2pi before
+       computing signs and cosines}
+        Angle3 := JPL_Data.Angle3;
+        while Angle3>TwoPi do Angle3 := Angle3 - TwoPi;
+        while Angle3<0     do Angle3 := Angle3 + TwoPi;
+
+        with PA_System do
+          begin
+            UnitX := Ux;
+            UnitY := Uy;
+            UnitZ := Uz;
+          end;
+
+        RotateCoordinateSystem(PA_System,JPL_Data.Angle1,JPL_Data.Angle2,Angle3);
+
+        if AdjustToMeanEarthSystem then
+          begin
+            CorrectAxis(PA_System.UnitX,SelenographicCoordinateSystem.UnitX);
+            CorrectAxis(PA_System.UnitY,SelenographicCoordinateSystem.UnitY);
+            CorrectAxis(PA_System.UnitZ,SelenographicCoordinateSystem.UnitZ);
+          end
+        else
+          SelenographicCoordinateSystem := PA_System;
+
       end;
 
-    RotateCoordinateSystem(SelenographicCoordinateSystem,JPL_Data.Angle1,JPL_Data.Angle2,Angle3);
+// following definitions of cartographic axes are from  Seidelmann et al. 2007 :
+// Report of the IAU/IAGWorking Group on cartographic coordinates and rotational elements: 2006
 
-    if AdjustToMeanEarthSystem then
+    Mercury :
       begin
-        PA_System := SelenographicCoordinateSystem;
-
-      // from DaviesMatrix we know components of MeanEarth system UnitX on PrincipalAxis system unit vectors.
-        Dummy_Vectors := PA_System;
-        MultiplyVector(DaviesMatrix[1,1],Dummy_Vectors.UnitX);
-        MultiplyVector(DaviesMatrix[2,1],Dummy_Vectors.UnitY);
-        MultiplyVector(DaviesMatrix[3,1],Dummy_Vectors.UnitZ);
-      // add the three parts together to get the direction of the MeanEarth vector in the Principal Axis system.
-        SelenographicCoordinateSystem.UnitX := Dummy_Vectors.UnitX;
-        VectorSum(SelenographicCoordinateSystem.UnitX,Dummy_Vectors.UnitY,SelenographicCoordinateSystem.UnitX);
-        VectorSum(SelenographicCoordinateSystem.UnitX,Dummy_Vectors.UnitZ,SelenographicCoordinateSystem.UnitX);
-
-      // repeat for MeanEarth system UnitY
-        Dummy_Vectors := PA_System;
-        MultiplyVector(DaviesMatrix[1,2],Dummy_Vectors.UnitX);
-        MultiplyVector(DaviesMatrix[2,2],Dummy_Vectors.UnitY);
-        MultiplyVector(DaviesMatrix[3,2],Dummy_Vectors.UnitZ);
-        SelenographicCoordinateSystem.UnitY := Dummy_Vectors.UnitX;
-        VectorSum(SelenographicCoordinateSystem.UnitY,Dummy_Vectors.UnitY,SelenographicCoordinateSystem.UnitY);
-        VectorSum(SelenographicCoordinateSystem.UnitY,Dummy_Vectors.UnitZ,SelenographicCoordinateSystem.UnitY);
-
-      // repeat for MeanEarth system UnitZ
-        Dummy_Vectors := PA_System;
-        MultiplyVector(DaviesMatrix[1,3],Dummy_Vectors.UnitX);
-        MultiplyVector(DaviesMatrix[2,3],Dummy_Vectors.UnitY);
-        MultiplyVector(DaviesMatrix[3,3],Dummy_Vectors.UnitZ);
-        SelenographicCoordinateSystem.UnitZ := Dummy_Vectors.UnitX;
-        VectorSum(SelenographicCoordinateSystem.UnitZ,Dummy_Vectors.UnitY,SelenographicCoordinateSystem.UnitZ);
-        VectorSum(SelenographicCoordinateSystem.UnitZ,Dummy_Vectors.UnitZ,SelenographicCoordinateSystem.UnitZ);
+        d := (TDB - JD2000);
+        T := d / DaysPerCentury;
+        RA_rad := OneDegree*(281.01 - 0.033*T);
+        Dec_rad := OneDegree*(61.45 - 0.005*T);
+        W_dot := 6.1385025;
+        W_rad := OneDegree*(329.548 + W_dot*d);
+        SetPlanetocentricAxes;
       end;
-
-
+    Venus :
+      begin
+        d := (TDB - JD2000);
+        RA_rad := OneDegree*(272.76);
+        Dec_rad := OneDegree*(67.16);
+        W_dot := -1.4813688;
+        W_rad := OneDegree*(160.20 + W_dot*d);
+        SetPlanetocentricAxes;
+      end;
+    Mars :
+      begin
+        d := (TDB - JD2000);
+        T := d / DaysPerCentury;
+        RA_rad := OneDegree*(317.68143 - 0.1061*T);
+        Dec_rad := OneDegree*(52.88650 - 0.0609*T);
+        W_dot := 350.89198226;
+        W_rad := OneDegree*(176.630 + W_dot*d);
+        SetPlanetocentricAxes;
+      end;
+    Jupiter :
+      begin
+        d := (TDB - JD2000);
+        T := d / DaysPerCentury;
+        Ja := 99.360714 + 4850.4046*T;
+        Jb := 175.895369 + 1191.9605*T;
+        Jc := 300.323162 + 262.5475*T;
+        Jd := 114.012305 + 6070.2476*T;
+        Je := 49.511251 + 64.3000*T;
+        RA_rad := OneDegree*(268.056595 - 0.006499*T + 0.000117*sin(Ja) + 0.000938*sin(Jb)
+          + 0.001432*sin(Jc) + 0.000030*sin(Jd) + 0.002150*sin(Je));
+        Dec_rad := OneDegree*(64.495303 + 0.002413*T + 0.000050*cos(Ja) + 0.000404*cos(Jb)
+          + 0.000617*cos(Jc) - 0.000013*cos(Jd) + 0.000926*cos(Je));
+//        W_rad := OneDegree*(67.1 + 877.900*d); // System I -- mean atmospheric equatorial rotation
+//        W_rad := OneDegree*(43.3 + 870.270*d); // System II -- mean atmospheric rotation north of the south component of the north equatorial belt, and south of the north component of the south equatorial belt
+        W_dot := 870.5366420;
+        W_rad := OneDegree*(284.95 + W_dot*d); // System III -- magnetic field
+        SetPlanetocentricAxes;
+      end;
+    Saturn :
+      begin
+        d := (TDB - JD2000);
+        T := d / DaysPerCentury;
+        RA_rad := OneDegree*(40.589 - 0.036*T);
+        Dec_rad := OneDegree*(83.537 - 0.004*T);
+        W_dot := 810.7939024;
+        W_rad := OneDegree*(38.90 + W_dot*d);
+        SetPlanetocentricAxes;
+      end;
+    Uranus :
+      begin
+        d := (TDB - JD2000);
+        RA_rad := OneDegree*(257.311);
+        Dec_rad := OneDegree*(-15.175);
+        W_dot := -501.1600928;
+        W_rad := OneDegree*(203.81 + W_dot*d);
+        SetPlanetocentricAxes;
+      end;
+    Neptune :
+      begin
+        d := (TDB - JD2000);
+        T := d / DaysPerCentury;
+        N := 357.85 + 52.316*T;
+        RA_rad := OneDegree*(299.36 + 0.70*sin(N));
+        Dec_rad := OneDegree*(43.46 - 0.51*cos(N));
+        W_dot := 536.3128492;
+        W_rad := OneDegree*(253.18 + W_dot*d - 0.48*sin(N));
+        SetPlanetocentricAxes;
+      end;
+    Pluto :
+      begin
+        d := (TDB - JD2000);
+        RA_rad := OneDegree*(312.993);
+        Dec_rad := OneDegree*(6.163);
+        W_dot := -56.3625225;
+        W_rad := OneDegree*(237.305 + W_dot*d);
+        SetPlanetocentricAxes;
+      end;
+    else
+      ShowMessage('Unable to set coordinate system for '+PlanetName[CurrentTargetPlanet]);
+    end;
   end;  {SetSelenographicSystem}
 
 function SelenographicCoordinates(const ICRF_Vector: TVector) : TPolarCoordinates;
@@ -360,18 +478,18 @@ function SubSolarPointOnMoon(const UTC_MJD: extended) : TPolarCoordinates;
   begin {SubSolarPointOnMoon}
     T0 := MJDOffset + UTC_MJD + TDT_Offset(UTC_MJD)*OneSecond/OneDay; {correct from UTC or UT1 to Ephemeris Time JD}
 
-    ReadEphemeris(T0,Moon,Earth,PositionsOnly,AU_day,Moon_Data);
+    ReadEphemeris(T0,JPL_TargetBody,JPL_Earth,PositionsOnly,AU_day,Moon_Data);
     LT1 := (OneAU*VectorMagnitude(Moon_Data.R)/c)/OneDay;
-    T1 := T0 - LT1;  {we see Moon where and as it was at this moment}
+    T1 := T0 - LT1;  {we see JPL_TargetBody where and as it was at this moment}
 
 
-    ReadEphemeris(T1,Sun,Moon,PositionsOnly,AU_day,Sun_Data);
+    ReadEphemeris(T1,JPL_Sun,JPL_TargetBody,PositionsOnly,AU_day,Sun_Data);
     LT2 := (OneAU*VectorMagnitude(Sun_Data.R)/c)/OneDay;
-    T2 := T1 - LT2;  {at T1 the Moon was illuminated by light radiated from the Sun at T2}
+    T2 := T1 - LT2;  {at T1 the JPL_TargetBody was illuminated by light radiated from the Sun at T2}
 
 
-    ReadEphemeris(T2,Moon,SolarSystemBarycenter,PositionsOnly,AU_day,Moon_Data);
-    ReadEphemeris(T2,Sun,SolarSystemBarycenter,PositionsOnly,AU_day,Sun_Data);
+    ReadEphemeris(T2,JPL_TargetBody,SolarSystemBarycenter,PositionsOnly,AU_day,Moon_Data);
+    ReadEphemeris(T2,JPL_Sun,SolarSystemBarycenter,PositionsOnly,AU_day,Sun_Data);
 
     VectorDifference(Sun_Data.R,Moon_Data.R,RayDirection);
     MoonToSunAU := VectorMagnitude(RayDirection);
@@ -389,16 +507,16 @@ function SubEarthPointOnMoon(const UTC_MJD: extended) : TPolarCoordinates;
   begin {SubEarthPointOnMoon}
     T0 :=  MJDOffset + UTC_MJD + TDT_Offset(UTC_MJD)*OneSecond/OneDay;
 
-    ReadEphemeris(T0,Moon,Earth,PositionsOnly,AU_day,Moon_Data);
+    ReadEphemeris(T0,JPL_TargetBody,JPL_Earth,PositionsOnly,AU_day,Moon_Data);
     LT1 := (OneAU*VectorMagnitude(Moon_Data.R)/c)/OneDay;
-    T1 := T0 - LT1;  {observer on Moon sees Earth where and as it was at this moment}
+    T1 := T0 - LT1;  {observer on JPL_TargetBody sees Earth where and as it was at this moment}
 
-    ReadEphemeris(T1,Earth,Moon,PositionsOnly,AU_day,Earth_Data);
+    ReadEphemeris(T1,JPL_Earth,JPL_TargetBody,PositionsOnly,AU_day,Earth_Data);
     LT2 := (OneAU*VectorMagnitude(Earth_Data.R)/c)/OneDay;
-    T2 := T1 - LT2;  {at T1 an observer on the Moon saw light radiated from the Earth at T2}
+    T2 := T1 - LT2;  {at T1 an observer on the JPL_TargetBody saw light radiated from the Earth at T2}
 
-    ReadEphemeris(T2,Moon,SolarSystemBarycenter,PositionsOnly,AU_day,Moon_Data);
-    ReadEphemeris(T2,Earth,SolarSystemBarycenter,PositionsOnly,AU_day,Earth_Data);
+    ReadEphemeris(T2,JPL_TargetBody,SolarSystemBarycenter,PositionsOnly,AU_day,Moon_Data);
+    ReadEphemeris(T2,JPL_Earth,SolarSystemBarycenter,PositionsOnly,AU_day,Earth_Data);
 
     if GeocentricSubEarthMode then
       VectorDifference(Earth_Data.R,Moon_Data.R,RayDirection)
@@ -425,62 +543,6 @@ function SubEarthPointOnMoon(const UTC_MJD: extended) : TPolarCoordinates;
     SetSelenographicSystem(T1);
     Result := SelenographicCoordinates(RayDirection);
   end;  {SubEarthPointOnMoon}
-
-(* old routines
-function SubSolarPointOnMoon(const UTC_MJD: extended) : TPolarCoordinates;
-  var
-    Moon_Data, Sun_Data : TEphemerisOutput;
-    T0, T1, LT1, T2, LT2 : extended;
-    RayDirection : TVector;
-  begin {SubSolarPointOnMoon}
-    T0 := MJDOffset + UTC_MJD + TDT_Offset(UTC_MJD)*OneSecond/OneDay; {correct from UTC or UT1 to Ephemeris Time JD}
-
-    ReadEphemeris(T0,Moon,Earth,PositionsOnly,AU_day,Moon_Data);
-    LT1 := (OneAU*VectorMagnitude(Moon_Data.R)/c)/OneDay;
-    T1 := T0 - LT1;  {we see Moon where and as it was at this moment}
-
-
-    ReadEphemeris(T0,Sun,Moon,PositionsOnly,AU_day,Sun_Data);
-    LT2 := (OneAU*VectorMagnitude(Sun_Data.R)/c)/OneDay;
-    T2 := T1 - LT2;  {at T1 the Moon was illuminated by light radiated from the Sun at T2}
-
-
-    ReadEphemeris(T1,Moon,SolarSystemBarycenter,PositionsOnly,AU_day,Moon_Data);
-    ReadEphemeris(T2,Sun,SolarSystemBarycenter,PositionsOnly,AU_day,Sun_Data);
-
-    VectorDifference(Sun_Data.R,Moon_Data.R,RayDirection);
-
-    SetSelenographicSystem(UTC_MJD - LT1);
-    Result := SelenographicCoordinates(RayDirection);
-  end;  {SubSolarPointOnMoon}
-
-function SubEarthPointOnMoon(const UTC_MJD: extended) : TPolarCoordinates;
-  var
-    JPL_Data : TEphemerisOutput;
-    GAST,
-    TDB, LT1, T1 : extended;
-    MoonEarthVector, ObsLocation, ObsVelocity, MoonObserverVector : TVector;
-  begin {SubEarthPointOnMoon}
-    TDB :=  MJDOffset + UTC_MJD + TDT_Offset(UTC_MJD)*OneSecond/OneDay;
-    ReadEphemeris(TDB,Earth,Moon,PositionsOnly,AU_day,JPL_Data);
-    LT1 := (OneAU*VectorMagnitude(JPL_Data.R)/c)/OneDay; {light time}
-    T1 := TDB - LT1; {Moon is seen as it was at this time}
-
-    sidtim(0,MJDOffset + UTC_MJD + IERS_DUT(UTC_MJD)*OneSecond/OneDay,1,GAST); {Note:
-      3rd parameter:  1 gives Greenwich apparent sidereal time (which is called for by TERRA;
-      0 gives Greenwich mean sidereal time, which may be more appropriate}
-
-    Terra(-ObserverLongitude,ObserverLatitude,ObserverElevation,GAST,ObsLocation,ObsVelocity);
-    {gives coordinates wrt equinox of date -- should use GMST for fixed ICRF equinox?}
-
-    ReadEphemeris(T1,Earth,Moon,PositionsOnly,AU_day,JPL_Data);
-    MoonEarthVector := JPL_Data.R;
-    VectorSum(MoonEarthVector,ObsLocation,MoonObserverVector);
-
-    SetSelenographicSystem(T1 - MJDOffset);
-    Result := SelenographicCoordinates(MoonObserverVector);
-  end;  {SubEarthPointOnMoon}
-*)
 
 procedure SetTerrestrialSystem(const TDB: extended);
 {note: this previously took as input the UT_MJD}
@@ -522,18 +584,18 @@ function SubSolarPointOnEarth(const UTC_MJD: extended) : TPolarCoordinates;
   begin {SubSolarPointOnEarth}
     T0 := MJDOffset + UTC_MJD + TDT_Offset(UTC_MJD)*OneSecond/OneDay; {correct from UTC or UT1 to Ephemeris Time JD}
 
-    ReadEphemeris(T0,Earth,Moon,PositionsOnly,AU_day,Earth_Data);
+    ReadEphemeris(T0,JPL_Earth,JPL_TargetBody,PositionsOnly,AU_day,Earth_Data);
     LT1 := (OneAU*VectorMagnitude(Earth_Data.R)/c)/OneDay;
-    T1 := T0 - LT1;  {observer on Moon sees Earth where and as it was at this moment}
+    T1 := T0 - LT1;  {observer on JPL_TargetBody sees Earth where and as it was at this moment}
 
 
-    ReadEphemeris(T1,Sun,Earth,PositionsOnly,AU_day,Sun_Data);
+    ReadEphemeris(T1,JPL_Sun,JPL_Earth,PositionsOnly,AU_day,Sun_Data);
     LT2 := (OneAU*VectorMagnitude(Sun_Data.R)/c)/OneDay;
     T2 := T1 - LT2;  {at T1 the Earth was illuminated by light radiated from the Sun at T2}
 
 
-    ReadEphemeris(T2,Earth,SolarSystemBarycenter,PositionsOnly,AU_day,Earth_Data);
-    ReadEphemeris(T2,Sun,SolarSystemBarycenter,PositionsOnly,AU_day,Sun_Data);
+    ReadEphemeris(T2,JPL_Earth,SolarSystemBarycenter,PositionsOnly,AU_day,Earth_Data);
+    ReadEphemeris(T2,JPL_Sun,SolarSystemBarycenter,PositionsOnly,AU_day,Sun_Data);
 
     VectorDifference(Sun_Data.R,Earth_Data.R,RayDirection);
 
@@ -549,16 +611,16 @@ function SubLunarPointOnEarth(const UTC_MJD: extended) : TPolarCoordinates;
   begin {SubLunarPointOnEarth}
     T0 :=  MJDOffset + UTC_MJD + TDT_Offset(UTC_MJD)*OneSecond/OneDay;
 
-    ReadEphemeris(T0,Moon,Earth,PositionsOnly,AU_day,Moon_Data);
+    ReadEphemeris(T0,JPL_TargetBody,JPL_Earth,PositionsOnly,AU_day,Moon_Data);
     LT1 := (OneAU*VectorMagnitude(Moon_Data.R)/c)/OneDay;
-    T1 := T0 - LT1;  {observer on Moon sees Earth where and as it was at this moment}
+    T1 := T0 - LT1;  {observer on JPL_TargetBody sees Earth where and as it was at this moment}
 
-    ReadEphemeris(T1,Earth,Moon,PositionsOnly,AU_day,Earth_Data);
+    ReadEphemeris(T1,JPL_Earth,JPL_TargetBody,PositionsOnly,AU_day,Earth_Data);
     LT2 := (OneAU*VectorMagnitude(Earth_Data.R)/c)/OneDay;
-    T2 := T1 - LT2;  {at T1 an observer on the Moon saw light radiated from the Earth at T2}
+    T2 := T1 - LT2;  {at T1 an observer on the JPL_TargetBody saw light radiated from the Earth at T2}
 
-    ReadEphemeris(T2,Moon,SolarSystemBarycenter,PositionsOnly,AU_day,Moon_Data);
-    ReadEphemeris(T2,Earth,SolarSystemBarycenter,PositionsOnly,AU_day,Earth_Data);
+    ReadEphemeris(T2,JPL_TargetBody,SolarSystemBarycenter,PositionsOnly,AU_day,Moon_Data);
+    ReadEphemeris(T2,JPL_Earth,SolarSystemBarycenter,PositionsOnly,AU_day,Earth_Data);
 
     VectorDifference(Moon_Data.R,Earth_Data.R,RayDirection);
 
@@ -611,18 +673,19 @@ function EclipticCoordinates(const ICRF_Vector: TVector) : TPolarCoordinates;
   end;  {EclipticCoordinates}
 
 {$F+}function EclipticLonDifference(const TDT : extended): extended;{$F-}
+// for LunarAge -- applies only to Moon
   var
     Moon_Data, Sun_Data : TEphemerisOutput;
     LT, MoonAngle, SunAngle : Extended;
   begin
-    ReadEphemeris(TDT,Moon,Earth,PositionsOnly,AU_day,Moon_Data);
+    ReadEphemeris(TDT,JPL_TargetBody,JPL_Earth,PositionsOnly,AU_day,Moon_Data);
     LT := (OneAU*VectorMagnitude(Moon_Data.R)/c)/OneDay;
-    ReadEphemeris(TDT-LT,Moon,Earth,PositionsOnly,AU_day,Moon_Data);
+    ReadEphemeris(TDT-LT,JPL_TargetBody,JPL_Earth,PositionsOnly,AU_day,Moon_Data);
     MoonAngle := EclipticCoordinates(Moon_Data.R).Longitude;
 
-    ReadEphemeris(TDT,Sun,Earth,PositionsOnly,AU_day,Sun_Data);
+    ReadEphemeris(TDT,JPL_Sun,JPL_Earth,PositionsOnly,AU_day,Sun_Data);
     LT := (OneAU*VectorMagnitude(Sun_Data.R)/c)/OneDay;
-    ReadEphemeris(TDT-LT,Sun,Earth,PositionsOnly,AU_day,Sun_Data);
+    ReadEphemeris(TDT-LT,JPL_Sun,JPL_Earth,PositionsOnly,AU_day,Sun_Data);
     SunAngle := EclipticCoordinates(Sun_Data.R).Longitude;
 
     Result := MoonAngle - SunAngle;
@@ -632,14 +695,30 @@ function EclipticCoordinates(const ICRF_Vector: TVector) : TPolarCoordinates;
   end;
 
 function LunarAge(const UTC_MJD: extended) : Extended;
+  const
+    DaysDifference = 1;
   var
-    T1, CurrentDifference, T0 : Extended;
+    T1, CurrentDifference, T0, EclipticRate : Extended;
   begin  {LunarAge}
     T1 :=  MJDOffset + UTC_MJD + TDT_Offset(UTC_MJD)*OneSecond/OneDay; // current ephemeris time
     CurrentDifference := EclipticLonDifference(T1);
-    while CurrentDifference<0 do CurrentDifference := CurrentDifference + TwoPi;
+    EclipticRate := EclipticLonDifference(T1 + DaysDifference) - CurrentDifference; // change in 1 day
+    while EclipticRate>Pi  do EclipticRate := EclipticRate - TwoPi;
+    while EclipticRate<-Pi do EclipticRate := EclipticRate + TwoPi;
+    EclipticRate := EclipticRate/DaysDifference;
 
-    T0 := T1 - 29.5*CurrentDifference/TwoPi;  // approx. ephemeris time of most recent New Moon
+    if EclipticRate>0 then
+      while CurrentDifference<0 do CurrentDifference := CurrentDifference + TwoPi
+    else
+      while CurrentDifference>0 do CurrentDifference := CurrentDifference - TwoPi;
+
+    if EclipticRate=0 then
+      begin
+        Result := 0;
+        Exit; //Error
+      end
+    else
+      T0 := T1 - CurrentDifference/EclipticRate;  // approx. ephemeris time of most recent New Moon
 
     SetEclipticCoordinateSystem(T0);
 
@@ -651,8 +730,8 @@ function LunarAge(const UTC_MJD: extended) : Extended;
 
 initialization
 
-ComputeMeanEarthSystemOffsetMatix;
-
+ChangeTargetPlanet(Moon);
+RefreshCorrectionAngles;
 SetEclipticCoordinateSystem(JD2000);
 
 END.

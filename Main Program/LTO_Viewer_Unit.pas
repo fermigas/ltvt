@@ -384,7 +384,7 @@ begin
           end;
         end; {case}
       LonLat_Label.Caption := Format('Lon = %s     Lat = %s',
-        [LTVT_Form.LongitudeString(Lon,3),LTVT_Form.LatitudeString(Lat,3)])
+        [LTVT_Form.PlanetaryLongitudeString(Lon,3),LTVT_Form.LatitudeString(Lat,3)])
     end
   else
     LonLat_Label.Caption := '';
@@ -615,7 +615,7 @@ procedure TLTO_Viewer_Form.FormResize(Sender: TObject);
 begin
   ScrollBox1.Width     := Width  - 15 - ScrollBox1.Left ;
   Filename_Label.Width := Width  - 15 - Filename_Label.Left;
-  ScrollBox1.Height    := Height - 30 - ScrollBox1.Top;
+  ScrollBox1.Height    := Height - 40 - ScrollBox1.Top;
 end;
 
 procedure TLTO_Viewer_Form.ImageCalibrated_RadioButtonClick(Sender: TObject);

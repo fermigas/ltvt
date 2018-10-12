@@ -4,7 +4,7 @@ object LibrationTabulator_Form: TLibrationTabulator_Form
   Width = 925
   Height = 690
   ActiveControl = Tabulate_Button
-  Caption = 'LTVT Libration Tabulator v0.3'
+  Caption = 'LTVT Libration Tabulator v0.5'
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -13,6 +13,7 @@ object LibrationTabulator_Form: TLibrationTabulator_Form
   Font.Style = []
   OldCreateOrder = False
   ShowHint = True
+  OnActivate = FormActivate
   OnCreate = FormCreate
   OnDestroy = FormDestroy
   OnShow = FormShow

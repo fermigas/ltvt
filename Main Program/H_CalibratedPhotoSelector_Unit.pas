@@ -22,7 +22,8 @@ type
     Ref2XPix,  Ref2YPix,
     Ref2Lon,   Ref2Lat,
     InversionCode,
-    PhotoFilename : String;
+    PhotoFilename,
+    Comment : String;
     end;
 
   TPhotoListData = record
@@ -74,60 +75,20 @@ type
     CopyInfo_Button: TButton;
     Colongitude_CheckBox: TCheckBox;
     FeaturePos_Part2_Label: TLabel;
+    ShowNote_Button: TButton;
     procedure Cancel_ButtonClick(Sender: TObject);
     procedure SelectPhoto_ButtonClick(Sender: TObject);
     procedure ListBox1Click(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure ListBox1KeyDown(Sender: TObject; var Key: Word;
       Shift: TShiftState);
-    procedure Lon1_LabeledNumericEditNumericEditKeyDown(Sender: TObject;
-      var Key: Word; Shift: TShiftState);
-    procedure Lat1_LabeledNumericEditNumericEditKeyDown(Sender: TObject;
-      var Key: Word; Shift: TShiftState);
-    procedure X1_Pix_LabeledNumericEditNumericEditKeyDown(Sender: TObject;
-      var Key: Word; Shift: TShiftState);
-    procedure Y1_Pix_LabeledNumericEditNumericEditKeyDown(Sender: TObject;
-      var Key: Word; Shift: TShiftState);
-    procedure Lon2_LabeledNumericEditNumericEditKeyDown(Sender: TObject;
-      var Key: Word; Shift: TShiftState);
-    procedure Lat2_LabeledNumericEditNumericEditKeyDown(Sender: TObject;
-      var Key: Word; Shift: TShiftState);
-    procedure X2_Pix_LabeledNumericEditNumericEditKeyDown(Sender: TObject;
-      var Key: Word; Shift: TShiftState);
-    procedure Y2_Pix_LabeledNumericEditNumericEditKeyDown(Sender: TObject;
-      var Key: Word; Shift: TShiftState);
-    procedure InversionCode_LabeledNumericEditNumericEditKeyDown(
-      Sender: TObject; var Key: Word; Shift: TShiftState);
-    procedure SelectPhoto_ButtonKeyDown(Sender: TObject; var Key: Word;
-      Shift: TShiftState);
-    procedure Cancel_ButtonKeyDown(Sender: TObject; var Key: Word;
-      Shift: TShiftState);
-    procedure OverwriteNone_RadioButtonKeyDown(Sender: TObject;
-      var Key: Word; Shift: TShiftState);
-    procedure OverwriteGeometry_RadioButtonKeyDown(Sender: TObject;
-      var Key: Word; Shift: TShiftState);
-    procedure OverwriteDateTime_RadioButtonKeyDown(Sender: TObject;
-      var Key: Word; Shift: TShiftState);
-    procedure OverwriteAll_RadioButtonKeyDown(Sender: TObject;
-      var Key: Word; Shift: TShiftState);
-    procedure TargetLon_LabeledNumericEditNumericEditKeyDown(
-      Sender: TObject; var Key: Word; Shift: TShiftState);
-    procedure TargetLat_LabeledNumericEditNumericEditKeyDown(
-      Sender: TObject; var Key: Word; Shift: TShiftState);
-    procedure ListPhotos_ButtonKeyDown(Sender: TObject; var Key: Word;
-      Shift: TShiftState);
-    procedure FilterPhotos_CheckBoxKeyDown(Sender: TObject; var Key: Word;
-      Shift: TShiftState);
     procedure FilterPhotos_CheckBoxClick(Sender: TObject);
     procedure ListPhotos_ButtonClick(Sender: TObject);
-    procedure ChangeFile_ButtonKeyDown(Sender: TObject; var Key: Word;
-      Shift: TShiftState);
     procedure ChangeFile_ButtonClick(Sender: TObject);
     procedure CopyInfo_ButtonClick(Sender: TObject);
-    procedure Colongitude_CheckBoxKeyDown(Sender: TObject; var Key: Word;
+    procedure FormKeyDown(Sender: TObject; var Key: Word;
       Shift: TShiftState);
-    procedure CopyInfo_ButtonKeyDown(Sender: TObject; var Key: Word;
-      Shift: TShiftState);
+    procedure ShowNote_ButtonClick(Sender: TObject);
   private
     { Private declarations }
   public
@@ -152,8 +113,8 @@ var
 
 implementation
 
-uses Constnts, LTVT_Unit, MoonPosition, Win_Ops, FileCtrl, Math, MPVectors,
-  IniFiles, Clipbrd;
+uses MP_Defs, Constnts, LTVT_Unit, MoonPosition, Win_Ops, FileCtrl, Math, MPVectors,
+  IniFiles, Clipbrd, LTVT_PopupMemo;
 
 {$R *.dfm}
 
@@ -213,12 +174,22 @@ begin
 
       if Colongitude_CheckBox.Checked then
         begin
-          Colongitude := (Pi/2) - LTVT_Form.SubSolarPoint.Longitude;
-          while Colongitude>TwoPi do Colongitude := Colongitude - TwoPi;
-          while Colongitude<0 do Colongitude := Colongitude + TwoPi;
+          if CurrentTargetPlanet=Moon then
+            begin
+              Colongitude := (Pi/2) - LTVT_Form.SubSolarPoint.Longitude;
+              while Colongitude>TwoPi do Colongitude := Colongitude - TwoPi;
+              while Colongitude<0 do Colongitude := Colongitude + TwoPi;
 
-          FeaturePos_Part1_Label.Caption := Format('In current: Colon= %0.2f, Lat= %0.2f',
-            [Colongitude/OneDegree, LTVT_Form.SubSolarPoint.Latitude/OneDegree]);
+              FeaturePos_Part1_Label.Caption := Format('In current: Colon= %0.2f, Lat= %0.2f',
+                [Colongitude/OneDegree, LTVT_Form.SubSolarPoint.Latitude/OneDegree]);
+            end
+          else
+            begin
+              Colongitude := LTVT_Form.SubObserverPoint.Longitude;
+
+              FeaturePos_Part1_Label.Caption := Format('In current: CM = %0.2f, Lat= %0.2f',
+                [LTVT_Form.PosNegDegrees(Colongitude/OneDegree,LTVT_Form.PlanetaryLongitudeConvention), LTVT_Form.SubSolarPoint.Latitude/OneDegree]);
+            end;
         end;
 
       if (FilterPhotos_CheckBox.Checked) then
@@ -283,7 +254,7 @@ begin
       if PhotoCalCode='U1' then
         begin
           ObsLocation_Label.Caption := 'Satellite : '
-            +LTVT_Form.LongitudeString(ExtendedValue(PhotoObsELonDeg),4)+' / '
+            +LTVT_Form.PlanetaryLongitudeString(ExtendedValue(PhotoObsELonDeg),4)+' / '
             +LTVT_Form.LatitudeString(ExtendedValue(PhotoObsNLatDeg),4)+' at '
             +Format('%0.0f',[ExtendedValue(PhotoObsHt)])+' km';
           SubObsPt_Label.Caption := 'Ground pt lon/lat : '+SubObsLon+'/'+SubObsLat;
@@ -294,7 +265,7 @@ begin
             ObsLocation_Label.Caption := 'Site : (manually set sub-observer lon/lat)'
           else
             ObsLocation_Label.Caption := 'Site : '
-              +LTVT_Form.LongitudeString(ExtendedValue(PhotoObsELonDeg),4)+' / '
+              +LTVT_Form.EarthLongitudeString(ExtendedValue(PhotoObsELonDeg),4)+' / '
               +LTVT_Form.LatitudeString(ExtendedValue(PhotoObsNLatDeg),4)+' at '
               +Format('%0.0f',[ExtendedValue(PhotoObsHt)])+' m';
           SubObsPt_Label.Caption := 'Sub-observer lon/lat : '+SubObsLon+'/'+SubObsLat;
@@ -311,6 +282,8 @@ begin
       X2_Pix_LabeledNumericEdit.NumericEdit.Text := Ref2XPix;
       Y2_Pix_LabeledNumericEdit.NumericEdit.Text := Ref2YPix;
       InversionCode_LabeledNumericEdit.NumericEdit.Text  := InversionCode;
+
+      ShowNote_Button.Visible := Comment<>'';
     end;
 end;
 
@@ -350,7 +323,7 @@ var
       begin
         Result := False;
 
-        PolarToVector(Lon, Lat, LTVT_Form.MoonRadius, FeatureVector);
+        PolarToVector(Lon, Lat, MoonRadius, FeatureVector);
 
         VectorDifference(FeatureVector,SatelliteVector,LineOfSight);
 
@@ -464,10 +437,10 @@ begin {TCalibratedPhotoLoader_Form.FeatureInPhoto}
         end;
 
       PolarToVector(DegToRad(SatelliteElonDeg), DegToRad(SatelliteNLatDeg),
-        LTVT_Form.MoonRadius + SatelliteElevKm, SatelliteVector);
+        MoonRadius + SatelliteElevKm, SatelliteVector);
 
       PolarToVector(DegToRad(SubObsLonDeg), DegToRad(SubObsLatDeg),
-        LTVT_Form.MoonRadius, GroundPointVector);
+        MoonRadius, GroundPointVector);
 
       VectorDifference(GroundPointVector,SatelliteVector,UserPhoto_ZPrime_Unit_Vector);
 
@@ -719,20 +692,23 @@ begin {SortFilenames}
   Sort(Low(SortedListIndex),High(SortedListIndex));
 end;  {SortFilenames}
 
-
-begin
+begin {TCalibratedPhotoLoader_Form.ListPhotos_ButtonClick}
   HeaderString := '';
-  if FilterPhotos_CheckBox.Checked then
+  if Colongitude_CheckBox.Checked then
     begin
-      if Colongitude_CheckBox.Checked then
+      if CurrentTargetPlanet=Moon then
         HeaderString := ' Colongitude  Latitude'
       else
-        HeaderString := '  Altitude     Azimuth';
+        HeaderString := '     CM       Latitude'
     end
-  else if Colongitude_CheckBox.Checked then HeaderString := ' Colongitude  Latitude';
+  else if FilterPhotos_CheckBox.Checked then
+    HeaderString := '  Altitude     Azimuth';
+
   if ListLibrations_CheckBox.Checked then HeaderString := HeaderString + '       Lon.       Lat.';
+
   if (not (FilterPhotos_CheckBox.Checked or Colongitude_CheckBox.Checked)) or (Length(HeaderString)<25) then
     HeaderString := HeaderString + '      File name';
+
   PhotoListHeaders_Label.Caption := HeaderString;
 
   if FileFound('LTVT user photo calibration data file',LTVT_Form.CalibratedPhotosFilename,TempFilename) then
@@ -815,7 +791,8 @@ begin
                       Ref2Lon  := LeadingElement(DataLine,',');
                       Ref2Lat  := LeadingElement(DataLine,',');
                       InversionCode  := LeadingElement(DataLine,',');
-                      PhotoFilename  := Trim(DataLine);
+                      PhotoFilename  := ExtractCSV_item(DataLine);
+                      Comment  := ExtractCSV_item(DataLine);
                     end;
 
                   if (not FilterPhotos_CheckBox.Checked) or FeatureInPhoto(TempPhotoData, TargetLonDeg, TargetLatDeg, SunAltDeg, SunAzDeg, X_pix, Y_pix) then
@@ -835,17 +812,32 @@ begin
                                     end
                                   else
                                     begin
-                                      Val(TempPhotoData.SubSolLon,SunAlt,ErrorCode);
-                                      if ErrorCode<>0 then
-                                        SunAlt := -99.99
+                                      if CurrentTargetPlanet=Moon then
+                                        begin
+                                          Val(TempPhotoData.SubSolLon,SunAlt,ErrorCode);
+                                          if ErrorCode<>0 then
+                                            SunAlt := -99.99
+                                          else
+                                            begin
+                                              SunAlt := 90 - SunAlt;  // colongitude
+                                              while SunAlt>360 do SunAlt := SunAlt - 360;
+                                              while SunAlt<0 do SunAlt := SunAlt + 360;
+                                            end;
+                                          Val(TempPhotoData.SubSolLat,SunAz,ErrorCode);
+                                          if ErrorCode<>0 then SunAz := 0;
+                                        end
                                       else
                                         begin
-                                          SunAlt := 90 - SunAlt;  // colongitude
-                                          while SunAlt>360 do SunAlt := SunAlt - 360;
-                                          while SunAlt<0 do SunAlt := SunAlt + 360;
-                                        end;
-                                      Val(TempPhotoData.SubSolLat,SunAz,ErrorCode);
-                                      if ErrorCode<>0 then SunAz := 0;
+                                          Val(TempPhotoData.SubObsLon,SunAlt,ErrorCode);
+                                          if ErrorCode<>0 then
+                                            SunAlt := -99.99
+                                          else
+                                            begin
+                                              SunAlt := LTVT_Form.PosNegDegrees(SunAlt,LTVT_Form.PlanetaryLongitudeConvention); // Central Meridian longitude
+                                            end;
+                                          Val(TempPhotoData.SubSolLat,SunAz,ErrorCode);
+                                          if ErrorCode<>0 then SunAz := 0;
+                                        end
                                     end;
                                 end
                               else
@@ -945,7 +937,7 @@ begin
       ShowMessage('Unable to find '+LTVT_Form.CalibratedPhotosFilename);
     end;
 
-end;
+end;  {TCalibratedPhotoLoader_Form.ListPhotos_ButtonClick}
 
 procedure TCalibratedPhotoLoader_Form.FilterPhotos_CheckBoxClick(Sender: TObject);
 begin
@@ -963,8 +955,7 @@ begin
     end;
 end;
 
-procedure TCalibratedPhotoLoader_Form.CopyInfo_ButtonClick(
-  Sender: TObject);
+procedure TCalibratedPhotoLoader_Form.CopyInfo_ButtonClick(Sender: TObject);
 var
   SavedShortDateFormat, SavedLongTimeFormat : String;
 begin
@@ -985,8 +976,18 @@ begin
 
 end;
 
-procedure TCalibratedPhotoLoader_Form.ListBox1KeyDown(Sender: TObject;
-  var Key: Word; Shift: TShiftState);
+procedure TCalibratedPhotoLoader_Form.ShowNote_ButtonClick(Sender: TObject);
+begin
+  with LTVT_Form.PopupMemo do
+    begin
+      Caption := 'Note related to "'+ExtractFileName(SelectedPhotoData.PhotoFilename)+'"';
+      ClearMemoArea;
+      Memo.Lines.Add(SelectedPhotoData.Comment);
+      ShowModal;
+    end;
+end;
+
+procedure TCalibratedPhotoLoader_Form.ListBox1KeyDown(Sender: TObject;  var Key: Word; Shift: TShiftState);
 begin
   if Key=VK_RETURN then
     SelectPhoto_Button.Click
@@ -994,134 +995,7 @@ begin
     LTVT_Form.DisplayF1Help(Key,Shift,'CalibratedPhotoSelection_Form.htm');
 end;
 
-procedure TCalibratedPhotoLoader_Form.Lon1_LabeledNumericEditNumericEditKeyDown(
-  Sender: TObject; var Key: Word; Shift: TShiftState);
-begin
-  LTVT_Form.DisplayF1Help(Key,Shift,'CalibratedPhotoSelection_Form.htm');
-end;
-
-procedure TCalibratedPhotoLoader_Form.Lat1_LabeledNumericEditNumericEditKeyDown(
-  Sender: TObject; var Key: Word; Shift: TShiftState);
-begin
-  LTVT_Form.DisplayF1Help(Key,Shift,'CalibratedPhotoSelection_Form.htm');
-end;
-
-procedure TCalibratedPhotoLoader_Form.X1_Pix_LabeledNumericEditNumericEditKeyDown(
-  Sender: TObject; var Key: Word; Shift: TShiftState);
-begin
-  LTVT_Form.DisplayF1Help(Key,Shift,'CalibratedPhotoSelection_Form.htm');
-end;
-
-procedure TCalibratedPhotoLoader_Form.Y1_Pix_LabeledNumericEditNumericEditKeyDown(
-  Sender: TObject; var Key: Word; Shift: TShiftState);
-begin
-  LTVT_Form.DisplayF1Help(Key,Shift,'CalibratedPhotoSelection_Form.htm');
-end;
-
-procedure TCalibratedPhotoLoader_Form.Lon2_LabeledNumericEditNumericEditKeyDown(
-  Sender: TObject; var Key: Word; Shift: TShiftState);
-begin
-  LTVT_Form.DisplayF1Help(Key,Shift,'CalibratedPhotoSelection_Form.htm');
-end;
-
-procedure TCalibratedPhotoLoader_Form.Lat2_LabeledNumericEditNumericEditKeyDown(
-  Sender: TObject; var Key: Word; Shift: TShiftState);
-begin
-  LTVT_Form.DisplayF1Help(Key,Shift,'CalibratedPhotoSelection_Form.htm');
-end;
-
-procedure TCalibratedPhotoLoader_Form.X2_Pix_LabeledNumericEditNumericEditKeyDown(
-  Sender: TObject; var Key: Word; Shift: TShiftState);
-begin
-  LTVT_Form.DisplayF1Help(Key,Shift,'CalibratedPhotoSelection_Form.htm');
-end;
-
-procedure TCalibratedPhotoLoader_Form.Y2_Pix_LabeledNumericEditNumericEditKeyDown(
-  Sender: TObject; var Key: Word; Shift: TShiftState);
-begin
-  LTVT_Form.DisplayF1Help(Key,Shift,'CalibratedPhotoSelection_Form.htm');
-end;
-
-procedure TCalibratedPhotoLoader_Form.InversionCode_LabeledNumericEditNumericEditKeyDown(
-  Sender: TObject; var Key: Word; Shift: TShiftState);
-begin
-  LTVT_Form.DisplayF1Help(Key,Shift,'CalibratedPhotoSelection_Form.htm');
-end;
-
-procedure TCalibratedPhotoLoader_Form.SelectPhoto_ButtonKeyDown(
-  Sender: TObject; var Key: Word; Shift: TShiftState);
-begin
-  LTVT_Form.DisplayF1Help(Key,Shift,'CalibratedPhotoSelection_Form.htm');
-end;
-
-procedure TCalibratedPhotoLoader_Form.Cancel_ButtonKeyDown(Sender: TObject;
-  var Key: Word; Shift: TShiftState);
-begin
-  LTVT_Form.DisplayF1Help(Key,Shift,'CalibratedPhotoSelection_Form.htm');
-end;
-
-procedure TCalibratedPhotoLoader_Form.OverwriteNone_RadioButtonKeyDown(
-  Sender: TObject; var Key: Word; Shift: TShiftState);
-begin
-  LTVT_Form.DisplayF1Help(Key,Shift,'CalibratedPhotoSelection_Form.htm');
-end;
-
-procedure TCalibratedPhotoLoader_Form.OverwriteGeometry_RadioButtonKeyDown(
-  Sender: TObject; var Key: Word; Shift: TShiftState);
-begin
-  LTVT_Form.DisplayF1Help(Key,Shift,'CalibratedPhotoSelection_Form.htm');
-end;
-
-procedure TCalibratedPhotoLoader_Form.OverwriteDateTime_RadioButtonKeyDown(
-  Sender: TObject; var Key: Word; Shift: TShiftState);
-begin
-  LTVT_Form.DisplayF1Help(Key,Shift,'CalibratedPhotoSelection_Form.htm');
-end;
-
-procedure TCalibratedPhotoLoader_Form.OverwriteAll_RadioButtonKeyDown(
-  Sender: TObject; var Key: Word; Shift: TShiftState);
-begin
-  LTVT_Form.DisplayF1Help(Key,Shift,'CalibratedPhotoSelection_Form.htm');
-end;
-
-procedure TCalibratedPhotoLoader_Form.TargetLon_LabeledNumericEditNumericEditKeyDown(
-  Sender: TObject; var Key: Word; Shift: TShiftState);
-begin
-  LTVT_Form.DisplayF1Help(Key,Shift,'CalibratedPhotoSelection_Form.htm');
-end;
-
-procedure TCalibratedPhotoLoader_Form.TargetLat_LabeledNumericEditNumericEditKeyDown(
-  Sender: TObject; var Key: Word; Shift: TShiftState);
-begin
-  LTVT_Form.DisplayF1Help(Key,Shift,'CalibratedPhotoSelection_Form.htm');
-end;
-
-procedure TCalibratedPhotoLoader_Form.ListPhotos_ButtonKeyDown(Sender: TObject;
-  var Key: Word; Shift: TShiftState);
-begin
-  LTVT_Form.DisplayF1Help(Key,Shift,'CalibratedPhotoSelection_Form.htm');
-end;
-
-procedure TCalibratedPhotoLoader_Form.FilterPhotos_CheckBoxKeyDown(
-  Sender: TObject; var Key: Word; Shift: TShiftState);
-begin
-  LTVT_Form.DisplayF1Help(Key,Shift,'CalibratedPhotoSelection_Form.htm');
-end;
-
-procedure TCalibratedPhotoLoader_Form.ChangeFile_ButtonKeyDown(
-  Sender: TObject; var Key: Word; Shift: TShiftState);
-begin
-  LTVT_Form.DisplayF1Help(Key,Shift,'CalibratedPhotoSelection_Form.htm');
-end;
-
-procedure TCalibratedPhotoLoader_Form.Colongitude_CheckBoxKeyDown(
-  Sender: TObject; var Key: Word; Shift: TShiftState);
-begin
-  LTVT_Form.DisplayF1Help(Key,Shift,'CalibratedPhotoSelection_Form.htm');
-end;
-
-procedure TCalibratedPhotoLoader_Form.CopyInfo_ButtonKeyDown(
-  Sender: TObject; var Key: Word; Shift: TShiftState);
+procedure TCalibratedPhotoLoader_Form.FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
   LTVT_Form.DisplayF1Help(Key,Shift,'CalibratedPhotoSelection_Form.htm');
 end;

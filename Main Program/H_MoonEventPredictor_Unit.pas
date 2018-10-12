@@ -1,27 +1,4 @@
 unit H_MoonEventPredictor_Unit;
-{
-v1.4:
-  1. Added box for observer elevation.
-  2. Reduce tabulation to two shades of gray (Moon up or Moon down).
-
-v0.0: (= v1.5 renamed)
-  1. Corrected JPL routine so it can silently cross 50-year boundaries.
-  2. Corrected Sub-observer point lon/lat display (librations) which was reversed!
-  3. Completely re-wrote SunAngle search algorithm.
-  4. Add check-box to filter output: print only results within tolerance.
-
-v0.3
-  1. Improved longitude/latitude tooltips to indicate E=+ W=- N=+ S = -.
-
-v0.5
-  1. Add button to launch LibrationTabulator form.
-  2. Refresh Memo1 area after each output line is printed.  Otherwise output
-     can be held making program appear frozen.
-
-v0.6
-  1. Add Abort button and "search completed" messages.
-
-                                                                   3/6/09}
 
 interface
 
@@ -145,6 +122,7 @@ type
     procedure AddLocation_ButtonKeyDown(Sender: TObject; var Key: Word;
       Shift: TShiftState);
     procedure AddLocation_ButtonClick(Sender: TObject);
+    procedure FormActivate(Sender: TObject);
   private
     { Private declarations }
   public
@@ -157,12 +135,6 @@ type
 
     SubSolarPoint : TPolarCoordinates;
     SolarColongitude : extended;  {in rad}
-
-    function EW_Tag(const Longitude : extended): string;
-    {returns 'E' or 'W'}
-
-    function NS_Tag(const Latitude : extended): string;
-    {returns 'N' or 'S'}
 
     function JPL_File_Valid(const Desired_MJD : extended) : boolean;
     {returns true if Desired_MJD falls within range of current ephemeris file;
@@ -224,6 +196,22 @@ begin
   ObsElevList.Free;;
 end;
 
+procedure TMoonEventPredictor_Form.FormActivate(Sender: TObject);
+begin
+  if CurrentTargetPlanet=Moon then
+    begin
+      ColongitudeMode_RadioButton.Caption := 'Colongitude Mode';
+      Colongitude_LabeledNumericEdit.Item_Label.Caption := 'Colongitude:';
+      Colongitude_LabeledNumericEdit.Hint := 'Desired selenographic colongitude of Sun in decimal degrees (DD.ddd format)'
+    end
+  else
+    begin
+      ColongitudeMode_RadioButton.Caption := 'Central Meridian Mode';
+      Colongitude_LabeledNumericEdit.Item_Label.Caption := '        CM :';
+      Colongitude_LabeledNumericEdit.Hint := 'Desired central meridian longitude in decimal degrees (DD.ddd format; East=+/West=-)'
+    end;
+end;
+
 procedure TMoonEventPredictor_Form.FormShow(Sender: TObject);
 var
   ObsListFile : TextFile;
@@ -251,7 +239,7 @@ begin
               ObsLonList.Add(LeadingElement(DataLine,','));
               ObsLatList.Add(LeadingElement(DataLine,','));
               ObsElevList.Add(LeadingElement(DataLine,','));
-              ObsNameList.Add(Trim(DataLine));
+              ObsNameList.Add(ExtractCSV_item(DataLine));
             end;
         end;
       CloseFile(ObsListFile);
@@ -362,7 +350,7 @@ begin
     Trim(ObserverLongitude_LabeledNumericEdit.NumericEdit.Text)+', '+
     Trim(ObserverLatitude_LabeledNumericEdit.NumericEdit.Text)+', '+
     Trim(ObserverElevation_LabeledNumericEdit.NumericEdit.Text)+', '+
-    NameToAdd);
+    CSV_formatted_string(NameToAdd));
   CloseFile(ObsListFile);
 
   ObsLonList.Add(Trim(ObserverLongitude_LabeledNumericEdit.NumericEdit.Text));
@@ -375,22 +363,6 @@ begin
 //  ShowMessage('Location added to '+LTVT_Form.ObservatoryListFilename);
   RefreshSelection;
 end;
-
-function TMoonEventPredictor_Form.EW_Tag(const Longitude : extended): string;
-  begin
-    if Longitude>=0 then
-      Result := 'E'
-    else
-      Result := 'W';
-  end;
-
-function TMoonEventPredictor_Form.NS_Tag(const Latitude : extended): string;
-  begin
-    if Latitude>=0 then
-      Result := 'N'
-    else
-      Result := 'S';
-  end;
 
 function TMoonEventPredictor_Form.JPL_File_Valid(const Desired_MJD : extended) : boolean;
 {returns true if Desired_MJD falls within range of current ephemeris file;
@@ -444,10 +416,19 @@ begin {CalculateCircumstances_ButtonClick}
   CalculateSolarColongitude(UT_MJD);
 
   Memo1.Lines.Add('');
-  Memo1.Lines.Add('Lunar lighting conditions calculated for:  '+
-    LTVT_Form.CorrectedDateTimeToStr(ModifiedJulianDateToDateTime(UT_MJD))+' UT');
+  if CurrentTargetPlanet=Moon then
+    begin
+      Memo1.Lines.Add('Lunar lighting conditions calculated for:  '+
+        LTVT_Form.CorrectedDateTimeToStr(ModifiedJulianDateToDateTime(UT_MJD))+' UT');
+      Colongitude_LabeledNumericEdit.NumericEdit.Text := Format('%0.4f',[RadToDeg(SolarColongitude)]);
+    end
+  else
+    begin
+      Memo1.Lines.Add('Conditions calculated for '+CurrentPlanetName+' :  '+
+        LTVT_Form.CorrectedDateTimeToStr(ModifiedJulianDateToDateTime(UT_MJD))+' UT');
+      Colongitude_LabeledNumericEdit.NumericEdit.Text := Format('%0.4f',[LTVT_Form.PosNegDegrees(RadToDeg(SolarColongitude),LTVT_Form.PlanetaryLongitudeConvention)]);
+    end;
 
-  Colongitude_LabeledNumericEdit.NumericEdit.Text := Format('%0.4f',[RadToDeg(SolarColongitude)]);
   SolarLatitude_LabeledNumericEdit.NumericEdit.Text := Format('%0.3f',[RadToDeg(SubSolarPoint.Latitude)]);
 
   CraterLon := DegToRad(Crater_Lon_LabeledNumericEdit.NumericEdit.ExtendedValue);
@@ -469,20 +450,30 @@ begin
 end;
 
 procedure TMoonEventPredictor_Form.CalculateSolarColongitude(const MJD_for_CL :extended);
+  var
+    SubObserverPoint : TPolarCoordinates;
   begin
     if not JPL_File_Valid(MJD_for_CL) then exit;
 
-    SubSolarPoint := SubSolarPointOnMoon(MJD_for_CL);
+    if CurrentTargetPlanet=Moon then
+      begin
+        SubSolarPoint := SubSolarPointOnMoon(MJD_for_CL);
 
-    SolarColongitude := PiByTwo - SubSolarPoint.Longitude;
-    while SolarColongitude>TwoPi do SolarColongitude := SolarColongitude - TwoPi;
-    while SolarColongitude<0     do SolarColongitude := SolarColongitude + TwoPi;
+        SolarColongitude := PiByTwo - SubSolarPoint.Longitude;
+        while SolarColongitude>TwoPi do SolarColongitude := SolarColongitude - TwoPi;
+        while SolarColongitude<0     do SolarColongitude := SolarColongitude + TwoPi;
+      end
+    else
+      begin
+        SubSolarPoint := SubSolarPointOnMoon(MJD_for_CL);
+
+        SubObserverPoint := SubEarthPointOnMoon(MJD_for_CL);
+        SolarColongitude := SubObserverPoint.Longitude;
+      end;
   end;
 
 procedure TMoonEventPredictor_Form.Tabulate_ButtonClick(Sender: TObject);
 const
-  SynodicMonth =  29.53;  {days}
-  CL_Rate = SynodicMonth/TwoPi;  {inverse rate of increase in days/radian}
   WithinToleranceSymbol = '+';
   MoonUpSunDownSymbol = '%';
   TargetVisibleSymbol = '*';
@@ -495,10 +486,36 @@ var
   SunAngleMJDStep,  // interval between tests for SunAngle crossing Target value
   StartMJD, EndMJD, AllowableError, OldSunAngle, NewSunAngle,
   MJD, TargetCL, TargetSolarLat, TargetSolarAzimuth, CL_Error,  {angles in rad}
+  CL_Rate,
   TargetAngle,
   SinCraterLat, CosCraterLat, CraterLon,
   CraterLonDeg, CraterLatDeg, SunAngleDeg,
   AllowableLatitudeErrorDegrees, AllowableAzimuthErrorDegrees : Extended;
+
+procedure UpdateCL_rate;
+  const
+    DaysDifference = OneHour/OneDay;
+  var
+    CL_1, CL_2, CL_Difference : Extended;
+  begin
+    CalculateSolarColongitude(MJD+DaysDifference);
+    CL_2 := SolarColongitude;
+    CalculateSolarColongitude(MJD);
+    CL_1 := SolarColongitude;
+
+    CL_Difference := CL_2 - CL_1;
+    if CL_Difference<-Pi then CL_Difference := CL_Difference + TwoPi;
+    if CL_Difference>Pi  then CL_Difference := CL_Difference - TwoPi;
+
+    if CL_Difference=0 then
+      begin
+        CL_Rate := 0; // error
+        ShowMessage('Tabulation needs to be aborted -- target not rotating');
+      end
+    else
+      CL_Rate := DaysDifference/CL_Difference;   // [days/rad];
+
+  end;
 
 procedure UpdateCL;
   begin
@@ -563,72 +580,107 @@ procedure PrintHeader;
   begin
     if GeocentricSubEarthMode then
       begin
-        Memo1.Lines.Add('Librations, elongation and percent illumination calculated for a geocentric observer');
+        Memo1.Lines.Add(CurrentPlanetName+' librations, elongation and percent illumination calculated for a geocentric observer');
         Memo1.Lines.Add('');
         if ColongitudeMode_RadioButton.Checked then
           begin
-            Memo1.Lines.Add('                          Terminators      Sub-Solar Point     Librations                Phase   ');
-            Memo1.Lines.Add('   Date      Time UT   Morning   Evening    Colong    Lat.    Long.   Lat.     Elong.   %Illum.    Age');
+            if CurrentTargetPlanet=Moon then
+              begin
+                Memo1.Lines.Add('                          Terminators      Sub-Solar Point     Librations                 Phase   ');
+                Memo1.Lines.Add('   Date      Time UT   Morning   Evening    Colong    Lat.    Long.    Lat.     Elong.   %Illum.    Age');
+              end
+            else
+              begin
+                Memo1.Lines.Add('                          Terminators                Solar   Sub-Earth Point              Phase   ');
+                Memo1.Lines.Add('   Date      Time UT   Morning   Evening      CM      Lat.    Long.    Lat.     Elong.   %Illum.    Age');
+              end;
           end
         else
           begin
-            Memo1.Lines.Add('                           Sun Angle       Sub-Solar Point     Librations                Phase   ');
-            Memo1.Lines.Add('   Date      Time UT   Altitude  Azimuth    Colong    Lat.    Long.   Lat.     Elong.   %Illum.    Age');
+            if CurrentTargetPlanet=Moon then
+              begin
+                Memo1.Lines.Add('                           Sun Angle       Sub-Solar Point     Librations                 Phase   ');
+                Memo1.Lines.Add('   Date      Time UT   Altitude  Azimuth    Colong    Lat.    Long.    Lat.     Elong.   %Illum.    Age');
+              end
+            else
+              begin
+                Memo1.Lines.Add('                           Sun Angle       Sub-Solar Point   Sub-Earth Point              Phase   ');
+                Memo1.Lines.Add('   Date      Time UT   Altitude  Azimuth     Long     Lat.    Long.    Lat.     Elong.   %Illum.    Age');
+              end;
           end;
       end
     else
       begin
-        Memo1.Lines.Add(Format('Librations and Moon/Sun positions calculated for observer at %0.4f %s  %0.4f %s  %0.0f m',
-          [Abs(-ObserverLongitude),EW_Tag(-ObserverLongitude),Abs(ObserverLatitude),NS_Tag(ObserverLatitude),ObserverElevation]));
+        Memo1.Lines.Add(Format('Librations and '+CurrentPlanetName+'/Sun positions calculated for observer at %s  %s  %0.0f m',
+          [LTVT_Form.EarthLongitudeString(-ObserverLongitude,3),LTVT_Form.LatitudeString(ObserverLatitude,3),ObserverElevation]));
         Memo1.Lines.Add('');
         if ColongitudeMode_RadioButton.Checked then
           begin
-            Memo1.Lines.Add('                          Terminators      Sub-Solar Point     Librations      Center of Moon      Center of Sun');
-            Memo1.Lines.Add('   Date      Time UT   Morning   Evening    Colong    Lat.    Long.   Lat.      Alt.     Azi.       Alt.     Azi');
+            if CurrentTargetPlanet=Moon then
+              begin
+                Memo1.Lines.Add('                          Terminators      Sub-Solar Point      Librations      Center of '+CurrentPlanetName+'      Center of Sun');
+                Memo1.Lines.Add('   Date      Time UT   Morning   Evening    Colong    Lat.     Long.   Lat.      Alt.     Azi.       Alt.     Azi');
+              end
+            else
+              begin
+                Memo1.Lines.Add('                          Terminators                Solar      Librations      Center of '+CurrentPlanetName+'      Center of Sun');
+                Memo1.Lines.Add('   Date      Time UT   Morning   Evening      CM      Lat.     Long.   Lat.      Alt.     Azi.       Alt.     Azi');
+              end
           end
         else
           begin
-            Memo1.Lines.Add('                           Sun Angle       Sub-Solar Point     Librations      Center of Moon      Center of Sun');
-            Memo1.Lines.Add('   Date      Time UT   Altitude  Azimuth    Colong    Lat.    Long.   Lat.      Alt.     Azi.       Alt.     Azi');
+            if CurrentTargetPlanet=Moon then
+              begin
+                Memo1.Lines.Add('                           Sun Angle       Sub-Solar Point      Librations      Center of '+CurrentPlanetName+'      Center of Sun');
+                Memo1.Lines.Add('   Date      Time UT   Altitude  Azimuth    Colong    Lat.     Long.   Lat.      Alt.     Azi.       Alt.     Azi');
+              end
+            else
+              begin
+                Memo1.Lines.Add('                           Sun Angle       Sub-Solar Point      Librations      Center of '+CurrentPlanetName+'      Center of Sun');
+                Memo1.Lines.Add('   Date      Time UT   Altitude  Azimuth     Long     Lat.     Long.   Lat.      Alt.     Azi.       Alt.     Azi');
+              end;
           end;
       end;
   end;
 
 procedure PrintData;
   var
-    SunPosition, MoonPosition : PositionResultRecord;
+    SunPositionRecord, MoonPositionRecord : PositionResultRecord;
     WithinToleranceCode, MoonUpSunDownCode, TargetVisibleCode : String;
     CraterLat, CraterLon, SunLat, SunLon, AngleToSun, SolarElevation, SolarAzimuth,
     TargetDistance, TargetAzimuth, AzimuthDifferenceDegrees : Extended;
-    CL, MT, ET : extended;
+    CL, MT, ET, CL_SearchResult : Extended;
     SunMoonAngle, SunMoonBearing,
-    Lon1, Lat1, Lon2, Lat2, CosTheta : extended;
+    Lon1, Lat1, Lon2, Lat2, CosTheta : Extended;
     PrintDateTime : TDateTime;
     SubEarthPoint : TPolarCoordinates;
 
   begin {PrintData}
+    SubSolarPoint := SubSolarPointOnMoon(MJD);     // actual point needed to determine MT and ET
+    CL := PiByTwo - SubSolarPoint.Longitude;
+    while CL>TwoPi do CL := CL - TwoPi;
+    while CL<0     do CL := CL + TwoPi;
+    CL := RadToDeg(CL);
+    ET := 180 - CL;
+    MT := -CL;
+
     CalculateSolarColongitude(MJD);
+    CL_SearchResult := RadToDeg(SolarColongitude);  // this may be Colongitude or Central Meridian
 
     SubEarthPoint := SubEarthPointOnMoon(MJD);
     while SubEarthPoint.Longitude>Pi do SubEarthPoint.Longitude := SubEarthPoint.Longitude - TwoPi;
-    CalculatePosition(MJD,Moon,BlankStarDataRecord,MoonPosition);
-    CalculatePosition(MJD,Sun, BlankStarDataRecord,SunPosition);
+    CalculatePosition(MJD,CurrentTargetPlanet,BlankStarDataRecord,MoonPositionRecord);
+    CalculatePosition(MJD,Sun, BlankStarDataRecord,SunPositionRecord);
 
-    if (MoonPosition.TopocentricAlt>0) and (SunPosition.TopocentricAlt<0) and not GeocentricSubEarthMode then
+    if (MoonPositionRecord.TopocentricAlt>0) and (SunPositionRecord.TopocentricAlt<0) and not GeocentricSubEarthMode then
       MoonUpSunDownCode := MoonUpSunDownSymbol
     else
       MoonUpSunDownCode := ' ';
 
-    CL := RadToDeg(SolarColongitude);
-
-    ET := 180 - CL;
-    MT := -CL;
-    if MT<-180 then MT := MT + 360;
-
     PrintDateTime := ModifiedJulianDateToDateTime(MJD);
     if (PrintDateTime<0) and (Frac(PrintDateTime)<>0) then PrintDateTime := Int(PrintDateTime) - Frac(PrintDateTime) - 2; // Correct for error in default display of negative DateTimes
 
-    if (MoonPosition.TopocentricAlt<0) and not GeocentricSubEarthMode then
+    if (MoonPositionRecord.TopocentricAlt<0) and not GeocentricSubEarthMode then
       Memo1.SelAttributes.Color := clLtGray
     else
       Memo1.SelAttributes.Color := clBlack;
@@ -642,7 +694,7 @@ procedure PrintData;
 
         CosTheta := Sin(Lat1)*Sin(Lat2) + Cos(Lat1)*Cos(Lat2)*Cos(Lon2 - Lon1);
 
-        ComputeDistanceAndBearing(MoonPosition.Azimuth*OneDegree,MoonPosition.TopocentricAlt*OneDegree,SunPosition.Azimuth*OneDegree,SunPosition.TopocentricAlt*OneDegree,SunMoonAngle,SunMoonBearing);
+        ComputeDistanceAndBearing(MoonPositionRecord.Azimuth*OneDegree,MoonPositionRecord.TopocentricAlt*OneDegree,SunPositionRecord.Azimuth*OneDegree,SunPositionRecord.TopocentricAlt*OneDegree,SunMoonAngle,SunMoonBearing);
       end
     else
       begin
@@ -656,6 +708,7 @@ procedure PrintData;
         CraterLat := DegToRad(Crater_Lat_LabeledNumericEdit.NumericEdit.ExtendedValue);
         SunLat := SubSolarPoint.Latitude;
         SunLon := SubSolarPoint.Longitude;
+        if CurrentTargetPlanet<>Moon then CL := LTVT_Form.PosNegDegrees(RadToDeg(SunLon),LTVT_Form.PlanetaryLongitudeConvention);
         ComputeDistanceAndBearing(CraterLon, CraterLat, SunLon, SunLat, AngleToSun, SolarAzimuth);
         SolarElevation := PiByTwo - AngleToSun;
 
@@ -678,19 +731,19 @@ procedure PrintData;
         if (WithinToleranceCode=WithinToleranceSymbol) or not FilterOutput_CheckBox.Checked then
           begin
             if GeocentricSubEarthMode then
-              Memo1.Lines.Add(Format('%10s%10s%10.4f%10.4f%10.3f%8.3f%8.3f%8.3f%11.3f%9.3f%9.3f  %1s%1s%1s',
+              Memo1.Lines.Add(Format('%10s%10s%10.4f%10.4f%10.3f%8.3f%9.3f%8.3f%11.3f%9.3f%9.3f  %1s%1s%1s',
                 [DateToStr(PrintDateTime),TimeToStr(PrintDateTime),RadToDeg(SolarElevation),
                 RadToDeg(SolarAzimuth),CL,RadToDeg(SubSolarPoint.Latitude),
-                RadToDeg(SubEarthPoint.Longitude),RadToDeg(SubEarthPoint.Latitude),
+                LTVT_Form.PosNegDegrees(RadToDeg(SubEarthPoint.Longitude),LTVT_Form.PlanetaryLongitudeConvention),RadToDeg(SubEarthPoint.Latitude),
                 SunMoonAngle/OneDegree, 50*(1 + CosTheta), LunarAge(MJD),
                 TargetVisibleCode,WithinToleranceCode,MoonUpSunDownCode]))
             else
-              Memo1.Lines.Add(Format('%10s%10s%10.4f%10.4f%10.3f%8.3f%8.3f%8.3f%10.3f%10.3f%10.3f%10.3f  %1s%1s%1s',
+              Memo1.Lines.Add(Format('%10s%10s%10.4f%10.4f%10.3f%8.3f%9.3f%8.3f%10.3f%10.3f%10.3f%10.3f  %1s%1s%1s',
                 [DateToStr(PrintDateTime),TimeToStr(PrintDateTime),RadToDeg(SolarElevation),
                 RadToDeg(SolarAzimuth),CL,RadToDeg(SubSolarPoint.Latitude),
-                RadToDeg(SubEarthPoint.Longitude),RadToDeg(SubEarthPoint.Latitude),
-                MoonPosition.TopocentricAlt,MoonPosition.Azimuth,
-                SunPosition.TopocentricAlt,SunPosition.Azimuth,
+                LTVT_Form.PosNegDegrees(RadToDeg(SubEarthPoint.Longitude),LTVT_Form.PlanetaryLongitudeConvention),RadToDeg(SubEarthPoint.Latitude),
+                MoonPositionRecord.TopocentricAlt,MoonPositionRecord.Azimuth,
+                SunPositionRecord.TopocentricAlt,SunPositionRecord.Azimuth,
                 TargetVisibleCode,WithinToleranceCode,MoonUpSunDownCode]));
 
             Memo1.Refresh;
@@ -698,6 +751,8 @@ procedure PrintData;
       end
     else  // colongitude mode
       begin
+        if CurrentTargetPlanet<>Moon then CL_SearchResult := LTVT_Form.PosNegDegrees(CL_SearchResult,LTVT_Form.PlanetaryLongitudeConvention);
+
         if Abs(RadToDeg(SubSolarPoint.Latitude-TargetSolarLat))<AllowableLatitudeErrorDegrees then
           WithinToleranceCode := WithinToleranceSymbol
         else
@@ -706,19 +761,21 @@ procedure PrintData;
         if (WithinToleranceCode=WithinToleranceSymbol) or not FilterOutput_CheckBox.Checked then
           begin
             if GeocentricSubEarthMode then
-              Memo1.Lines.Add(Format('%10s%10s%9.3f%1s%9.3f%1s%10.3f%8.3f%8.3f%8.3f%11.3f%9.3f%9.3f  %1s%1s',
-                [DateToStr(PrintDateTime),TimeToStr(PrintDateTime),Abs(MT),EW_Tag(MT),Abs(ET),EW_Tag(ET),
-                CL,RadToDeg(SubSolarPoint.Latitude),
-                RadToDeg(SubEarthPoint.Longitude),RadToDeg(SubEarthPoint.Latitude),
+              Memo1.Lines.Add(Format('%10s%10s%10s%10s%10.3f%8.3f%9.3f%8.3f%11.3f%9.3f%9.3f  %1s%1s',
+                [DateToStr(PrintDateTime),TimeToStr(PrintDateTime),LTVT_Form.PlanetaryLongitudeString(MT,3),
+                LTVT_Form.PlanetaryLongitudeString(ET,3),
+                CL_SearchResult,RadToDeg(SubSolarPoint.Latitude),
+                LTVT_Form.PosNegDegrees(RadToDeg(SubEarthPoint.Longitude),LTVT_Form.PlanetaryLongitudeConvention),RadToDeg(SubEarthPoint.Latitude),
                 SunMoonAngle/OneDegree, 50*(1 + CosTheta), LunarAge(MJD),
                 WithinToleranceCode,MoonUpSunDownCode]))
             else
-              Memo1.Lines.Add(Format('%10s%10s%9.3f%1s%9.3f%1s%10.3f%8.3f%8.3f%8.3f%10.3f%10.3f%10.3f%10.3f  %1s%1s',
-                [DateToStr(PrintDateTime),TimeToStr(PrintDateTime),Abs(MT),EW_Tag(MT),Abs(ET),EW_Tag(ET),
-                CL,RadToDeg(SubSolarPoint.Latitude),
-                RadToDeg(SubEarthPoint.Longitude),RadToDeg(SubEarthPoint.Latitude),
-                MoonPosition.TopocentricAlt,MoonPosition.Azimuth,
-                SunPosition.TopocentricAlt,SunPosition.Azimuth,
+              Memo1.Lines.Add(Format('%10s%10s%10s%10s%10.3f%8.3f%9.3f%8.3f%10.3f%10.3f%10.3f%10.3f  %1s%1s',
+                [DateToStr(PrintDateTime),TimeToStr(PrintDateTime),LTVT_Form.PlanetaryLongitudeString(MT,3),
+                LTVT_Form.PlanetaryLongitudeString(ET,3),
+                CL_SearchResult,RadToDeg(SubSolarPoint.Latitude),
+                LTVT_Form.PosNegDegrees(RadToDeg(SubEarthPoint.Longitude),LTVT_Form.PlanetaryLongitudeConvention),RadToDeg(SubEarthPoint.Latitude),
+                MoonPositionRecord.TopocentricAlt,MoonPositionRecord.Azimuth,
+                SunPositionRecord.TopocentricAlt,SunPositionRecord.Azimuth,
                 WithinToleranceCode,MoonUpSunDownCode]));
 
             Memo1.Refresh;
@@ -759,18 +816,33 @@ begin {Tabulate_ButtonClick}
       AllowableLatitudeErrorDegrees := Abs(IncTolerance_LabeledNumericEdit.NumericEdit.ExtendedValue);
 
       TargetCL := DegToRad(Colongitude_LabeledNumericEdit.NumericEdit.ExtendedValue);
-      Memo1.Lines.Add(Format('Searching for Colong = %0.3f  with  Solar Lat = %0.3f',
-        [RadToDeg(TargetCL),RadToDeg(TargetSolarLat)]));
+      if CurrentTargetPlanet=Moon then
+        Memo1.Lines.Add(Format('Searching for Colongitude = %0.3f  with  Solar Lat = %0.3f',
+          [RadToDeg(TargetCL),RadToDeg(TargetSolarLat)]))
+      else
+        Memo1.Lines.Add(Format('Searching for Central Meridian = %0.3f  with  Solar Lat = %0.3f',
+          [RadToDeg(TargetCL),RadToDeg(TargetSolarLat)]));
+
       PrintHeader;
 
       AllowableError := DegToRad(0.00001);
       MJD := StartMJD;
+//      UpdateCL_rate;
+//      Memo1.Lines.Add(Format('CL_rate = %0.6f days/rad',[CL_rate]));
       while (MJD<EndMJD) and (not AbortTabulation) do
         begin
+          UpdateCL_rate; // probably doesn't change much, so could be done outside the loop?
           UpdateCL;
-          while Abs(CL_Error)>AllowableError do RefineCL;
+//          PrintData;  // show steps approaching solution
+          while (Abs(CL_Error)>AllowableError) and (not AbortTabulation) do
+            begin
+              RefineCL;
+//              PrintData;  // show steps approaching solution
+              Application.ProcessMessages;
+            end;
           PrintData;
-          MJD := MJD+SynodicMonth;
+//          Memo1.Lines.Add('');
+          MJD := MJD + TwoPi*Abs(CL_Rate);  // advance to next event, always at greater MJD
           Application.ProcessMessages;
         end;
     end
@@ -784,8 +856,8 @@ begin {Tabulate_ButtonClick}
       CraterLatDeg := Crater_Lat_LabeledNumericEdit.NumericEdit.ExtendedValue;
       SunAngleDeg  := SunAngle_LabeledNumericEdit.NumericEdit.ExtendedValue;
 
-      Memo1.Lines.Add(Format('Searching for Sun Angle = %0.4f deg over feature at %0.3f %s   %0.3f %s',
-        [SunAngleDeg,Abs(CraterLonDeg),EW_Tag(CraterLonDeg),Abs(CraterLatDeg),NS_Tag(CraterLatDeg)]));
+      Memo1.Lines.Add(Format('Searching for Sun Angle = %0.4f° over feature at %s   %s',
+        [SunAngleDeg,LTVT_Form.PlanetaryLongitudeString(CraterLonDeg,3),LTVT_Form.LatitudeString(CraterLatDeg,3)]));
 
       TargetAngle := DegToRad(SunAngle_LabeledNumericEdit.NumericEdit.ExtendedValue);
       CosCraterLat := Cos(DegToRad(CraterLatDeg));
@@ -818,12 +890,12 @@ begin {Tabulate_ButtonClick}
       if SunAngleMode_RadioButton.Checked then
         begin
           Memo1.Lines.Add(Format('  %s = Target feature on visible disk',[TargetVisibleSymbol]));
-          Memo1.Lines.Add(Format('  %s = Azimuth of Sun within %0.2f deg of target (= %0.3f)',[WithinToleranceSymbol,AllowableAzimuthErrorDegrees,RadToDeg(TargetSolarAzimuth)]));
+          Memo1.Lines.Add(Format('  %s = Azimuth of Sun within %0.2f° of target (= %0.3f°)',[WithinToleranceSymbol,AllowableAzimuthErrorDegrees,RadToDeg(TargetSolarAzimuth)]));
         end
       else
-        Memo1.Lines.Add(Format('  %s = Latitude of sub-solar point within %0.2f deg of target (= %0.3f)',[WithinToleranceSymbol,AllowableLatitudeErrorDegrees,RadToDeg(TargetSolarLat)]));
+        Memo1.Lines.Add(Format('  %s = Latitude of sub-solar point within %0.2f° of target (= %0.3f°)',[WithinToleranceSymbol,AllowableLatitudeErrorDegrees,RadToDeg(TargetSolarLat)]));
 
-      if not GeocentricSubEarthMode then Memo1.Lines.Add(Format('  %s = Moon above horizon/Sun below horizon',[MoonUpSunDownSymbol]));
+      if not GeocentricSubEarthMode then Memo1.Lines.Add(Format('  %s = '+CurrentPlanetName+' above horizon/Sun below horizon',[MoonUpSunDownSymbol]));
       Memo1.Lines.Add('');
       if AbortTabulation then
         Memo1.Lines.Add('                     *** tabulation aborted ***')

@@ -1,9 +1,9 @@
 object PhotoCalibrator_Form: TPhotoCalibrator_Form
-  Left = 12
-  Top = 20
-  Width = 1012
-  Height = 698
-  Caption = 'Personal Photo Calibrator  v0.5'
+  Left = 7
+  Top = 19
+  Width = 1017
+  Height = 714
+  Caption = 'Personal Photo Calibrator  v0.6'
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -14,6 +14,7 @@ object PhotoCalibrator_Form: TPhotoCalibrator_Form
   ShowHint = True
   OnCreate = FormCreate
   OnDestroy = FormDestroy
+  OnKeyDown = FormKeyDown
   OnResize = FormResize
   PixelsPerInch = 96
   TextHeight = 13
@@ -101,18 +102,18 @@ object PhotoCalibrator_Form: TPhotoCalibrator_Form
     Caption = 'Open'
     TabOrder = 0
     OnClick = LoadPhoto_ButtonClick
-    OnKeyDown = LoadPhoto_ButtonKeyDown
+    OnKeyDown = FormKeyDown
   end
   object Save_Button: TButton
-    Left = 104
-    Top = 640
-    Width = 65
+    Left = 136
+    Top = 648
+    Width = 57
     Height = 25
     Hint = 'Save calibration to database of personal photos'
     Caption = 'Save'
     TabOrder = 10
     OnClick = Save_ButtonClick
-    OnKeyDown = Save_ButtonKeyDown
+    OnKeyDown = FormKeyDown
   end
   object SetGeometry_RadioButton: TRadioButton
     Left = 8
@@ -124,7 +125,7 @@ object PhotoCalibrator_Form: TPhotoCalibrator_Form
     TabOrder = 4
     TabStop = True
     OnClick = SetGeometry_RadioButtonClick
-    OnKeyDown = SetGeometry_RadioButtonKeyDown
+    OnKeyDown = FormKeyDown
   end
   object RefPt1_RadioButton: TRadioButton
     Left = 8
@@ -145,7 +146,7 @@ object PhotoCalibrator_Form: TPhotoCalibrator_Form
     ParentFont = False
     TabOrder = 5
     OnClick = RefPt1_RadioButtonClick
-    OnKeyDown = RefPt1_RadioButtonKeyDown
+    OnKeyDown = FormKeyDown
   end
   object RefPt1_GroupBox: TGroupBox
     Left = 8
@@ -190,7 +191,7 @@ object PhotoCalibrator_Form: TPhotoCalibrator_Form
         Width = 65
         Height = 19
         Text = '0.000'
-        OnKeyDown = RefPt1_Lat_LabeledNumericEditNumericEditKeyDown
+        OnKeyDown = FormKeyDown
         InputMin = '-90'
         InputMax = '90'
       end
@@ -215,7 +216,7 @@ object PhotoCalibrator_Form: TPhotoCalibrator_Form
         Width = 65
         Height = 19
         Text = '0.000'
-        OnKeyDown = RefPt1_Lon_LabeledNumericEditNumericEditKeyDown
+        OnKeyDown = FormKeyDown
       end
     end
     inline RefPt1_XPix_LabeledNumericEdit: TLabeledNumericEdit
@@ -238,7 +239,7 @@ object PhotoCalibrator_Form: TPhotoCalibrator_Form
       inherited NumericEdit: TNumericEdit
         Left = 16
         Height = 19
-        OnKeyDown = RefPt1_XPix_LabeledNumericEditNumericEditKeyDown
+        OnKeyDown = FormKeyDown
         InputType = tInteger
       end
     end
@@ -262,7 +263,7 @@ object PhotoCalibrator_Form: TPhotoCalibrator_Form
       inherited NumericEdit: TNumericEdit
         Left = 16
         Height = 19
-        OnKeyDown = RefPt1_YPix_LabeledNumericEditNumericEditKeyDown
+        OnKeyDown = FormKeyDown
         InputType = tInteger
       end
     end
@@ -275,7 +276,7 @@ object PhotoCalibrator_Form: TPhotoCalibrator_Form
       Caption = 'Copy from Main Screen'
       TabOrder = 0
       OnClick = RefPt1_Copy_ButtonClick
-      OnKeyDown = RefPt1_Copy_ButtonKeyDown
+      OnKeyDown = FormKeyDown
     end
   end
   object RefPt2_RadioButton: TRadioButton
@@ -295,7 +296,7 @@ object PhotoCalibrator_Form: TPhotoCalibrator_Form
     ParentFont = False
     TabOrder = 6
     OnClick = RefPt2_RadioButtonClick
-    OnKeyDown = RefPt2_RadioButtonKeyDown
+    OnKeyDown = FormKeyDown
   end
   object RefPt2_GroupBox: TGroupBox
     Left = 8
@@ -340,7 +341,7 @@ object PhotoCalibrator_Form: TPhotoCalibrator_Form
         Width = 65
         Height = 19
         Text = '0.000'
-        OnKeyDown = RefPt2_Lat_LabeledNumericEditNumericEditKeyDown
+        OnKeyDown = FormKeyDown
         InputMin = '-90'
         InputMax = '90'
       end
@@ -365,7 +366,7 @@ object PhotoCalibrator_Form: TPhotoCalibrator_Form
         Width = 65
         Height = 19
         Text = '0.000'
-        OnKeyDown = RefPt2_Lon_LabeledNumericEditNumericEditKeyDown
+        OnKeyDown = FormKeyDown
       end
     end
     inline RefPt2_XPix_LabeledNumericEdit: TLabeledNumericEdit
@@ -388,7 +389,7 @@ object PhotoCalibrator_Form: TPhotoCalibrator_Form
       inherited NumericEdit: TNumericEdit
         Left = 16
         Height = 19
-        OnKeyDown = RefPt2_XPix_LabeledNumericEditNumericEditKeyDown
+        OnKeyDown = FormKeyDown
         InputType = tInteger
       end
     end
@@ -412,7 +413,7 @@ object PhotoCalibrator_Form: TPhotoCalibrator_Form
       inherited NumericEdit: TNumericEdit
         Left = 16
         Height = 19
-        OnKeyDown = RefPt2_YPix_LabeledNumericEditNumericEditKeyDown
+        OnKeyDown = FormKeyDown
         InputType = tInteger
       end
     end
@@ -425,7 +426,7 @@ object PhotoCalibrator_Form: TPhotoCalibrator_Form
       Caption = 'Copy from Main Screen'
       TabOrder = 0
       OnClick = RefPt2_Copy_ButtonClick
-      OnKeyDown = RefPt2_Copy_ButtonKeyDown
+      OnKeyDown = FormKeyDown
     end
   end
   object Geometry_GroupBox: TGroupBox
@@ -465,7 +466,7 @@ object PhotoCalibrator_Form: TPhotoCalibrator_Form
       Caption = 'Copy from Main Screen'
       TabOrder = 0
       OnClick = GeometryCopy_ButtonClick
-      OnKeyDown = GeometryCopy_ButtonKeyDown
+      OnKeyDown = FormKeyDown
     end
     object Date_DateTimePicker: TDateTimePicker
       Left = 16
@@ -483,7 +484,7 @@ object PhotoCalibrator_Form: TPhotoCalibrator_Form
       MinDate = -182619
       ParseInput = False
       TabOrder = 1
-      OnKeyDown = Date_DateTimePickerKeyDown
+      OnKeyDown = FormKeyDown
     end
     object Time_DateTimePicker: TDateTimePicker
       Left = 128
@@ -500,7 +501,7 @@ object PhotoCalibrator_Form: TPhotoCalibrator_Form
       Kind = dtkTime
       ParseInput = False
       TabOrder = 2
-      OnKeyDown = Time_DateTimePickerKeyDown
+      OnKeyDown = FormKeyDown
     end
     inline ObserverLongitude_LabeledNumericEdit: TLabeledNumericEdit
       Left = 8
@@ -526,7 +527,7 @@ object PhotoCalibrator_Form: TPhotoCalibrator_Form
         Width = 73
         Height = 19
         Text = '0.000'
-        OnKeyDown = ObserverLongitude_LabeledNumericEditNumericEditKeyDown
+        OnKeyDown = FormKeyDown
       end
     end
     inline ObserverLatitude_LabeledNumericEdit: TLabeledNumericEdit
@@ -551,7 +552,7 @@ object PhotoCalibrator_Form: TPhotoCalibrator_Form
         Width = 65
         Height = 19
         Text = '0.000'
-        OnKeyDown = ObserverLatitude_LabeledNumericEditNumericEditKeyDown
+        OnKeyDown = FormKeyDown
       end
     end
     inline ObserverElevation_LabeledNumericEdit: TLabeledNumericEdit
@@ -579,7 +580,7 @@ object PhotoCalibrator_Form: TPhotoCalibrator_Form
         Width = 65
         Height = 19
         Text = '0.0'
-        OnKeyDown = ObserverElevation_LabeledNumericEditNumericEditKeyDown
+        OnKeyDown = FormKeyDown
       end
     end
   end
@@ -595,7 +596,7 @@ object PhotoCalibrator_Form: TPhotoCalibrator_Form
     Caption = 'Step 4:  Check '
     TabOrder = 7
     OnClick = InversionCode_RadioButtonClick
-    OnKeyDown = InversionCode_RadioButtonKeyDown
+    OnKeyDown = FormKeyDown
   end
   object InvertedImage_CheckBox: TCheckBox
     Left = 104
@@ -605,29 +606,29 @@ object PhotoCalibrator_Form: TPhotoCalibrator_Form
     Caption = 'if this is a mirror image'
     TabOrder = 8
     OnClick = InvertedImage_CheckBoxClick
-    OnKeyDown = InvertedImage_CheckBoxKeyDown
+    OnKeyDown = FormKeyDown
   end
   object Cancel_Button: TButton
-    Left = 192
-    Top = 640
-    Width = 57
+    Left = 208
+    Top = 648
+    Width = 49
     Height = 25
     Hint = 'Close form without saving calibration data'
     Caption = 'Close'
     TabOrder = 11
     OnClick = Cancel_ButtonClick
-    OnKeyDown = Cancel_ButtonKeyDown
+    OnKeyDown = FormKeyDown
   end
   object Clear_Button: TButton
-    Left = 16
-    Top = 640
-    Width = 65
+    Left = 8
+    Top = 648
+    Width = 41
     Height = 25
     Hint = 'Erase all marks from photo being calibrated'
     Caption = 'Clear'
     TabOrder = 9
     OnClick = Clear_ButtonClick
-    OnKeyDown = Clear_ButtonKeyDown
+    OnKeyDown = FormKeyDown
   end
   object ZoomIn_Button: TButton
     Left = 608
@@ -638,7 +639,7 @@ object PhotoCalibrator_Form: TPhotoCalibrator_Form
     Caption = '2 X'
     TabOrder = 3
     OnClick = ZoomIn_ButtonClick
-    OnKeyDown = ZoomIn_ButtonKeyDown
+    OnKeyDown = FormKeyDown
   end
   object ZoomOut_Button: TButton
     Left = 480
@@ -649,7 +650,7 @@ object PhotoCalibrator_Form: TPhotoCalibrator_Form
     Caption = '0.5 X'
     TabOrder = 1
     OnClick = ZoomOut_ButtonClick
-    OnKeyDown = ZoomOut_ButtonKeyDown
+    OnKeyDown = FormKeyDown
   end
   object OneToOne_Button: TButton
     Left = 552
@@ -660,7 +661,20 @@ object PhotoCalibrator_Form: TPhotoCalibrator_Form
     Caption = '1:1'
     TabOrder = 2
     OnClick = OneToOne_ButtonClick
-    OnKeyDown = OneToOne_ButtonKeyDown
+    OnKeyDown = FormKeyDown
+  end
+  object AddNote_Button: TButton
+    Left = 64
+    Top = 648
+    Width = 59
+    Height = 25
+    Hint = 
+      'Click to enter a note to be appended to the calibration data whe' +
+      'n you click SAVE'
+    Caption = 'Add Note'
+    TabOrder = 16
+    OnClick = AddNote_ButtonClick
+    OnKeyDown = FormKeyDown
   end
   object OpenPictureDialog1: TOpenPictureDialog
     Left = 736
