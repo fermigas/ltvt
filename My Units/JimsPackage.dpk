@@ -1,0 +1,48 @@
+package JimsPackage;
+
+{$R *.res}
+{$R 'ASGCapture.dcr'}
+{$R 'NGSDatasheetFile.dcr'}
+{$R 'XYGraph.dcr'}
+{$R 'NumericEdit.dcr'}
+{$R 'UnicodeLabel.dcr'}
+{$R 'JimsGraph.dcr'}
+{$ALIGN 8}
+{$ASSERTIONS OFF}
+{$BOOLEVAL OFF}
+{$DEBUGINFO ON}
+{$EXTENDEDSYNTAX ON}
+{$IMPORTEDDATA ON}
+{$IOCHECKS ON}
+{$LOCALSYMBOLS ON}
+{$LONGSTRINGS ON}
+{$OPENSTRINGS ON}
+{$OPTIMIZATION ON}
+{$OVERFLOWCHECKS ON}
+{$RANGECHECKS ON}
+{$REFERENCEINFO OFF}
+{$SAFEDIVIDE OFF}
+{$STACKFRAMES OFF}
+{$TYPEDADDRESS OFF}
+{$VARSTRINGCHECKS ON}
+{$WRITEABLECONST OFF}
+{$MINENUMSIZE 1}
+{$IMAGEBASE $400000}
+{$IMPLICITBUILD ON}
+
+requires
+  rtl,
+  vcl,
+  vclx,
+  VclSmp,
+  vcljpg;
+
+contains
+  ASGCapture in 'ASGCapture.pas',
+  NGSDatasheetFile in 'NGSDatasheetFile.pas',
+  XYGraph in 'XYGraph.pas',
+  NumericEdit in 'NumericEdit.pas',
+  UnicodeLabel in 'UnicodeLabel.pas',
+  JimsGraph in 'JimsGraph.pas';
+
+end.
