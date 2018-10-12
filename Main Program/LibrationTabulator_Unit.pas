@@ -150,7 +150,7 @@ begin
   MEP_JPL_Filename := 'UNXP2000.405'; //overwritten by calling program
   MEP_JPL_Path := '';
 
-  if not Terminator_Form.LinuxCompatibilityMode then
+  if not LTVT_Form.LinuxCompatibilityMode then
     begin
       StartDate_DateTimePicker.MinDate := EncodeDateDay(1601,1);
       EndDate_DateTimePicker.MinDate := EncodeDateDay(1601,1);
@@ -196,9 +196,9 @@ begin
   ObsLatList.Clear;
   ObsLonList.Clear;
   ObsElevList.Clear;
-  if FileExists(Terminator_Form.ObservatoryListFilename) then
+  if FileExists(LTVT_Form.ObservatoryListFilename) then
     begin
-      AssignFile(ObsListFile,Terminator_Form.ObservatoryListFilename);
+      AssignFile(ObsListFile,LTVT_Form.ObservatoryListFilename);
       Reset(ObsListFile);
       while (not EOF(ObsListFile)) {and (Length(FeatureList)<100)} do
         begin
@@ -241,15 +241,15 @@ begin
         ObservatoryList_ComboBox.ItemIndex := i
       else
         begin
-          if FileExists(Terminator_Form.ObservatoryListFilename) then
+          if FileExists(LTVT_Form.ObservatoryListFilename) then
             begin
               ObservatoryList_ComboBox.ItemIndex := -1;
-              ObservatoryList_ComboBox.Text := Terminator_Form.ObservatoryComboBoxDefaultText;
+              ObservatoryList_ComboBox.Text := LTVT_Form.ObservatoryComboBoxDefaultText;
             end
           else
             begin
               ObservatoryList_ComboBox.ItemIndex := -1;
-              ObservatoryList_ComboBox.Text := Terminator_Form.ObservatoryNoFileText;
+              ObservatoryList_ComboBox.Text := LTVT_Form.ObservatoryNoFileText;
             end
         end;
     end;
@@ -298,9 +298,9 @@ begin
       NameToAdd := Trim(Name_Edit.Text);
     end;
 
-  AssignFile(ObsListFile,Terminator_Form.ObservatoryListFilename);
+  AssignFile(ObsListFile,LTVT_Form.ObservatoryListFilename);
 
-  if FileExists(Terminator_Form.ObservatoryListFilename) then
+  if FileExists(LTVT_Form.ObservatoryListFilename) then
     begin
       Append(ObsListFile);
     end
@@ -333,7 +333,7 @@ begin
 
   ObservatoryList_ComboBox.Items.Add(NameToAdd);
 
-//  ShowMessage('Location added to '+Terminator_Form.ObservatoryListFilename);
+//  ShowMessage('Location added to '+LTVT_Form.ObservatoryListFilename);
   RefreshSelection;
 end;
 
@@ -633,19 +633,19 @@ end;
 procedure TLibrationTabulator_Form.GeocentricObserver_CheckBoxKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'LibrationTabulatorForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'LibrationTabulatorForm.htm');
 end;
 
 procedure TLibrationTabulator_Form.Crater_Lon_LabeledNumericEditNumericEditKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'LibrationTabulatorForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'LibrationTabulatorForm.htm');
 end;
 
 procedure TLibrationTabulator_Form.Crater_Lat_LabeledNumericEditNumericEditKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'LibrationTabulatorForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'LibrationTabulatorForm.htm');
 end;
 
 procedure TLibrationTabulator_Form.StartDate_DateTimePickerKeyDown(
@@ -660,7 +660,7 @@ begin
             MonthOf(StartDate_DateTimePicker.DateTime),DayOf(StartDate_DateTimePicker.DateTime));
     end
   else
-    Terminator_Form.DisplayF1Help(Key,Shift,'LibrationTabulatorForm.htm');
+    LTVT_Form.DisplayF1Help(Key,Shift,'LibrationTabulatorForm.htm');
 end;
 
 procedure TLibrationTabulator_Form.EndDate_DateTimePickerKeyDown(
@@ -675,115 +675,115 @@ begin
             MonthOf(EndDate_DateTimePicker.DateTime),DayOf(EndDate_DateTimePicker.DateTime));
     end
   else
-    Terminator_Form.DisplayF1Help(Key,Shift,'LibrationTabulatorForm.htm');
+    LTVT_Form.DisplayF1Help(Key,Shift,'LibrationTabulatorForm.htm');
 end;
 
 procedure TLibrationTabulator_Form.Tabulate_ButtonKeyDown(Sender: TObject;
   var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'LibrationTabulatorForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'LibrationTabulatorForm.htm');
 end;
 
 procedure TLibrationTabulator_Form.Memo1KeyDown(Sender: TObject;
   var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'LibrationTabulatorForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'LibrationTabulatorForm.htm');
 end;
 
 procedure TLibrationTabulator_Form.Font_ButtonKeyDown(Sender: TObject;
   var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'LibrationTabulatorForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'LibrationTabulatorForm.htm');
 end;
 
 procedure TLibrationTabulator_Form.ClearMemo_ButtonKeyDown(Sender: TObject;
   var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'LibrationTabulatorForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'LibrationTabulatorForm.htm');
 end;
 
 procedure TLibrationTabulator_Form.ObserverLongitude_LabeledNumericEditNumericEditKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'LibrationTabulatorForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'LibrationTabulatorForm.htm');
 end;
 
 procedure TLibrationTabulator_Form.ObserverLatitude_LabeledNumericEditNumericEditKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'LibrationTabulatorForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'LibrationTabulatorForm.htm');
 end;
 
 procedure TLibrationTabulator_Form.ObserverElevation_LabeledNumericEditNumericEditKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'LibrationTabulatorForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'LibrationTabulatorForm.htm');
 end;
 
 procedure TLibrationTabulator_Form.Abort_ButtonKeyDown(Sender: TObject;
   var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'LibrationTabulatorForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'LibrationTabulatorForm.htm');
 end;
 
 procedure TLibrationTabulator_Form.ShowAll_CheckBoxKeyDown(Sender: TObject;
   var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'LibrationTabulatorForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'LibrationTabulatorForm.htm');
 end;
 
 procedure TLibrationTabulator_Form.MinMoonElevDeg_LabeledNumericEditNumericEditKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'LibrationTabulatorForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'LibrationTabulatorForm.htm');
 end;
 
 procedure TLibrationTabulator_Form.MaxSunElevDeg_LabeledNumericEditNumericEditKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'LibrationTabulatorForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'LibrationTabulatorForm.htm');
 end;
 
 procedure TLibrationTabulator_Form.MaxCenterAngleDeg_LabeledNumericEditNumericEditKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'LibrationTabulatorForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'LibrationTabulatorForm.htm');
 end;
 
 procedure TLibrationTabulator_Form.SearchTimeStepMin_LabeledNumericEditNumericEditKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'LibrationTabulatorForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'LibrationTabulatorForm.htm');
 end;
 
 procedure TLibrationTabulator_Form.MinSunAngleDeg_LabeledNumericEditNumericEditKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'LibrationTabulatorForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'LibrationTabulatorForm.htm');
 end;
 
 procedure TLibrationTabulator_Form.MaxSunAngleDeg_LabeledNumericEditNumericEditKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'LibrationTabulatorForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'LibrationTabulatorForm.htm');
 end;
 
 procedure TLibrationTabulator_Form.StartEnd_CheckBoxKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'LibrationTabulatorForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'LibrationTabulatorForm.htm');
 end;
 
 procedure TLibrationTabulator_Form.ObservatoryList_ComboBoxKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'LibrationTabulatorForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'LibrationTabulatorForm.htm');
 end;
 
 procedure TLibrationTabulator_Form.AddLocation_ButtonKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'LibrationTabulatorForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'LibrationTabulatorForm.htm');
 end;
 
 end.

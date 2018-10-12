@@ -1,4 +1,4 @@
-object Terminator_Form: TTerminator_Form
+object LTVT_Form: TLTVT_Form
   Left = 11
   Top = -1
   Width = 994
@@ -16,6 +16,7 @@ object Terminator_Form: TTerminator_Form
   OnClose = FormClose
   OnCreate = FormCreate
   OnKeyDown = FormKeyDown
+  OnResize = FormResize
   PixelsPerInch = 96
   TextHeight = 13
   object Label6: TLabel
@@ -25,122 +26,23 @@ object Terminator_Form: TTerminator_Form
     Height = 13
     Caption = '------------------ Time of Observation -------------'
   end
-  object JimsGraph1: TJimsGraph
+  object Image1: TImage
     Left = 0
     Top = 45
     Width = 641
     Height = 641
+    Align = alCustom
+    Anchors = []
     PopupMenu = Image_PopupMenu
-    OnMouseDown = JimsGraph1MouseDown
-    OnMouseMove = JimsGraph1MouseMove
+    OnMouseDown = Image1MouseDown
+    OnMouseMove = Image1MouseMove
   end
-  object MousePosition_GroupBox: TGroupBox
-    Left = 648
-    Top = 536
-    Width = 313
-    Height = 113
-    Hint = 
-      'Information related to current mouse position; in top caption, "' +
-      'Map" is IAU format LTO zone number; "Rnn" is R'#252'kl sheet number'
-    Caption = 'Mouse Position'
-    Ctl3D = False
-    ParentCtl3D = False
-    TabOrder = 7
-    object SunAngle_Label: TLabel
-      Left = 11
-      Top = 44
-      Width = 78
-      Height = 13
-      Hint = 
-        'Information related to mouse distance from current reference poi' +
-        'nt'
-      Caption = 'SunAngle_Label'
-    end
-    object RefPtDistance_Label: TLabel
-      Left = 12
-      Top = 68
-      Width = 101
-      Height = 13
-      Caption = 'RefPtDistance_Label'
-    end
-    object CraterName_Label: TLabel
-      Left = 9
-      Top = 92
-      Width = 88
-      Height = 13
-      Hint = 'Information about dot closest to current mouse point'
-      Caption = 'CraterName_Label'
-    end
-    object MouseLonLat_Label: TLabel
-      Left = 8
-      Top = 20
-      Width = 97
-      Height = 13
-      Hint = 'Selenographic longitude and latitude of current mouse point'
-      Caption = 'MouseLonLat_Label'
-    end
-  end
-  object Date_DateTimePicker: TDateTimePicker
-    Left = 112
+  object ImageSize_Label: TLabel
+    Left = 424
     Top = 16
-    Width = 89
-    Height = 21
-    Hint = 
-      'Enter UT date in your national date format; press ESC to set yea' +
-      'r <1752'
-    CalAlignment = dtaLeft
-    Date = 39447
-    Time = 39447
-    DateFormat = dfShort
-    DateMode = dmComboBox
-    Kind = dtkDate
-    ParseInput = False
-    TabOrder = 1
-    OnChange = Date_DateTimePickerChange
-    OnKeyDown = Date_DateTimePickerKeyDown
-  end
-  object Time_DateTimePicker: TDateTimePicker
-    Left = 216
-    Top = 16
-    Width = 89
-    Height = 21
-    Hint = 'Enter Universal Time in HH:MM:SS format'
-    CalAlignment = dtaLeft
-    Date = 38718.7916666667
-    Format = 'HH:mm:ss  UT'
-    Time = 38718.7916666667
-    DateFormat = dfShort
-    DateMode = dmComboBox
-    Kind = dtkTime
-    ParseInput = False
-    TabOrder = 2
-    OnChange = Time_DateTimePickerChange
-    OnEnter = Time_DateTimePickerEnter
-    OnKeyDown = Time_DateTimePickerKeyDown
-  end
-  object EstimateData_Button: TButton
-    Left = 512
-    Top = 8
-    Width = 113
-    Height = 30
-    Hint = 
-      'Estimate observing geometry from specified location at indicated' +
-      ' date/time'
-    Caption = 'Compute Geometry'
-    TabOrder = 4
-    OnClick = EstimateData_ButtonClick
-    OnKeyDown = EstimateData_ButtonKeyDown
-  end
-  object Now_Button: TButton
-    Left = 15
-    Top = 8
-    Width = 82
-    Height = 30
-    Hint = 'Set boxes to current Universal Date/Time and refresh map'
-    Caption = 'Current UT'
-    TabOrder = 0
-    OnClick = Now_ButtonClick
-    OnKeyDown = Now_ButtonKeyDown
+    Width = 81
+    Height = 13
+    Caption = 'ImageSize_Label'
   end
   object Geometry_GroupBox: TGroupBox
     Left = 648
@@ -345,6 +247,101 @@ object Terminator_Form: TTerminator_Form
       end
     end
   end
+  object MousePosition_GroupBox: TGroupBox
+    Left = 648
+    Top = 536
+    Width = 313
+    Height = 113
+    Hint = 
+      'Information related to current mouse position; in top caption, "' +
+      'Map" is IAU format LTO zone number; "Rnn" is R'#252'kl sheet number'
+    Caption = 'Mouse Position'
+    Ctl3D = False
+    ParentCtl3D = False
+    TabOrder = 7
+    object SunAngle_Label: TLabel
+      Left = 11
+      Top = 44
+      Width = 78
+      Height = 13
+      Hint = 
+        'Information related to mouse distance from current reference poi' +
+        'nt'
+      Caption = 'SunAngle_Label'
+    end
+    object RefPtDistance_Label: TLabel
+      Left = 12
+      Top = 68
+      Width = 101
+      Height = 13
+      Caption = 'RefPtDistance_Label'
+    end
+    object CraterName_Label: TLabel
+      Left = 9
+      Top = 92
+      Width = 88
+      Height = 13
+      Hint = 'Information about dot closest to current mouse point'
+      Caption = 'CraterName_Label'
+    end
+    object MouseLonLat_Label: TLabel
+      Left = 8
+      Top = 20
+      Width = 97
+      Height = 13
+      Hint = 'Selenographic longitude and latitude of current mouse point'
+      Caption = 'MouseLonLat_Label'
+    end
+  end
+  object Date_DateTimePicker: TDateTimePicker
+    Left = 112
+    Top = 16
+    Width = 89
+    Height = 21
+    Hint = 
+      'Enter UT date in your national date format; press ESC to set yea' +
+      'r <1752'
+    CalAlignment = dtaLeft
+    Date = 39447
+    Time = 39447
+    DateFormat = dfShort
+    DateMode = dmComboBox
+    Kind = dtkDate
+    ParseInput = False
+    TabOrder = 1
+    OnChange = Date_DateTimePickerChange
+    OnKeyDown = Date_DateTimePickerKeyDown
+  end
+  object Time_DateTimePicker: TDateTimePicker
+    Left = 216
+    Top = 16
+    Width = 89
+    Height = 21
+    Hint = 'Enter Universal Time in HH:MM:SS format'
+    CalAlignment = dtaLeft
+    Date = 38718.7916666667
+    Format = 'HH:mm:ss  UT'
+    Time = 38718.7916666667
+    DateFormat = dfShort
+    DateMode = dmComboBox
+    Kind = dtkTime
+    ParseInput = False
+    TabOrder = 2
+    OnChange = Time_DateTimePickerChange
+    OnEnter = Time_DateTimePickerEnter
+    OnKeyDown = Time_DateTimePickerKeyDown
+  end
+  object Now_Button: TButton
+    Left = 15
+    Top = 8
+    Width = 82
+    Height = 30
+    Hint = 'Set boxes to current Universal Date/Time and refresh map'
+    Caption = 'Current UT'
+    TabOrder = 0
+    OnClick = Now_ButtonClick
+    OnKeyDown = Now_ButtonKeyDown
+  end
   object MoonDisplay_GroupBox: TGroupBox
     Left = 648
     Top = 264
@@ -360,6 +357,13 @@ object Terminator_Form: TTerminator_Form
     ParentCtl3D = False
     ParentFont = False
     TabOrder = 6
+    object DrawingMap_Label: TLabel
+      Left = 111
+      Top = 14
+      Width = 106
+      Height = 13
+      Caption = 'Drawing texture map...'
+    end
     object StatusLine_Label: TLabel
       Left = 31
       Top = 56
@@ -373,12 +377,25 @@ object Terminator_Form: TTerminator_Form
       Font.Style = []
       ParentFont = False
     end
-    object DrawingMap_Label: TLabel
-      Left = 143
-      Top = 12
-      Width = 106
-      Height = 13
-      Caption = 'Drawing texture map...'
+    object ThreeD_CheckBox: TCheckBox
+      Left = 120
+      Top = 54
+      Width = 113
+      Height = 17
+      Hint = 'In drawing from DEMs, display points at correct projected height'
+      Caption = 'Display DEM in 3D'
+      TabOrder = 19
+      OnKeyDown = ThreeD_CheckBoxKeyDown
+    end
+    object DrawCircles_CheckBox: TCheckBox
+      Left = 120
+      Top = 17
+      Width = 97
+      Height = 17
+      Hint = 'Draw circles around dots, indicating feature size'
+      Caption = 'Draw circles'
+      TabOrder = 15
+      OnKeyDown = DrawCircles_CheckBoxKeyDown
     end
     inline CraterThreshold_LabeledNumericEdit: TLabeledNumericEdit
       Left = 12
@@ -417,9 +434,9 @@ object Terminator_Form: TTerminator_Form
       Visible = False
     end
     object DrawDots_Button: TButton
-      Left = 16
+      Left = 8
       Top = 80
-      Width = 49
+      Width = 45
       Height = 25
       Hint = 
         'Draw fresh dot diagram based on current geometry; identify dots ' +
@@ -430,9 +447,9 @@ object Terminator_Form: TTerminator_Form
       OnKeyDown = DrawDots_ButtonKeyDown
     end
     object DrawTexture_Button: TButton
-      Left = 80
+      Left = 64
       Top = 80
-      Width = 57
+      Width = 55
       Height = 25
       Hint = 
         'Draw fresh surface relief simulation using current geometry and ' +
@@ -443,7 +460,7 @@ object Terminator_Form: TTerminator_Form
       OnKeyDown = DrawTexture_ButtonKeyDown
     end
     object OverlayDots_Button: TButton
-      Left = 152
+      Left = 176
       Top = 80
       Width = 73
       Height = 25
@@ -647,16 +664,6 @@ object Terminator_Form: TTerminator_Form
         OnKeyDown = GridSpacing_LabeledNumericEditNumericEditKeyDown
       end
     end
-    object DrawCircles_CheckBox: TCheckBox
-      Left = 120
-      Top = 25
-      Width = 97
-      Height = 17
-      Hint = 'Draw circles around dots, indicating feature size'
-      Caption = 'Draw circles'
-      TabOrder = 15
-      OnKeyDown = DrawCircles_CheckBoxKeyDown
-    end
     inline RotationAngle_LabeledNumericEdit: TLabeledNumericEdit
       Left = 168
       Top = 233
@@ -686,7 +693,7 @@ object Terminator_Form: TTerminator_Form
     end
     object MarkCenter_CheckBox: TCheckBox
       Left = 120
-      Top = 43
+      Top = 35
       Width = 97
       Height = 17
       Hint = 
@@ -695,6 +702,27 @@ object Terminator_Form: TTerminator_Form
       Caption = 'Mark center'
       TabOrder = 17
       OnKeyDown = MarkCenter_CheckBoxKeyDown
+    end
+    object DrawDEM_Button: TButton
+      Left = 128
+      Top = 80
+      Width = 41
+      Height = 25
+      Caption = 'DEM'
+      TabOrder = 18
+      OnClick = DrawDEM_ButtonClick
+      OnKeyDown = DrawDEM_ButtonKeyDown
+    end
+    object Abort_Button: TButton
+      Left = 264
+      Top = 11
+      Width = 41
+      Height = 20
+      Hint = 'Halt current drawing'
+      Caption = 'Abort'
+      TabOrder = 20
+      Visible = False
+      OnClick = Abort_ButtonClick
     end
   end
   object SearchPhotoSessions_Button: TButton
@@ -709,18 +737,6 @@ object Terminator_Form: TTerminator_Form
     TabOrder = 10
     OnClick = SearchPhotoSessions_ButtonClick
     OnKeyDown = SearchPhotoSessions_ButtonKeyDown
-  end
-  object SetLocation_Button: TButton
-    Left = 336
-    Top = 8
-    Width = 65
-    Height = 30
-    Hint = 'Specify a new observer location and refresh map'
-    Caption = 'Location'
-    ModalResult = 3
-    TabOrder = 3
-    OnClick = SetLocation_ButtonClick
-    OnKeyDown = SetLocation_ButtonKeyDown
   end
   object SaveImage_Button: TButton
     Left = 656
@@ -746,6 +762,31 @@ object Terminator_Form: TTerminator_Form
     OnClick = Predict_ButtonClick
     OnKeyDown = Predict_ButtonKeyDown
   end
+  object EstimateData_Button: TButton
+    Left = 512
+    Top = 8
+    Width = 113
+    Height = 30
+    Hint = 
+      'Estimate observing geometry from specified location at indicated' +
+      ' date/time'
+    Caption = 'Compute Geometry'
+    TabOrder = 4
+    OnClick = EstimateData_ButtonClick
+    OnKeyDown = EstimateData_ButtonKeyDown
+  end
+  object SetLocation_Button: TButton
+    Left = 336
+    Top = 8
+    Width = 65
+    Height = 30
+    Hint = 'Specify a new observer location and refresh map'
+    Caption = 'Location'
+    ModalResult = 3
+    TabOrder = 3
+    OnClick = SetLocation_ButtonClick
+    OnKeyDown = SetLocation_ButtonKeyDown
+  end
   object OpenDialog1: TOpenDialog
     Filter = 'Text Files (*.txt)|*.txt|All Files|*.*'
     InitialDir = '.'
@@ -764,7 +805,7 @@ object Terminator_Form: TTerminator_Form
   object MainMenu1: TMainMenu
     Left = 328
     Top = 96
-    object File1: TMenuItem
+    object Files1: TMenuItem
       Caption = '&Files'
       object ChangeExternalFiles_MainMenuItem: TMenuItem
         Caption = 'Change &external file associations...'
@@ -806,7 +847,7 @@ object Terminator_Form: TTerminator_Form
         OnClick = Exit_MainMenuItemClick
       end
     end
-    object ools1: TMenuItem
+    object Tools1: TMenuItem
       Caption = '&Tools'
       object GoTo_MainMenuItem: TMenuItem
         Caption = '&Go to named feature or lon/lat...'
@@ -830,6 +871,10 @@ object Terminator_Form: TTerminator_Form
         Caption = 'Change &cartographic options...'
         OnClick = ChangeCartographicOptions_MainMenuItemClick
       end
+      object ChangeDemOptions_MainMenuItem: TMenuItem
+        Caption = 'Change DEM &options'
+        OnClick = ChangeDemOptions_MainMenuItemClick
+      end
       object ChangeMouseOptions_MainMenuItem: TMenuItem
         Caption = 'Change &mouse options...'
         OnClick = ChangeMouseOptions_MainMenuItemClick
@@ -842,9 +887,9 @@ object Terminator_Form: TTerminator_Form
         Caption = 'Show &Earth viewed from Moon'
         OnClick = ShowEarth_MainMenuItemClick
       end
-      object DrawRuklGrid1: TMenuItem
+      object DrawRuklGrid_MainMenuItem: TMenuItem
         Caption = 'Draw &R'#252'kl grid'
-        OnClick = DrawRuklGrid1Click
+        OnClick = DrawRuklGrid_MainMenuItemClick
       end
     end
     object Help1: TMenuItem

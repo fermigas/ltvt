@@ -1,8 +1,8 @@
 object ExternalFileSelection_Form: TExternalFileSelection_Form
-  Left = 139
-  Top = 12
+  Left = 134
+  Top = 2
   Width = 777
-  Height = 715
+  Height = 724
   Caption = 'LTVT External File Selector'
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET

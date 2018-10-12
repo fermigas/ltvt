@@ -55,6 +55,13 @@ INTERFACE
    based on local MJD (depending on daylight savings)}
 
   function DaylightSavings(const Day, Month, Year : integer): boolean;
+  {follows US rules, works before and after 2007, returns same value for entire
+   Sunday on which a change occurs -- so may be off in transition hour}
+
+  function EU_DaylightSavings(const Day, Month, Year : integer): boolean;
+  {returns value according to European Union rule: DST starts on last Sunday
+   in March, ends on last Sunday in October -- so may be off in transition
+   hour(s), which are different in different countries}
 
 procedure DecodeMJD(const MJD : real; const DecPlaces : integer;
     var DateString, TimeString : string);
@@ -416,8 +423,9 @@ function UTCOffset(const MJD : extended): integer;
   end;
 
 function DaylightSavings(const Day, Month, Year : integer): boolean;
-{Daylight Savings begins on first Sunday in April and ends on last Sunday
- in October}
+{prior to 2007, Daylight Savings began on first Sunday in April and ends on last Sunday
+ in October; starting in 2007, it begins on the second Sunday in March and ends on
+ the first Sunday in November}
   function FirstSundayMJD(const Month : integer): longint;
     var
       StartMJD : longint;
@@ -452,6 +460,34 @@ function DaylightSavings(const Day, Month, Year : integer): boolean;
           HaltForError('Illegal month = '+Int2Str(Month,0)+' in DaylightSavings routine','TIMLIB');
       end;
   end;  {DaylightSavings}
+
+function EU_DaylightSavings(const Day, Month, Year : integer): boolean;
+{returns value according to European Union rule: DST starts on last Sunday
+ in March, ends on last Sunday in October}
+  function FirstSundayMJD(const Month : integer): longint;
+    var
+      StartMJD : longint;
+      StartDayOfWeek : integer;
+    begin
+      StartMJD := round(MJD(1,Month,Year,0));
+    {following returns 0..6 for Sun..Sat}
+      StartDayOfWeek := (StartMJD + 3) mod 7;
+      if StartDayOfWeek=0 then
+        FirstSundayMJD := StartMJD
+      else
+        FirstSundayMJD  := StartMJD + (7 - StartDayOfWeek);
+    end;
+
+  begin {EU_DaylightSavings}
+    case Month of
+      1..2,11..12 : EU_DaylightSavings := false;
+      4..9        : EU_DaylightSavings := true;
+      3  : EU_DaylightSavings := (round(MJD(Day,Month,Year,0)) - (FirstSundayMJD(4)-7)) >= 0;
+      10 : EU_DaylightSavings := (round(MJD(Day,Month,Year,0)) - (FirstSundayMJD(11)-7)) < 0;
+      else
+        HaltForError('Illegal month = '+Int2Str(Month,0)+' in DaylightSavings routine','TIMLIB');
+    end;    
+  end;  {EU_DaylightSavings}
 
 function Hp2DecHr(const HPFormatHour: extended): extended;
 {converts from HP 49G  HH.MMSSSSS format to decimal hour}

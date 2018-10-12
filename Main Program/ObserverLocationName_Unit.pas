@@ -54,11 +54,11 @@ begin
       Exit;
     end;
 
-  if FileExists(Terminator_Form.ObservatoryListFilename) then
+  if FileExists(LTVT_Form.ObservatoryListFilename) then
     begin
       NameFound := False;
 
-      AssignFile(ObsListFile,Terminator_Form.ObservatoryListFilename);
+      AssignFile(ObsListFile,LTVT_Form.ObservatoryListFilename);
       Reset(ObsListFile);
       while (not EOF(ObsListFile)) and (not NameFound) do
         begin
@@ -86,7 +86,7 @@ end;
 procedure TObserverLocationName_Form.ShowHelp(Sender: TObject;
   var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'ObserverLocationNameForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'ObserverLocationNameForm.htm');
 end;
 
 end.

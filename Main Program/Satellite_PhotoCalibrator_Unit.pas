@@ -352,7 +352,7 @@ begin
           UpdateMagnification(OriginalWidth,OriginalHeight);
           CurrentMag_Label.Show;
         end;
-      Screen.Cursor := Terminator_Form.DefaultCursor;
+      Screen.Cursor := LTVT_Form.DefaultCursor;
     end
   else
     ShowMessage('Action cancelled - no photo loaded');
@@ -593,8 +593,8 @@ begin
       if XYToLonLat(PointX, PointY, PointLon, PointLat) then
         begin
           OutString := OutString +
-            Format('Lunar Lon/Lat = (%s, %s)',[Terminator_Form.LongitudeString(RadToDeg(PointLon),3),
-              Terminator_Form.LatitudeString(RadToDeg(PointLat),3)])
+            Format('Lunar Lon/Lat = (%s, %s)',[LTVT_Form.LongitudeString(RadToDeg(PointLon),3),
+              LTVT_Form.LatitudeString(RadToDeg(PointLat),3)])
         end
       else
         OutString := OutString + '(off disk)';
@@ -604,8 +604,8 @@ end;
 
 procedure TSatellitePhotoCalibrator_Form.RefPt1_Copy_ButtonClick(Sender: TObject);
 begin
-  RefPt1_Lon_LabeledNumericEdit.NumericEdit.Text := Format('%0.3f',[RadToDeg(Terminator_Form.RefPtLon)]);
-  RefPt1_Lat_LabeledNumericEdit.NumericEdit.Text := Format('%0.3f',[RadToDeg(Terminator_Form.RefPtLat)]);
+  RefPt1_Lon_LabeledNumericEdit.NumericEdit.Text := Format('%0.3f',[RadToDeg(LTVT_Form.RefPtLon)]);
+  RefPt1_Lat_LabeledNumericEdit.NumericEdit.Text := Format('%0.3f',[RadToDeg(LTVT_Form.RefPtLat)]);
 end;
 
 procedure TSatellitePhotoCalibrator_Form.DrawCross(const CenterX, CenterY : integer; const CrossColor : TColor);
@@ -650,8 +650,8 @@ end;
 
 procedure TSatellitePhotoCalibrator_Form.RefPt2_Copy_ButtonClick(Sender: TObject);
 begin
-  RefPt2_Lon_LabeledNumericEdit.NumericEdit.Text := Format('%0.3f',[RadToDeg(Terminator_Form.RefPtLon)]);
-  RefPt2_Lat_LabeledNumericEdit.NumericEdit.Text := Format('%0.3f',[RadToDeg(Terminator_Form.RefPtLat)]);
+  RefPt2_Lon_LabeledNumericEdit.NumericEdit.Text := Format('%0.3f',[RadToDeg(LTVT_Form.RefPtLon)]);
+  RefPt2_Lat_LabeledNumericEdit.NumericEdit.Text := Format('%0.3f',[RadToDeg(LTVT_Form.RefPtLat)]);
 end;
 
 procedure TSatellitePhotoCalibrator_Form.SetGeometry_RadioButtonClick(Sender: TObject);
@@ -686,8 +686,8 @@ begin
     PhotoCalibrated_Label.Caption := 'When finished, click SAVE to store in database';
     PhotoCalibrated_Label.Show;
     RotationAndZoom_Label.Caption := Format('Rotation = %0.3f deg   Zoom = %0.3f',
-      [Terminator_Form.PosNegDegrees(RadToDeg(-PhotoNP_CW_AngleRad)),
-       PhotoPixelsPerXYUnit/(Terminator_Form.JimsGraph1.Width/2)]);
+      [LTVT_Form.PosNegDegrees(RadToDeg(-PhotoNP_CW_AngleRad)),
+       PhotoPixelsPerXYUnit/(LTVT_Form.Image1.Width/2)]);
     RotationAndZoom_Label.Show;
     Save_Button.Show;
     Clear_Button.Hide;
@@ -716,7 +716,7 @@ var
   FeatureVector, LineOfSight : TVector;
 begin
   Result := False;
-  Terminator_Form.PolarToVector(Lat,Lon,Terminator_Form.MoonRadius,FeatureVector);
+  LTVT_Form.PolarToVector(Lon,Lat,LTVT_Form.MoonRadius,FeatureVector);
 
   VectorDifference(FeatureVector,SatelliteVector,LineOfSight);
 
@@ -761,21 +761,21 @@ begin {UpdateGeometry}
   GeocentricSubEarthMode := True;
 
 // CalPhotoSubSolPoint is written to calibration file;  CalPhotoSubObsPoint is not meaningful, and not used
-  Terminator_Form.CalculateSubPoints(DateTimeToModifiedJulianDate(DateOf(Date_DateTimePicker.Date) + TimeOf(Time_DateTimePicker.Time)),
+  LTVT_Form.CalculateSubPoints(DateTimeToModifiedJulianDate(DateOf(Date_DateTimePicker.Date) + TimeOf(Time_DateTimePicker.Time)),
     0, 0, 0, CalPhotoSubObsPoint, CalPhotoSubSolPoint);
 
   GeocentricSubEarthMode := SavedGeocentricMode;  // restore mode
 
 // determine vectors in orthographic system with z = central point, y = north polar direction
 
-  Terminator_Form.PolarToVector(DegToRad(SatelliteLatDeg_LabeledNumericEdit.NumericEdit.ExtendedValue),
-    DegToRad(SatelliteLonDeg_LabeledNumericEdit.NumericEdit.ExtendedValue),
-    Terminator_Form.MoonRadius + SatelliteElevation_LabeledNumericEdit.NumericEdit.ExtendedValue,
+  LTVT_Form.PolarToVector(DegToRad(SatelliteLonDeg_LabeledNumericEdit.NumericEdit.ExtendedValue),
+    DegToRad(SatelliteLatDeg_LabeledNumericEdit.NumericEdit.ExtendedValue),
+    LTVT_Form.MoonRadius + SatelliteElevation_LabeledNumericEdit.NumericEdit.ExtendedValue,
     SatelliteVector);
 
-  Terminator_Form.PolarToVector(DegToRad(GroundPointLatDeg_LabeledNumericEdit.NumericEdit.ExtendedValue),
-    DegToRad(GroundPointLonDeg_LabeledNumericEdit.NumericEdit.ExtendedValue),
-    Terminator_Form.MoonRadius,
+  LTVT_Form.PolarToVector(DegToRad(GroundPointLonDeg_LabeledNumericEdit.NumericEdit.ExtendedValue),
+    DegToRad(GroundPointLatDeg_LabeledNumericEdit.NumericEdit.ExtendedValue),
+    LTVT_Form.MoonRadius,
     GroundPointVector);
 
   VectorDifference(GroundPointVector,SatelliteVector,CalPhoto_ZPrime_Unit_Vector);
@@ -895,7 +895,7 @@ begin {TPhotoCalibrator_Form.XYToLonLat}
 
   MinusDotProd := -DotProduct(SatelliteVector,FeatureDirection);  // this should be positive if camera is pointed towards Moon
 
-  Discrim := Sqr(MinusDotProd) - (VectorModSqr(SatelliteVector) - Sqr(Terminator_Form.MoonRadius));
+  Discrim := Sqr(MinusDotProd) - (VectorModSqr(SatelliteVector) - Sqr(LTVT_Form.MoonRadius));
 
   if Discrim<0 then Exit;   // error condition: no intercept of line and sphere
 
@@ -927,9 +927,9 @@ var
   InversionCode : String;
 
 begin {TPhotoCalibrator_Form.Save_ButtonClick}
-  if FileExists(Terminator_Form.CalibratedPhotosFilename) then
+  if FileExists(LTVT_Form.CalibratedPhotosFilename) then
     begin
-      AssignFile(CalData,Terminator_Form.CalibratedPhotosFilename);
+      AssignFile(CalData,LTVT_Form.CalibratedPhotosFilename);
       Append(CalData);
     end
   else
@@ -939,10 +939,10 @@ begin {TPhotoCalibrator_Form.Save_ButtonClick}
         +'Choosing "Yes" will let you browse for an existing file; choosing "No" will create a new one.',
         mtConfirmation,[mbYes,mbNo],0)=mrYes then
         begin
-          if FileFound('Photo calibration data file',Terminator_Form.CalibratedPhotosFilename,TempFilename) then
+          if FileFound('Photo calibration data file',LTVT_Form.CalibratedPhotosFilename,TempFilename) then
             begin
-              Terminator_Form.CalibratedPhotosFilename := TempFilename;
-              AssignFile(CalData,Terminator_Form.CalibratedPhotosFilename);
+              LTVT_Form.CalibratedPhotosFilename := TempFilename;
+              AssignFile(CalData,LTVT_Form.CalibratedPhotosFilename);
               Append(CalData);
             end
           else
@@ -953,7 +953,7 @@ begin {TPhotoCalibrator_Form.Save_ButtonClick}
         end
       else
         begin
-          AssignFile(CalData,Terminator_Form.CalibratedPhotosFilename);
+          AssignFile(CalData,LTVT_Form.CalibratedPhotosFilename);
           Rewrite(CalData);
           Writeln(CalData,'*LTVT User Photo Calibration Data');
           Writeln(CalData,'*  Please edit this file only with a plain text processor.');
@@ -967,7 +967,7 @@ begin {TPhotoCalibrator_Form.Save_ButtonClick}
           Writeln(CalData,'*U0, Date, Time, ObsEastLonDeg, ObsNorthLatDeg, ObsElevationMeters, PixelWidth, PixelHeight,   SubObsLon,   SubObsLat, SubSolLon, SubSolLat, Ref1XPix, Ref1YPix, Ref1Lon, Ref1Lat, Ref2XPix, Ref2YPix, Ref2Lon, Ref2Lat, InversionCode, Filename');
           Writeln(CalData,'*U1, Date, Time, SatEastLonDeg, SatNorthLatDeg, SatElevKilometers,  PixelWidth, PixelHeight, GroundPtLon, GroundPtLat, SubSolLon, SubSolLat, Ref1XPix, Ref1YPix, Ref1Lon, Ref1Lat, Ref2XPix, Ref2YPix, Ref2Lon, Ref2Lat, InversionCode, Filename');
           ShowMessage('Your calibration data have been successfully added to a new calibration file: '+Char(13)
-                      +Terminator_Form.CalibratedPhotosFilename);
+                      +LTVT_Form.CalibratedPhotosFilename);
         end;
     end;
 
@@ -992,7 +992,7 @@ begin {TPhotoCalibrator_Form.Save_ButtonClick}
     +GroundPointLonDeg_LabeledNumericEdit.NumericEdit.Text+', '
     +GroundPointLatDeg_LabeledNumericEdit.NumericEdit.Text+', '
     +Format('%0.3f, %0.3f',
-     [Terminator_Form.PosNegDegrees(RadToDeg(CalPhotoSubSolPoint.Longitude)), RadToDeg(CalPhotoSubSolPoint.Latitude)])+', '
+     [LTVT_Form.PosNegDegrees(RadToDeg(CalPhotoSubSolPoint.Longitude)), RadToDeg(CalPhotoSubSolPoint.Latitude)])+', '
     +RefPt1_XPix_LabeledNumericEdit.NumericEdit.Text+', '+RefPt1_YPix_LabeledNumericEdit.NumericEdit.Text+', '
     +RefPt1_Lon_LabeledNumericEdit.NumericEdit.Text+', '+RefPt1_Lat_LabeledNumericEdit.NumericEdit.Text+', '
     +RefPt2_XPix_LabeledNumericEdit.NumericEdit.Text+', '+RefPt2_YPix_LabeledNumericEdit.NumericEdit.Text+', '
@@ -1003,7 +1003,7 @@ begin {TPhotoCalibrator_Form.Save_ButtonClick}
 
   CloseFile(CalData);
 
-//  ShowMessage('Calibration data has been appended to '+Terminator_Form.CalibratedPhotosFilename);
+//  ShowMessage('Calibration data has been appended to '+LTVT_Form.CalibratedPhotosFilename);
   PhotoCalibrated_Label.Caption := 'Calibration data has been saved to disk';
   ActiveControl := LoadPhoto_Button;
 
@@ -1044,187 +1044,187 @@ end;
 procedure TSatellitePhotoCalibrator_Form.ZoomOut_ButtonKeyDown(Sender: TObject;
   var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'SatellitePhotoCalibration_Form.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'SatellitePhotoCalibration_Form.htm');
 end;
 
 procedure TSatellitePhotoCalibrator_Form.LoadPhoto_ButtonKeyDown(Sender: TObject;
   var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'SatellitePhotoCalibration_Form.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'SatellitePhotoCalibration_Form.htm');
 end;
 
 procedure TSatellitePhotoCalibrator_Form.SetGeometry_RadioButtonKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'SatellitePhotoCalibration_Form.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'SatellitePhotoCalibration_Form.htm');
 end;
 
 procedure TSatellitePhotoCalibrator_Form.RefPt1_RadioButtonKeyDown(Sender: TObject;
   var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'SatellitePhotoCalibration_Form.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'SatellitePhotoCalibration_Form.htm');
 end;
 
 procedure TSatellitePhotoCalibrator_Form.RefPt2_RadioButtonKeyDown(Sender: TObject;
   var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'SatellitePhotoCalibration_Form.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'SatellitePhotoCalibration_Form.htm');
 end;
 
 procedure TSatellitePhotoCalibrator_Form.InversionCode_RadioButtonKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'SatellitePhotoCalibration_Form.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'SatellitePhotoCalibration_Form.htm');
 end;
 
 procedure TSatellitePhotoCalibrator_Form.InvertedImage_CheckBoxKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'SatellitePhotoCalibration_Form.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'SatellitePhotoCalibration_Form.htm');
 end;
 
 procedure TSatellitePhotoCalibrator_Form.Clear_ButtonKeyDown(Sender: TObject;
   var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'SatellitePhotoCalibration_Form.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'SatellitePhotoCalibration_Form.htm');
 end;
 
 procedure TSatellitePhotoCalibrator_Form.Save_ButtonKeyDown(Sender: TObject;
   var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'SatellitePhotoCalibration_Form.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'SatellitePhotoCalibration_Form.htm');
 end;
 
 procedure TSatellitePhotoCalibrator_Form.Cancel_ButtonKeyDown(Sender: TObject;
   var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'SatellitePhotoCalibration_Form.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'SatellitePhotoCalibration_Form.htm');
 end;
 
 procedure TSatellitePhotoCalibrator_Form.GeometryCopy_ButtonKeyDown(Sender: TObject;
   var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'SatellitePhotoCalibration_Form.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'SatellitePhotoCalibration_Form.htm');
 end;
 
 procedure TSatellitePhotoCalibrator_Form.Date_DateTimePickerKeyDown(Sender: TObject;
   var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'SatellitePhotoCalibration_Form.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'SatellitePhotoCalibration_Form.htm');
 end;
 
 procedure TSatellitePhotoCalibrator_Form.Time_DateTimePickerKeyDown(Sender: TObject;
   var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'SatellitePhotoCalibration_Form.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'SatellitePhotoCalibration_Form.htm');
 end;
 
 procedure TSatellitePhotoCalibrator_Form.ObserverLongitude_LabeledNumericEditNumericEditKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'SatellitePhotoCalibration_Form.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'SatellitePhotoCalibration_Form.htm');
 end;
 
 procedure TSatellitePhotoCalibrator_Form.OneToOne_ButtonKeyDown(Sender: TObject;
   var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'SatellitePhotoCalibration_Form.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'SatellitePhotoCalibration_Form.htm');
 end;
 
 procedure TSatellitePhotoCalibrator_Form.ZoomIn_ButtonKeyDown(Sender: TObject;
   var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'SatellitePhotoCalibration_Form.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'SatellitePhotoCalibration_Form.htm');
 end;
 
 procedure TSatellitePhotoCalibrator_Form.ObserverElevation_LabeledNumericEditNumericEditKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'SatellitePhotoCalibration_Form.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'SatellitePhotoCalibration_Form.htm');
 end;
 
 procedure TSatellitePhotoCalibrator_Form.RefPt1_Copy_ButtonKeyDown(Sender: TObject;
   var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'SatellitePhotoCalibration_Form.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'SatellitePhotoCalibration_Form.htm');
 end;
 
 procedure TSatellitePhotoCalibrator_Form.RefPt1_Lon_LabeledNumericEditNumericEditKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'SatellitePhotoCalibration_Form.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'SatellitePhotoCalibration_Form.htm');
 end;
 
 procedure TSatellitePhotoCalibrator_Form.RefPt1_XPix_LabeledNumericEditNumericEditKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'SatellitePhotoCalibration_Form.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'SatellitePhotoCalibration_Form.htm');
 end;
 
 procedure TSatellitePhotoCalibrator_Form.RefPt1_Lat_LabeledNumericEditNumericEditKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'SatellitePhotoCalibration_Form.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'SatellitePhotoCalibration_Form.htm');
 end;
 
 procedure TSatellitePhotoCalibrator_Form.RefPt1_YPix_LabeledNumericEditNumericEditKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'SatellitePhotoCalibration_Form.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'SatellitePhotoCalibration_Form.htm');
 end;
 
 procedure TSatellitePhotoCalibrator_Form.RefPt2_Copy_ButtonKeyDown(Sender: TObject;
   var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'SatellitePhotoCalibration_Form.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'SatellitePhotoCalibration_Form.htm');
 end;
 
 procedure TSatellitePhotoCalibrator_Form.RefPt2_Lon_LabeledNumericEditNumericEditKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'SatellitePhotoCalibration_Form.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'SatellitePhotoCalibration_Form.htm');
 end;
 
 procedure TSatellitePhotoCalibrator_Form.RefPt2_Lat_LabeledNumericEditNumericEditKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'SatellitePhotoCalibration_Form.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'SatellitePhotoCalibration_Form.htm');
 end;
 
 procedure TSatellitePhotoCalibrator_Form.RefPt2_XPix_LabeledNumericEditNumericEditKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'SatellitePhotoCalibration_Form.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'SatellitePhotoCalibration_Form.htm');
 end;
 
 procedure TSatellitePhotoCalibrator_Form.RefPt2_YPix_LabeledNumericEditNumericEditKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'SatellitePhotoCalibration_Form.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'SatellitePhotoCalibration_Form.htm');
 end;
 
 procedure TSatellitePhotoCalibrator_Form.GroundPointLonDeg_LabeledNumericEditNumericEditKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'SatellitePhotoCalibration_Form.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'SatellitePhotoCalibration_Form.htm');
 end;
 
 procedure TSatellitePhotoCalibrator_Form.GroundPointLatDeg_LabeledNumericEditNumericEditKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'SatellitePhotoCalibration_Form.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'SatellitePhotoCalibration_Form.htm');
 end;
 
 procedure TSatellitePhotoCalibrator_Form.SatelliteLatDeg_LabeledNumericEditNumericEditKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'SatellitePhotoCalibration_Form.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'SatellitePhotoCalibration_Form.htm');
 end;
 
 procedure TSatellitePhotoCalibrator_Form.AutoCopy_ButtonKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'SatellitePhotoCalibration_Form.htm#Lookup_Button');
+  LTVT_Form.DisplayF1Help(Key,Shift,'SatellitePhotoCalibration_Form.htm#Lookup_Button');
 end;
 
 end.

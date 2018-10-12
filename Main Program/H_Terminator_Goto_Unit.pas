@@ -39,6 +39,8 @@ type
     Center_RadioButton: TRadioButton;
     Next_Button: TButton;
     AutoLabel_CheckBox: TCheckBox;
+    SetToRadius_TLabeledNumericEdit: TLabeledNumericEdit;
+    ResetRadius_Button: TButton;
     procedure FormShow(Sender: TObject);
     procedure Cancel_ButtonClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
@@ -104,6 +106,11 @@ type
       Shift: TShiftState);
     procedure AutoLabel_CheckBoxKeyDown(Sender: TObject; var Key: Word;
       Shift: TShiftState);
+    procedure SetToRadius_TLabeledNumericEditNumericEditKeyDown(
+      Sender: TObject; var Key: Word; Shift: TShiftState);
+    procedure ResetRadius_ButtonClick(Sender: TObject);
+    procedure ResetRadius_ButtonKeyDown(Sender: TObject; var Key: Word;
+      Shift: TShiftState);
   private
     { Private declarations }
   public
@@ -118,6 +125,7 @@ type
 
     procedure SelectCurrentItem;
     procedure UpdateMapZone;
+    procedure ResetRadius(const DesiredRadius : Extended);
   end;
 
 var
@@ -138,6 +146,8 @@ begin
   FeatureLatStringList := TStringList.Create;
   FeatureLonStringList := TStringList.Create;
   LastItemSelected := 0;
+
+  ResetRadius_Button.Click;
 end;
 
 procedure TH_Terminator_Goto_Form.FormDestroy(Sender: TObject);
@@ -155,6 +165,19 @@ begin
   XY_GroupBox.Visible := XY_RadioButton.Checked;
   RuklZone_GroupBox.Visible := RuklZone_RadioButton.Checked;
   UpdateMapZone;
+
+  SetToRadius_TLabeledNumericEdit.Visible := LTVT_Form.DrawingMode=DEM_3D;
+  ResetRadius_Button.Visible := LTVT_Form.DrawingMode=DEM_3D;
+end;
+
+procedure TH_Terminator_Goto_Form.ResetRadius(const DesiredRadius : Extended);
+begin
+  SetToRadius_TLabeledNumericEdit.NumericEdit.Text := Format('%0.3f',[DesiredRadius]);
+end;
+
+procedure TH_Terminator_Goto_Form.ResetRadius_ButtonClick(Sender: TObject);
+begin
+  ResetRadius(LTVT_Form.MoonRadius);
 end;
 
 procedure TH_Terminator_Goto_Form.AerialView_ButtonClick(Sender: TObject);
@@ -354,13 +377,13 @@ end;
 procedure TH_Terminator_Goto_Form.LonLat_RadioButtonKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'GotoForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'GotoForm.htm');
 end;
 
 procedure TH_Terminator_Goto_Form.XY_RadioButtonKeyDown(Sender: TObject;
   var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'GotoForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'GotoForm.htm');
 end;
 
 procedure TH_Terminator_Goto_Form.CenterX_LabeledNumericEditNumericEditKeyDown(
@@ -370,11 +393,11 @@ var
   Digits : Integer;
   FormatString : String;
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'GotoForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'GotoForm.htm');
 
-  with Terminator_Form.JimsGraph1 do
+  with LTVT_Form do
     begin
-      OnePixel := (XValue(Terminator_Form.JimsGraph1.Width)-XValue(0))/Terminator_Form.JimsGraph1.Width;
+      OnePixel := (XValue(LTVT_Form.Image1.Width)-XValue(0))/LTVT_Form.Image1.Width;
       StepSize := Abs(OnePixel);
     end;
 
@@ -411,11 +434,11 @@ var
   Digits : Integer;
   FormatString : String;
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'GotoForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'GotoForm.htm');
 
-  with Terminator_Form.JimsGraph1 do
+  with LTVT_Form do
     begin
-      OnePixel := (YValue(Terminator_Form.JimsGraph1.Height)-YValue(0))/Terminator_Form.JimsGraph1.Height;
+      OnePixel := (YValue(LTVT_Form.Image1.Height)-YValue(0))/LTVT_Form.Image1.Height;
       StepSize := Abs(OnePixel);
     end;
 
@@ -476,17 +499,17 @@ end;
 procedure TH_Terminator_Goto_Form.MinimizeGotoList_CheckBoxClick(
   Sender: TObject);
 begin
-  with Terminator_Form do
+  with LTVT_Form do
     begin
       GoToListCurrent := False;
       RefreshGoToList;
-    end;  
+    end;
 end;
 
 procedure TH_Terminator_Goto_Form.XY_Redraw_ButtonClick(Sender: TObject);
 begin
   GoToState := Center;
-  Terminator_Form.GoToXY(CenterX_LabeledNumericEdit.NumericEdit.ExtendedValue,CenterY_LabeledNumericEdit.NumericEdit.ExtendedValue);;
+  LTVT_Form.GoToXY(CenterX_LabeledNumericEdit.NumericEdit.ExtendedValue,CenterY_LabeledNumericEdit.NumericEdit.ExtendedValue);;
   GoToState := Cancel; // without this, closing form may cause another redraw
 end;
 
@@ -500,115 +523,127 @@ begin
       with FeatureNames_ComboBox do if ItemIndex<0 then Text := '';
     end
   else
-    Terminator_Form.DisplayF1Help(Key,Shift,'GotoForm.htm');
+    LTVT_Form.DisplayF1Help(Key,Shift,'GotoForm.htm');
 end;
 
 procedure TH_Terminator_Goto_Form.SelectFeature_ButtonKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'GotoForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'GotoForm.htm');
 end;
 
 procedure TH_Terminator_Goto_Form.SetToLon_LabeledNumericEditNumericEditKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'GotoForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'GotoForm.htm');
 end;
 
 procedure TH_Terminator_Goto_Form.SetToLat_LabeledNumericEditNumericEditKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'GotoForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'GotoForm.htm');
+end;
+
+procedure TH_Terminator_Goto_Form.SetToRadius_TLabeledNumericEditNumericEditKeyDown(
+  Sender: TObject; var Key: Word; Shift: TShiftState);
+begin
+  LTVT_Form.DisplayF1Help(Key,Shift,'GotoForm.htm');
 end;
 
 procedure TH_Terminator_Goto_Form.MarkFeature_ButtonKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'GotoForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'GotoForm.htm');
 end;
 
 procedure TH_Terminator_Goto_Form.GoTo_ButtonKeyDown(Sender: TObject;
   var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'GotoForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'GotoForm.htm');
 end;
 
 procedure TH_Terminator_Goto_Form.AerialView_ButtonKeyDown(Sender: TObject;
   var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'GotoForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'GotoForm.htm');
 end;
 
 procedure TH_Terminator_Goto_Form.Cancel_ButtonKeyDown(Sender: TObject;
   var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'GotoForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'GotoForm.htm');
 end;
 
 procedure TH_Terminator_Goto_Form.MinimizeGotoList_CheckBoxKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'GotoForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'GotoForm.htm');
 end;
 
 procedure TH_Terminator_Goto_Form.XY_Redraw_ButtonKeyDown(Sender: TObject;
   var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'GotoForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'GotoForm.htm');
 end;
 
 procedure TH_Terminator_Goto_Form.RuklZone_RadioButtonKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'GotoForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'GotoForm.htm');
 end;
 
 procedure TH_Terminator_Goto_Form.LabeledNumericEdit2NumericEditKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'GotoForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'GotoForm.htm');
 end;
 
 procedure TH_Terminator_Goto_Form.Center_RadioButtonKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'GotoForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'GotoForm.htm');
 end;
 
 procedure TH_Terminator_Goto_Form.NW_RadioButtonKeyDown(Sender: TObject;
   var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'GotoForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'GotoForm.htm');
 end;
 
 procedure TH_Terminator_Goto_Form.NE_RadioButtonKeyDown(Sender: TObject;
   var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'GotoForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'GotoForm.htm');
 end;
 
 procedure TH_Terminator_Goto_Form.SW_RadioButtonKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'GotoForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'GotoForm.htm');
 end;
 
 procedure TH_Terminator_Goto_Form.SE_RadioButtonKeyDown(Sender: TObject;
   var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'GotoForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'GotoForm.htm');
 end;
 
 procedure TH_Terminator_Goto_Form.Next_ButtonKeyDown(Sender: TObject;
   var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'GotoForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'GotoForm.htm');
 end;
 
 procedure TH_Terminator_Goto_Form.AutoLabel_CheckBoxKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'GotoForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'GotoForm.htm');
+end;
+
+procedure TH_Terminator_Goto_Form.ResetRadius_ButtonKeyDown(
+  Sender: TObject; var Key: Word; Shift: TShiftState);
+begin
+  LTVT_Form.DisplayF1Help(Key,Shift,'GotoForm.htm');
 end;
 
 end.

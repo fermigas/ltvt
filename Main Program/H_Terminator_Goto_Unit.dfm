@@ -2,7 +2,7 @@ object H_Terminator_Goto_Form: TH_Terminator_Goto_Form
   Left = 132
   Top = 145
   Width = 448
-  Height = 266
+  Height = 303
   ActiveControl = GoTo_Button
   Caption = 'Mark and/or Re-Center Plot on a Specific Location'
   Color = clBtnFace
@@ -227,14 +227,14 @@ object H_Terminator_Goto_Form: TH_Terminator_Goto_Form
     Left = 8
     Top = 32
     Width = 409
-    Height = 145
+    Height = 177
     Hint = 'Select location by longitude and latitude'
     Ctl3D = False
     ParentCtl3D = False
     TabOrder = 3
     object Label2: TLabel
       Left = 8
-      Top = 80
+      Top = 72
       Width = 82
       Height = 13
       Hint = 'Enter desired longitude and latitude by hand'
@@ -250,7 +250,7 @@ object H_Terminator_Goto_Form: TH_Terminator_Goto_Form
     end
     object LTOZone_Label: TLabel
       Left = 304
-      Top = 112
+      Top = 104
       Width = 25
       Height = 13
       Hint = 
@@ -261,7 +261,7 @@ object H_Terminator_Goto_Form: TH_Terminator_Goto_Form
     end
     object LAC_Label: TLabel
       Left = 250
-      Top = 112
+      Top = 104
       Width = 52
       Height = 13
       Hint = 'LAC map zone corresponding to indicated longitude and latitude'
@@ -269,7 +269,7 @@ object H_Terminator_Goto_Form: TH_Terminator_Goto_Form
     end
     object RuklZone_Label: TLabel
       Left = 344
-      Top = 112
+      Top = 104
       Width = 47
       Height = 13
       Hint = 
@@ -279,12 +279,12 @@ object H_Terminator_Goto_Form: TH_Terminator_Goto_Form
     end
     inline SetToLat_LabeledNumericEdit: TLabeledNumericEdit
       Left = 135
-      Top = 96
+      Top = 88
       Width = 97
       Height = 32
       Hint = 'Selenographic Latitude in decimal degrees (N=+  S=-)'
       AutoSize = True
-      TabOrder = 2
+      TabOrder = 3
       inherited Item_Label: TLabel
         Top = 13
         Width = 41
@@ -309,12 +309,12 @@ object H_Terminator_Goto_Form: TH_Terminator_Goto_Form
     end
     inline SetToLon_LabeledNumericEdit: TLabeledNumericEdit
       Left = 15
-      Top = 105
+      Top = 97
       Width = 105
       Height = 24
       Hint = 'Selenographic longitude in decimal degrees (E=+  W=-)'
       AutoSize = True
-      TabOrder = 1
+      TabOrder = 2
       inherited Item_Label: TLabel
         Top = 5
         Width = 50
@@ -361,14 +361,51 @@ object H_Terminator_Goto_Form: TH_Terminator_Goto_Form
         'rrent dot file that are flagged by a character in the first colu' +
         'mn'
       Caption = 'Flagged entries only'
-      TabOrder = 3
+      TabOrder = 1
       OnClick = MinimizeGotoList_CheckBoxClick
       OnKeyDown = MinimizeGotoList_CheckBoxKeyDown
+    end
+    inline SetToRadius_TLabeledNumericEdit: TLabeledNumericEdit
+      Left = 24
+      Top = 140
+      Width = 134
+      Height = 19
+      Hint = 
+        'Distance of point from Moon'#39's center (applies only when display ' +
+        'is a three-dimensional DEM-based simulation)'
+      AutoSize = True
+      TabOrder = 4
+      inherited Item_Label: TLabel
+        Width = 36
+        Caption = 'Radius:'
+      end
+      inherited Units_Label: TLabel
+        Left = 120
+        Width = 14
+        Caption = 'km'
+      end
+      inherited NumericEdit: TNumericEdit
+        Left = 48
+        Width = 65
+        Height = 19
+        OnKeyDown = SetToRadius_TLabeledNumericEditNumericEditKeyDown
+      end
+    end
+    object ResetRadius_Button: TButton
+      Left = 176
+      Top = 140
+      Width = 57
+      Height = 20
+      Hint = 'Reset to IAU radius'
+      Caption = '<-- Reset'
+      TabOrder = 5
+      OnClick = ResetRadius_ButtonClick
+      OnKeyDown = ResetRadius_ButtonKeyDown
     end
   end
   object GoTo_Button: TButton
     Left = 103
-    Top = 195
+    Top = 227
     Width = 66
     Height = 25
     Hint = 
@@ -381,7 +418,7 @@ object H_Terminator_Goto_Form: TH_Terminator_Goto_Form
   end
   object Cancel_Button: TButton
     Left = 352
-    Top = 195
+    Top = 227
     Width = 51
     Height = 25
     Hint = 'Close form without taking any action'
@@ -392,7 +429,7 @@ object H_Terminator_Goto_Form: TH_Terminator_Goto_Form
   end
   object AerialView_Button: TButton
     Left = 192
-    Top = 195
+    Top = 227
     Width = 75
     Height = 25
     Hint = 
@@ -405,7 +442,7 @@ object H_Terminator_Goto_Form: TH_Terminator_Goto_Form
   end
   object MarkFeature_Button: TButton
     Left = 8
-    Top = 195
+    Top = 227
     Width = 57
     Height = 25
     Hint = 'Place plus mark at specified location on current map'

@@ -213,12 +213,12 @@ begin
 
       if Colongitude_CheckBox.Checked then
         begin
-          Colongitude := (Pi/2) - Terminator_Form.SubSolarPoint.Longitude;
+          Colongitude := (Pi/2) - LTVT_Form.SubSolarPoint.Longitude;
           while Colongitude>TwoPi do Colongitude := Colongitude - TwoPi;
           while Colongitude<0 do Colongitude := Colongitude + TwoPi;
 
           FeaturePos_Part1_Label.Caption := Format('In current: Colon= %0.2f, Lat= %0.2f',
-            [Colongitude/OneDegree, Terminator_Form.SubSolarPoint.Latitude/OneDegree]);
+            [Colongitude/OneDegree, LTVT_Form.SubSolarPoint.Latitude/OneDegree]);
         end;
 
       if (FilterPhotos_CheckBox.Checked) then
@@ -237,7 +237,7 @@ begin
               if not Colongitude_CheckBox.Checked then
                 begin
                   ComputeDistanceAndBearing(TargetLonDeg*OneDegree,TargetLatDeg*OneDegree,
-                    Terminator_Form.SubSolarPoint.Longitude,Terminator_Form.SubSolarPoint.Latitude,
+                    LTVT_Form.SubSolarPoint.Longitude,LTVT_Form.SubSolarPoint.Latitude,
                     SunAngle,SunBearing);
                   SunAngle := (Pi/2) - SunAngle;
 
@@ -259,8 +259,8 @@ begin
               with Overlay_Image.Canvas do   // note: Overlay_Image is transparent
                 begin
                   FillRect(ClipRect);  // clear previous image
-                  Pen.Color := Terminator_Form.ReferencePointColor;
-                  CrossSize := Terminator_Form.DotSize + 1;
+                  Pen.Color := LTVT_Form.ReferencePointColor;
+                  CrossSize := LTVT_Form.DotSize + 1;
                   MoveTo(ThumbnailXPix-CrossSize,ThumbnailYPix);
                   LineTo(ThumbnailXPix+CrossSize+1,ThumbnailYPix);
                   MoveTo(ThumbnailXPix,ThumbnailYPix-CrossSize);
@@ -283,8 +283,8 @@ begin
       if PhotoCalCode='U1' then
         begin
           ObsLocation_Label.Caption := 'Satellite : '
-            +Terminator_Form.LongitudeString(ExtendedValue(PhotoObsELonDeg),4)+' / '
-            +Terminator_Form.LatitudeString(ExtendedValue(PhotoObsNLatDeg),4)+' at '
+            +LTVT_Form.LongitudeString(ExtendedValue(PhotoObsELonDeg),4)+' / '
+            +LTVT_Form.LatitudeString(ExtendedValue(PhotoObsNLatDeg),4)+' at '
             +Format('%0.0f',[ExtendedValue(PhotoObsHt)])+' km';
           SubObsPt_Label.Caption := 'Ground pt lon/lat : '+SubObsLon+'/'+SubObsLat;
         end
@@ -294,8 +294,8 @@ begin
             ObsLocation_Label.Caption := 'Site : (manually set sub-observer lon/lat)'
           else
             ObsLocation_Label.Caption := 'Site : '
-              +Terminator_Form.LongitudeString(ExtendedValue(PhotoObsELonDeg),4)+' / '
-              +Terminator_Form.LatitudeString(ExtendedValue(PhotoObsNLatDeg),4)+' at '
+              +LTVT_Form.LongitudeString(ExtendedValue(PhotoObsELonDeg),4)+' / '
+              +LTVT_Form.LatitudeString(ExtendedValue(PhotoObsNLatDeg),4)+' at '
               +Format('%0.0f',[ExtendedValue(PhotoObsHt)])+' m';
           SubObsPt_Label.Caption := 'Sub-observer lon/lat : '+SubObsLon+'/'+SubObsLat;
         end;
@@ -350,7 +350,7 @@ var
       begin
         Result := False;
 
-        Terminator_Form.PolarToVector(Lat, Lon, Terminator_Form.MoonRadius, FeatureVector);
+        LTVT_Form.PolarToVector(Lon, Lat, LTVT_Form.MoonRadius, FeatureVector);
 
         VectorDifference(FeatureVector,SatelliteVector,LineOfSight);
 
@@ -382,7 +382,7 @@ var
       end
     else // Earthbased photo
       begin
-        Terminator_Form.PolarToVector(Lat,Lon,1,FeatureVector);
+        LTVT_Form.PolarToVector(Lon,Lat,1,FeatureVector);
         if DotProduct(FeatureVector,UserPhoto_SubObsVector)>0 then
           begin
             UserX := DotProduct(FeatureVector,UserPhoto_XPrime_Unit_Vector);
@@ -463,11 +463,11 @@ begin {TCalibratedPhotoLoader_Form.FeatureInPhoto}
           Exit;
         end;
 
-      Terminator_Form.PolarToVector(DegToRad(SatelliteNLatDeg), DegToRad(SatelliteElonDeg),
-        Terminator_Form.MoonRadius + SatelliteElevKm, SatelliteVector);
+      LTVT_Form.PolarToVector(DegToRad(SatelliteElonDeg), DegToRad(SatelliteNLatDeg),
+        LTVT_Form.MoonRadius + SatelliteElevKm, SatelliteVector);
 
-      Terminator_Form.PolarToVector(DegToRad(SubObsLatDeg),
-        DegToRad(SubObsLonDeg), Terminator_Form.MoonRadius, GroundPointVector);
+      LTVT_Form.PolarToVector(DegToRad(SubObsLonDeg), DegToRad(SubObsLatDeg),
+        LTVT_Form.MoonRadius, GroundPointVector);
 
       VectorDifference(GroundPointVector,SatelliteVector,UserPhoto_ZPrime_Unit_Vector);
 
@@ -506,7 +506,7 @@ begin {TCalibratedPhotoLoader_Form.FeatureInPhoto}
       Exit;
     end;
 
-  Terminator_Form.PolarToVector(DegToRad(SubObsLatDeg),DegToRad(SubObsLonDeg),1,UserPhoto_SubObsVector);
+  LTVT_Form.PolarToVector(DegToRad(SubObsLonDeg),DegToRad(SubObsLatDeg),1,UserPhoto_SubObsVector);
   NormalizeVector(UserPhoto_SubObsVector);
 
   if UserPhotoType=Earthbased then
@@ -604,13 +604,13 @@ begin
   with OpenDialog1 do
     begin
       Title := 'Select Calibrated Photo Database list';
-      FileName := Terminator_Form.CalibratedPhotosFilename;
+      FileName := LTVT_Form.CalibratedPhotosFilename;
       Filter := 'Text file in comma separated format (*.txt)|*.txt|All files|*.*';
       if Execute then
         begin
-          Terminator_Form.FileSettingsChanged := FileName <> Terminator_Form.CalibratedPhotosFilename ;
-          Terminator_Form.CalibratedPhotosFilename := FileName;
-          Filename_Label.Caption := 'Searching in:  '+MinimizeName(Terminator_Form.BriefName(Terminator_Form.CalibratedPhotosFilename),Filename_Label.Canvas,Filename_Label.Width);
+          LTVT_Form.FileSettingsChanged := FileName <> LTVT_Form.CalibratedPhotosFilename ;
+          LTVT_Form.CalibratedPhotosFilename := FileName;
+          Filename_Label.Caption := 'Searching in:  '+MinimizeName(LTVT_Form.BriefName(LTVT_Form.CalibratedPhotosFilename),Filename_Label.Canvas,Filename_Label.Width);
         end;
     end;
 end;
@@ -735,14 +735,14 @@ begin
     HeaderString := HeaderString + '      File name';
   PhotoListHeaders_Label.Caption := HeaderString;
 
-  if FileFound('LTVT user photo calibration data file',Terminator_Form.CalibratedPhotosFilename,TempFilename) then
+  if FileFound('LTVT user photo calibration data file',LTVT_Form.CalibratedPhotosFilename,TempFilename) then
     begin
       Screen.Cursor := crHourGlass;
 
       TargetLonDeg := TargetLon_LabeledNumericEdit.NumericEdit.ExtendedValue;
       TargetLatDeg := TargetLat_LabeledNumericEdit.NumericEdit.ExtendedValue;
 
-      IniFile := TIniFile.Create(Terminator_Form.IniFileName);
+      IniFile := TIniFile.Create(LTVT_Form.IniFileName);
       with ListBox1.Font do
         begin
           Name := IniFile.ReadString('LTVT Defaults','CalibratedPhotosFont_Name','QuickType Mono');
@@ -762,8 +762,8 @@ begin
         end;
       IniFile.Free;
 
-      Terminator_Form.CalibratedPhotosFilename := TempFilename;
-      AssignFile(CalFile,Terminator_Form.CalibratedPhotosFilename);
+      LTVT_Form.CalibratedPhotosFilename := TempFilename;
+      AssignFile(CalFile,LTVT_Form.CalibratedPhotosFilename);
       Reset(CalFile);
       SetLength(PhotoListData,0);
 
@@ -910,18 +910,18 @@ begin
           ListBox1.Items.Add(AltAzString+LibrationString+ExtractFileName(PhotoCalData.PhotoFilename));
         end;
 
-      Filename_Label.Caption := MinimizeName(Terminator_Form.BriefName(Terminator_Form.CalibratedPhotosFilename),Filename_Label.Canvas,Filename_Label.Width);
+      Filename_Label.Caption := MinimizeName(LTVT_Form.BriefName(LTVT_Form.CalibratedPhotosFilename),Filename_Label.Canvas,Filename_Label.Width);
 
-      Screen.Cursor := Terminator_Form.DefaultCursor;
+      Screen.Cursor := LTVT_Form.DefaultCursor;
 
       with ListBox1 do
         begin
           if Count<=0 then
             begin
               if FilterPhotos_CheckBox.Checked then
-                ShowMessage('Sorry - there are no calibrated photos showing the feature at the requested lon/lat in "'+Terminator_Form.CalibratedPhotosFilename+'"')
+                ShowMessage('Sorry - there are no calibrated photos showing the feature at the requested lon/lat in "'+LTVT_Form.CalibratedPhotosFilename+'"')
               else
-                ShowMessage('Sorry - there are no calibrated photos listed in "'+Terminator_Form.CalibratedPhotosFilename+'"');
+                ShowMessage('Sorry - there are no calibrated photos listed in "'+LTVT_Form.CalibratedPhotosFilename+'"');
             end
           else
             begin
@@ -942,7 +942,7 @@ begin
     end
   else
     begin
-      ShowMessage('Unable to find '+Terminator_Form.CalibratedPhotosFilename);
+      ShowMessage('Unable to find '+LTVT_Form.CalibratedPhotosFilename);
     end;
 
 end;
@@ -991,139 +991,139 @@ begin
   if Key=VK_RETURN then
     SelectPhoto_Button.Click
   else
-    Terminator_Form.DisplayF1Help(Key,Shift,'CalibratedPhotoSelection_Form.htm');
+    LTVT_Form.DisplayF1Help(Key,Shift,'CalibratedPhotoSelection_Form.htm');
 end;
 
 procedure TCalibratedPhotoLoader_Form.Lon1_LabeledNumericEditNumericEditKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'CalibratedPhotoSelection_Form.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'CalibratedPhotoSelection_Form.htm');
 end;
 
 procedure TCalibratedPhotoLoader_Form.Lat1_LabeledNumericEditNumericEditKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'CalibratedPhotoSelection_Form.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'CalibratedPhotoSelection_Form.htm');
 end;
 
 procedure TCalibratedPhotoLoader_Form.X1_Pix_LabeledNumericEditNumericEditKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'CalibratedPhotoSelection_Form.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'CalibratedPhotoSelection_Form.htm');
 end;
 
 procedure TCalibratedPhotoLoader_Form.Y1_Pix_LabeledNumericEditNumericEditKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'CalibratedPhotoSelection_Form.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'CalibratedPhotoSelection_Form.htm');
 end;
 
 procedure TCalibratedPhotoLoader_Form.Lon2_LabeledNumericEditNumericEditKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'CalibratedPhotoSelection_Form.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'CalibratedPhotoSelection_Form.htm');
 end;
 
 procedure TCalibratedPhotoLoader_Form.Lat2_LabeledNumericEditNumericEditKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'CalibratedPhotoSelection_Form.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'CalibratedPhotoSelection_Form.htm');
 end;
 
 procedure TCalibratedPhotoLoader_Form.X2_Pix_LabeledNumericEditNumericEditKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'CalibratedPhotoSelection_Form.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'CalibratedPhotoSelection_Form.htm');
 end;
 
 procedure TCalibratedPhotoLoader_Form.Y2_Pix_LabeledNumericEditNumericEditKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'CalibratedPhotoSelection_Form.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'CalibratedPhotoSelection_Form.htm');
 end;
 
 procedure TCalibratedPhotoLoader_Form.InversionCode_LabeledNumericEditNumericEditKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'CalibratedPhotoSelection_Form.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'CalibratedPhotoSelection_Form.htm');
 end;
 
 procedure TCalibratedPhotoLoader_Form.SelectPhoto_ButtonKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'CalibratedPhotoSelection_Form.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'CalibratedPhotoSelection_Form.htm');
 end;
 
 procedure TCalibratedPhotoLoader_Form.Cancel_ButtonKeyDown(Sender: TObject;
   var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'CalibratedPhotoSelection_Form.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'CalibratedPhotoSelection_Form.htm');
 end;
 
 procedure TCalibratedPhotoLoader_Form.OverwriteNone_RadioButtonKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'CalibratedPhotoSelection_Form.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'CalibratedPhotoSelection_Form.htm');
 end;
 
 procedure TCalibratedPhotoLoader_Form.OverwriteGeometry_RadioButtonKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'CalibratedPhotoSelection_Form.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'CalibratedPhotoSelection_Form.htm');
 end;
 
 procedure TCalibratedPhotoLoader_Form.OverwriteDateTime_RadioButtonKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'CalibratedPhotoSelection_Form.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'CalibratedPhotoSelection_Form.htm');
 end;
 
 procedure TCalibratedPhotoLoader_Form.OverwriteAll_RadioButtonKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'CalibratedPhotoSelection_Form.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'CalibratedPhotoSelection_Form.htm');
 end;
 
 procedure TCalibratedPhotoLoader_Form.TargetLon_LabeledNumericEditNumericEditKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'CalibratedPhotoSelection_Form.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'CalibratedPhotoSelection_Form.htm');
 end;
 
 procedure TCalibratedPhotoLoader_Form.TargetLat_LabeledNumericEditNumericEditKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'CalibratedPhotoSelection_Form.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'CalibratedPhotoSelection_Form.htm');
 end;
 
 procedure TCalibratedPhotoLoader_Form.ListPhotos_ButtonKeyDown(Sender: TObject;
   var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'CalibratedPhotoSelection_Form.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'CalibratedPhotoSelection_Form.htm');
 end;
 
 procedure TCalibratedPhotoLoader_Form.FilterPhotos_CheckBoxKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'CalibratedPhotoSelection_Form.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'CalibratedPhotoSelection_Form.htm');
 end;
 
 procedure TCalibratedPhotoLoader_Form.ChangeFile_ButtonKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'CalibratedPhotoSelection_Form.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'CalibratedPhotoSelection_Form.htm');
 end;
 
 procedure TCalibratedPhotoLoader_Form.Colongitude_CheckBoxKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'CalibratedPhotoSelection_Form.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'CalibratedPhotoSelection_Form.htm');
 end;
 
 procedure TCalibratedPhotoLoader_Form.CopyInfo_ButtonKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'CalibratedPhotoSelection_Form.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'CalibratedPhotoSelection_Form.htm');
 end;
 
 end.

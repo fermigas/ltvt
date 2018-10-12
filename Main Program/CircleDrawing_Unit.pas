@@ -68,7 +68,7 @@ procedure TCircleDrawing_Form.FormShow(Sender: TObject);
 begin
   if SavedImage<>nil then SavedImage.Free; 
   SavedImage := TBitmap.Create;
-  SavedImage.Assign(Terminator_Form.JimsGraph1.Picture.Bitmap);
+  SavedImage.Assign(LTVT_Form.Image1.Picture.Bitmap);
   ActiveControl := DrawCircle_Button;
 end;
 
@@ -86,14 +86,14 @@ var
 begin
   LonDeg := LonDeg_LabeledNumericEdit.NumericEdit.ExtendedValue;
   LatDeg := LatDeg_LabeledNumericEdit.NumericEdit.ExtendedValue;
-  RadiusDeg := RadToDeg(Diam_LabeledNumericEdit.NumericEdit.ExtendedValue/Terminator_Form.MoonRadius/2);
+  RadiusDeg := RadToDeg(Diam_LabeledNumericEdit.NumericEdit.ExtendedValue/LTVT_Form.MoonRadius/2);
 
-  with Terminator_Form do
+  with LTVT_Form do
     begin
       DrawCircle(LonDeg,LatDeg,RadiusDeg, Circle_ColorBox.Selected);
 
-      PolarToVector(DegToRad(LatDeg),DegToRad(LonDeg),1,CenterVector);
-      if DotProduct(CenterVector,SubObsvrVector)>=0 then with JimsGraph1 do
+      PolarToVector(DegToRad(LonDeg),DegToRad(LatDeg),1,CenterVector);
+      if DotProduct(CenterVector,SubObsvrVector)>=0 then with Image1 do
         begin {crater is on visible hemisphere, so check its projection to see if it is in viewable area}
           CenterXPix := XPix(DotProduct(CenterVector,XPrime_UnitVector));
           CenterYPix := YPix(DotProduct(CenterVector,YPrime_UnitVector));
@@ -124,7 +124,7 @@ end;
 
 procedure TCircleDrawing_Form.ClearCircle_ButtonClick(Sender: TObject);
 begin
-  Terminator_Form.JimsGraph1.Canvas.Draw(0,0,SavedImage);
+  LTVT_Form.Image1.Canvas.Draw(0,0,SavedImage);
 end;
 
 procedure TCircleDrawing_Form.LonDeg_LabeledNumericEditNumericEditKeyDown(
@@ -136,9 +136,9 @@ var
 begin
   ProcessKeyStroke(Key,Shift,'CircleDrawingTool.htm');
 
-  with Terminator_Form do
+  with LTVT_Form do
     begin
-      OnePixel := (180/Pi)*(JimsGraph1.XValue(JimsGraph1.Width)-JimsGraph1.XValue(0))/JimsGraph1.Width;
+      OnePixel := (180/Pi)*(XValue(Image1.Width)-XValue(0))/Image1.Width;
       StepSize := Abs(OnePixel);
     end;
 
@@ -183,9 +183,9 @@ var
 begin
   ProcessKeyStroke(Key,Shift,'CircleDrawingTool.htm');
 
-  with Terminator_Form do
+  with LTVT_Form do
     begin
-      OnePixel := (180/Pi)*(JimsGraph1.XValue(JimsGraph1.Width)-JimsGraph1.XValue(0))/JimsGraph1.Width;
+      OnePixel := (180/Pi)*(XValue(Image1.Width)-XValue(0))/Image1.Width;
       StepSize := Abs(OnePixel);
     end;
 
@@ -226,9 +226,9 @@ var
 begin
   ProcessKeyStroke(Key,Shift,'CircleDrawingTool.htm');
 
-  with Terminator_Form do
+  with LTVT_Form do
     begin
-      OnePixel := 2*MoonRadius*(JimsGraph1.XValue(JimsGraph1.Width)-JimsGraph1.XValue(0))/JimsGraph1.Width;
+      OnePixel := 2*MoonRadius*(XValue(Image1.Width)-XValue(0))/Image1.Width;
       StepSize := Abs(OnePixel);
     end;
 
@@ -263,7 +263,7 @@ var
   OutputFilename : String;
   OutputFile : TextFile;
 begin
-  OutputFilename := Terminator_Form.BasePath+'CircleList.txt';
+  OutputFilename := LTVT_Form.BasePath+'CircleList.txt';
   AssignFile(OutputFile,OutputFilename);
   if FileExists(OutputFilename) then
     Append(OutputFile)
@@ -291,7 +291,7 @@ begin
   if Key=VK_ESCAPE then
     Close
   else
-    Terminator_Form.DisplayF1Help(Key,Shift,HelpFile);
+    LTVT_Form.DisplayF1Help(Key,Shift,HelpFile);
 end;
 
 procedure TCircleDrawing_Form.FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
@@ -339,13 +339,13 @@ procedure TCircleDrawing_Form.InitiateShadowFile_ButtonClick(Sender: TObject);
 var
   ShadowFile : TextFile;
 begin
-  if FileExists(Terminator_Form.ShadowProfileFilename) and
+  if FileExists(LTVT_Form.ShadowProfileFilename) and
     (mrNO=MessageDlg('Overwrite existing shadow profile?',mtConfirmation,[mbYes,mbNo],0)) then Exit;
 
-  Terminator_Form.PolarToVector(DegToRad(LatDeg_LabeledNumericEdit.NumericEdit.ExtendedValue),
-    DegToRad(LonDeg_LabeledNumericEdit.NumericEdit.ExtendedValue), 1, Terminator_Form.ShadowProfileCenterVector);
+  LTVT_Form.PolarToVector(DegToRad(LonDeg_LabeledNumericEdit.NumericEdit.ExtendedValue),
+    DegToRad(LatDeg_LabeledNumericEdit.NumericEdit.ExtendedValue), 1, LTVT_Form.ShadowProfileCenterVector);
 
-  AssignFile(ShadowFile, Terminator_Form.ShadowProfileFilename);
+  AssignFile(ShadowFile, LTVT_Form.ShadowProfileFilename);
   Rewrite(ShadowFile);
 
   Writeln(ShadowFile,'* Crater profile -- distances referenced to point at');
@@ -359,7 +359,7 @@ begin
 
   CloseFile(ShadowFile);
 
-  ShowMessage('Ready to record shadow data in file : '+Terminator_Form.ShadowProfileFilename);
+  ShowMessage('Ready to record shadow data in file : '+LTVT_Form.ShadowProfileFilename);
 
 end;
 

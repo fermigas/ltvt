@@ -357,7 +357,7 @@ begin
             DelY := -DelXObs*SinTheta + DelYObs*CosTheta;
             Lat := CenterLatDeg + DelY/VertPixPerDeg;
             Lon := CenterLonDeg + DelX/HorzPixPerDeg/Cos(DegToRad(Lat));
-            Lat := Lat - Terminator_Form.LTO_SagCorrectionDeg(Lon - CenterLonDeg,Lat);
+            Lat := Lat - LTVT_Form.LTO_SagCorrectionDeg(Lon - CenterLonDeg,Lat);
           end;
         Mercator :
           begin
@@ -384,7 +384,7 @@ begin
           end;
         end; {case}
       LonLat_Label.Caption := Format('Lon = %s     Lat = %s',
-        [Terminator_Form.LongitudeString(Lon,3),Terminator_Form.LatitudeString(Lat,3)])
+        [LTVT_Form.LongitudeString(Lon,3),LTVT_Form.LatitudeString(Lat,3)])
     end
   else
     LonLat_Label.Caption := '';
@@ -554,7 +554,7 @@ begin
         HorzPixPerDeg := (Ref2XPix - Ref1XPix)/(Ref2LonDeg - Ref1LonDeg)/Cos(DegToRad(Ref1LatDeg));
         VertPixPerDeg := -HorzPixPerDeg*VertCorrection;  // minus sign because pixels increase down screen; latitudes decrease down screen
 
-        CenterLatDeg := Ref1LatDeg + Terminator_Form.LTO_SagCorrectionDeg(Ref2LonDeg - CenterLonDeg,Ref1LatDeg);
+        CenterLatDeg := Ref1LatDeg + LTVT_Form.LTO_SagCorrectionDeg(Ref2LonDeg - CenterLonDeg,Ref1LatDeg);
       end;
     Mercator :
       begin
@@ -639,46 +639,46 @@ begin
     end;
 
   Screen.Cursor := crHourGlass;
-  Terminator_Form.LTO_Filename        := LTO_Viewer_Form.OpenDialog1.FileName;
-  Terminator_Form.LTO_SinTheta        := LTO_Viewer_Form.SinTheta;
-  Terminator_Form.LTO_CosTheta        := LTO_Viewer_Form.CosTheta;  // rotation angle
+  LTVT_Form.LTO_Filename        := LTO_Viewer_Form.OpenDialog1.FileName;
+  LTVT_Form.LTO_SinTheta        := LTO_Viewer_Form.SinTheta;
+  LTVT_Form.LTO_CosTheta        := LTO_Viewer_Form.CosTheta;  // rotation angle
   case MapMode of
     LTO :
       begin
-        Terminator_Form.LTO_MapMode         := LTO_map;
-        Terminator_Form.LTO_CenterLon       := CenterLonDeg;
-        Terminator_Form.LTO_CenterLat       := CenterLatDeg;
-        Terminator_Form.LTO_CenterXPix      := CenterXPix;
-        Terminator_Form.LTO_CenterYPix      := CenterYPix;
-        Terminator_Form.LTO_HorzPixPerDeg   := HorzPixPerDeg;
-        Terminator_Form.LTO_VertPixPerDeg   := VertPixPerDeg;
-        Terminator_Form.LTO_DegLonPerXPixel := DegLonPerXPixel;
-        Terminator_Form.LTO_DegLatPerYPixel := DegLatPerYPixel;
+        LTVT_Form.LTO_MapMode         := LTO_map;
+        LTVT_Form.LTO_CenterLon       := CenterLonDeg;
+        LTVT_Form.LTO_CenterLat       := CenterLatDeg;
+        LTVT_Form.LTO_CenterXPix      := CenterXPix;
+        LTVT_Form.LTO_CenterYPix      := CenterYPix;
+        LTVT_Form.LTO_HorzPixPerDeg   := HorzPixPerDeg;
+        LTVT_Form.LTO_VertPixPerDeg   := VertPixPerDeg;
+        LTVT_Form.LTO_DegLonPerXPixel := DegLonPerXPixel;
+        LTVT_Form.LTO_DegLatPerYPixel := DegLatPerYPixel;
       end;
     Mercator :
       begin
-        Terminator_Form.LTO_MapMode         := Mercator_map;
-        Terminator_Form.LTO_VertCorrection  := 1/VertCorrection;  // note: used for inverse correction in main form
-        Terminator_Form.LTO_CenterLon       := RadToDeg(MercatorStartLonRad);
-        Terminator_Form.LTO_CenterLat       := 0;
-        Terminator_Form.LTO_CenterXPix      := MercatorStartX;
-        Terminator_Form.LTO_CenterYPix      := MercatorStartY;
-        Terminator_Form.LTO_MercatorScaleFactor := MercatorScaleFactor;
+        LTVT_Form.LTO_MapMode         := Mercator_map;
+        LTVT_Form.LTO_VertCorrection  := 1/VertCorrection;  // note: used for inverse correction in main form
+        LTVT_Form.LTO_CenterLon       := RadToDeg(MercatorStartLonRad);
+        LTVT_Form.LTO_CenterLat       := 0;
+        LTVT_Form.LTO_CenterXPix      := MercatorStartX;
+        LTVT_Form.LTO_CenterYPix      := MercatorStartY;
+        LTVT_Form.LTO_MercatorScaleFactor := MercatorScaleFactor;
       end;
     Lambert :
       begin
-        Terminator_Form.LTO_MapMode         := Lambert_map;
-        Terminator_Form.LTO_VertCorrection  := 1/VertCorrection;  // note: used for inverse correction in main form
-        Terminator_Form.LTO_CenterLon       := CenterLonDeg;
-        Terminator_Form.LTO_CenterLat       := CenterLatDeg;
-        Terminator_Form.LTO_CenterXPix      := CenterXPix;
-        Terminator_Form.LTO_CenterYPix      := CenterYPix;
-        Terminator_Form.LTO_Lambert_ScaleFactor := Lambert_ScaleFactor;
-        Terminator_Form.LTO_Lambert_Lat1        := Lambert_Lat1;
-        Terminator_Form.LTO_Lambert_Lat2        := Lambert_Lat2;
-        Terminator_Form.LTO_Lambert_n           := Lambert_n;
-        Terminator_Form.LTO_Lambert_F           := Lambert_F;
-        Terminator_Form.LTO_Lambert_Rho_zero    := Lambert_Rho_zero;
+        LTVT_Form.LTO_MapMode         := Lambert_map;
+        LTVT_Form.LTO_VertCorrection  := 1/VertCorrection;  // note: used for inverse correction in main form
+        LTVT_Form.LTO_CenterLon       := CenterLonDeg;
+        LTVT_Form.LTO_CenterLat       := CenterLatDeg;
+        LTVT_Form.LTO_CenterXPix      := CenterXPix;
+        LTVT_Form.LTO_CenterYPix      := CenterYPix;
+        LTVT_Form.LTO_Lambert_ScaleFactor := Lambert_ScaleFactor;
+        LTVT_Form.LTO_Lambert_Lat1        := Lambert_Lat1;
+        LTVT_Form.LTO_Lambert_Lat2        := Lambert_Lat2;
+        LTVT_Form.LTO_Lambert_n           := Lambert_n;
+        LTVT_Form.LTO_Lambert_F           := Lambert_F;
+        LTVT_Form.LTO_Lambert_Rho_zero    := Lambert_Rho_zero;
       end;
     else
       begin // this should have been checked earlier!
@@ -687,17 +687,17 @@ begin
       end;
     end;
 
-  Terminator_Form.LTO_Image.Width  := OriginalWidth;
-  Terminator_Form.LTO_Image.Height := OriginalHeight;
-  Terminator_Form.LTO_Image.PixelFormat := pf24bit;
-  Terminator_Form.LTO_Image.Canvas.Draw(0,0, TempPicture.Graphic);
+  LTVT_Form.LTO_Image.Width  := OriginalWidth;
+  LTVT_Form.LTO_Image.Height := OriginalHeight;
+  LTVT_Form.LTO_Image.PixelFormat := pf24bit;
+  LTVT_Form.LTO_Image.Canvas.Draw(0,0, TempPicture.Graphic);
   Screen.Cursor := crDefault;
 
-  Terminator_Form.LTO_RadioButton.Caption := ExtractFileName(Terminator_Form.LTO_Filename);
-  Terminator_Form.LTO_RadioButton.Show;
-  Terminator_Form.LTO_RadioButton.Checked := True;
+  LTVT_Form.LTO_RadioButton.Caption := ExtractFileName(LTVT_Form.LTO_Filename);
+  LTVT_Form.LTO_RadioButton.Show;
+  LTVT_Form.LTO_RadioButton.Checked := True;
 
-  Terminator_Form.DrawTexture_Button.Click;
+  LTVT_Form.DrawTexture_Button.Click;
 
   Close;
 end;
@@ -729,139 +729,139 @@ end;
 procedure TLTO_Viewer_Form.LoadPhoto_ButtonKeyDown(Sender: TObject;
   var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'LTO_Viewer.htm#Using');
+  LTVT_Form.DisplayF1Help(Key,Shift,'LTO_Viewer.htm#Using');
 end;
 
 procedure TLTO_Viewer_Form.ZoomOut_ButtonKeyDown(Sender: TObject;
   var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'LTO_Viewer.htm#Using');
+  LTVT_Form.DisplayF1Help(Key,Shift,'LTO_Viewer.htm#Using');
 end;
 
 procedure TLTO_Viewer_Form.OneToOne_ButtonKeyDown(Sender: TObject;
   var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'LTO_Viewer.htm#Using');
+  LTVT_Form.DisplayF1Help(Key,Shift,'LTO_Viewer.htm#Using');
 end;
 
 procedure TLTO_Viewer_Form.ZoomIn_ButtonKeyDown(Sender: TObject;
   var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'LTO_Viewer.htm#Using');
+  LTVT_Form.DisplayF1Help(Key,Shift,'LTO_Viewer.htm#Using');
 end;
 
 procedure TLTO_Viewer_Form.RefPt1_RadioButtonKeyDown(Sender: TObject;
   var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'LTO_Viewer.htm#Using');
+  LTVT_Form.DisplayF1Help(Key,Shift,'LTO_Viewer.htm#Using');
 end;
 
 procedure TLTO_Viewer_Form.RefPt1_Lon_LabeledNumericEditNumericEditKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'LTO_Viewer.htm#Using');
+  LTVT_Form.DisplayF1Help(Key,Shift,'LTO_Viewer.htm#Using');
 end;
 
 procedure TLTO_Viewer_Form.RefPt1_Lat_LabeledNumericEditNumericEditKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'LTO_Viewer.htm#Using');
+  LTVT_Form.DisplayF1Help(Key,Shift,'LTO_Viewer.htm#Using');
 end;
 
 procedure TLTO_Viewer_Form.RefPt1_XPix_LabeledNumericEditNumericEditKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'LTO_Viewer.htm#Using');
+  LTVT_Form.DisplayF1Help(Key,Shift,'LTO_Viewer.htm#Using');
 end;
 
 procedure TLTO_Viewer_Form.RefPt1_YPix_LabeledNumericEditNumericEditKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'LTO_Viewer.htm#Using');
+  LTVT_Form.DisplayF1Help(Key,Shift,'LTO_Viewer.htm#Using');
 end;
 
 procedure TLTO_Viewer_Form.RefPt2_RadioButtonKeyDown(Sender: TObject;
   var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'LTO_Viewer.htm#Using');
+  LTVT_Form.DisplayF1Help(Key,Shift,'LTO_Viewer.htm#Using');
 end;
 
 procedure TLTO_Viewer_Form.RefPt2_Lon_LabeledNumericEditNumericEditKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'LTO_Viewer.htm#Using');
+  LTVT_Form.DisplayF1Help(Key,Shift,'LTO_Viewer.htm#Using');
 end;
 
 procedure TLTO_Viewer_Form.RefPt2_Lat_LabeledNumericEditNumericEditKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'LTO_Viewer.htm#Using');
+  LTVT_Form.DisplayF1Help(Key,Shift,'LTO_Viewer.htm#Using');
 end;
 
 procedure TLTO_Viewer_Form.RefPt2_XPix_LabeledNumericEditNumericEditKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'LTO_Viewer.htm#Using');
+  LTVT_Form.DisplayF1Help(Key,Shift,'LTO_Viewer.htm#Using');
 end;
 
 procedure TLTO_Viewer_Form.RefPt2_YPix_LabeledNumericEditNumericEditKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'LTO_Viewer.htm#Using');
+  LTVT_Form.DisplayF1Help(Key,Shift,'LTO_Viewer.htm#Using');
 end;
 
 procedure TLTO_Viewer_Form.ImageCalibrated_RadioButtonKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'LTO_Viewer.htm#Using');
+  LTVT_Form.DisplayF1Help(Key,Shift,'LTO_Viewer.htm#Using');
 end;
 
 procedure TLTO_Viewer_Form.Clear_ButtonKeyDown(Sender: TObject;
   var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'LTO_Viewer.htm#Using');
+  LTVT_Form.DisplayF1Help(Key,Shift,'LTO_Viewer.htm#Using');
 end;
 
 procedure TLTO_Viewer_Form.TransferData_ButtonKeyDown(Sender: TObject;
   var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'LTO_Viewer.htm#Using');
+  LTVT_Form.DisplayF1Help(Key,Shift,'LTO_Viewer.htm#Using');
 end;
 
 procedure TLTO_Viewer_Form.MapType_RadioButtonKeyDown(Sender: TObject;
   var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'LTO_Viewer.htm#Using');
+  LTVT_Form.DisplayF1Help(Key,Shift,'LTO_Viewer.htm#Using');
 end;
 
 procedure TLTO_Viewer_Form.LTO_RadioButtonKeyDown(Sender: TObject;
   var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'LTO_Viewer.htm#Using');
+  LTVT_Form.DisplayF1Help(Key,Shift,'LTO_Viewer.htm#Using');
 end;
 
 procedure TLTO_Viewer_Form.Mercator_RadioButtonKeyDown(Sender: TObject;
   var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'LTO_Viewer.htm#Using');
+  LTVT_Form.DisplayF1Help(Key,Shift,'LTO_Viewer.htm#Using');
 end;
 
 procedure TLTO_Viewer_Form.Lambert_RadioButtonKeyDown(Sender: TObject;
   var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'LTO_Viewer.htm#Using');
+  LTVT_Form.DisplayF1Help(Key,Shift,'LTO_Viewer.htm#Using');
 end;
 
 procedure TLTO_Viewer_Form.Lambert2_RadioButtonKeyDown(Sender: TObject;
   var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'LTO_Viewer.htm#Using');
+  LTVT_Form.DisplayF1Help(Key,Shift,'LTO_Viewer.htm#Using');
 end;
 
 procedure TLTO_Viewer_Form.VertCompression_LabeledNumericEditNumericEditKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'LTO_Viewer.htm#VerticalCompression_1');
+  LTVT_Form.DisplayF1Help(Key,Shift,'LTO_Viewer.htm#VerticalCompression_1');
 end;
 
 end.

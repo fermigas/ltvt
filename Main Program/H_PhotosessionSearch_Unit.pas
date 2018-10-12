@@ -187,7 +187,7 @@ begin
 //  PSS_JPL_Path := '';
   PhotoSessionsFilename := '';
 
-  if not Terminator_Form.LinuxCompatibilityMode then Date_DateTimePicker.MinDate := EncodeDateDay(1601,1);
+  if not LTVT_Form.LinuxCompatibilityMode then Date_DateTimePicker.MinDate := EncodeDateDay(1601,1);
 
   ObsNameList := TStringList.Create;
   ObsLatList := TStringList.Create;
@@ -222,15 +222,15 @@ begin
         ObservatoryList_ComboBox.ItemIndex := i
       else
         begin
-          if FileExists(Terminator_Form.ObservatoryListFilename) then
+          if FileExists(LTVT_Form.ObservatoryListFilename) then
             begin
               ObservatoryList_ComboBox.ItemIndex := -1;
-              ObservatoryList_ComboBox.Text := Terminator_Form.ObservatoryComboBoxDefaultText;
+              ObservatoryList_ComboBox.Text := LTVT_Form.ObservatoryComboBoxDefaultText;
             end
           else
             begin
               ObservatoryList_ComboBox.ItemIndex := -1;
-              ObservatoryList_ComboBox.Text := Terminator_Form.ObservatoryNoFileText;
+              ObservatoryList_ComboBox.Text := LTVT_Form.ObservatoryNoFileText;
             end
         end;
     end;
@@ -279,9 +279,9 @@ begin
       NameToAdd := Trim(Name_Edit.Text);
     end;
 
-  AssignFile(ObsListFile,Terminator_Form.ObservatoryListFilename);
+  AssignFile(ObsListFile,LTVT_Form.ObservatoryListFilename);
 
-  if FileExists(Terminator_Form.ObservatoryListFilename) then
+  if FileExists(LTVT_Form.ObservatoryListFilename) then
     begin
       Append(ObsListFile);
     end
@@ -314,7 +314,7 @@ begin
 
   ObservatoryList_ComboBox.Items.Add(NameToAdd);
 
-//  ShowMessage('Location added to '+Terminator_Form.ObservatoryListFilename);
+//  ShowMessage('Location added to '+LTVT_Form.ObservatoryListFilename);
   RefreshSelection;
 end;
 
@@ -393,7 +393,7 @@ begin {CalculateCircumstances_ButtonClick}
 
       Memo1.Lines.Add('');
       Memo1.Lines.Add('Lunar lighting conditions calculated for:  '+
-        Terminator_Form.CorrectedDateTimeToStr(ModifiedJulianDateToDateTime(UT_MJD))+' UT');
+        LTVT_Form.CorrectedDateTimeToStr(ModifiedJulianDateToDateTime(UT_MJD))+' UT');
 
       Colongitude_LabeledNumericEdit.NumericEdit.Text := Format('%0.4f',[RadToDeg(SolarColongitude)]);
       SolarLatitude_LabeledNumericEdit.NumericEdit.Text := Format('%0.3f',[RadToDeg(SubSolarPoint.Latitude)]);
@@ -705,9 +705,9 @@ begin
   ObsLatList.Clear;
   ObsLonList.Clear;
   ObsElevList.Clear;
-  if FileExists(Terminator_Form.ObservatoryListFilename) then
+  if FileExists(LTVT_Form.ObservatoryListFilename) then
     begin
-      AssignFile(ObsListFile,Terminator_Form.ObservatoryListFilename);
+      AssignFile(ObsListFile,LTVT_Form.ObservatoryListFilename);
       Reset(ObsListFile);
       while (not EOF(ObsListFile)) {and (Length(FeatureList)<100)} do
         begin
@@ -769,151 +769,151 @@ begin
             MonthOf(Date_DateTimePicker.DateTime),DayOf(Date_DateTimePicker.DateTime));
     end
   else
-    Terminator_Form.DisplayF1Help(Key,Shift,'PhotosessionsSearchForm.htm');
+    LTVT_Form.DisplayF1Help(Key,Shift,'PhotosessionsSearchForm.htm');
 end;
 
 procedure TPhotosessionSearch_Form.Time_DateTimePickerKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'PhotosessionsSearchForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'PhotosessionsSearchForm.htm');
 end;
 
 procedure TPhotosessionSearch_Form.CalculateCircumstances_ButtonKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'PhotosessionsSearchForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'PhotosessionsSearchForm.htm');
 end;
 
 procedure TPhotosessionSearch_Form.ColongitudeMode_RadioButtonKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'PhotosessionsSearchForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'PhotosessionsSearchForm.htm');
 end;
 
 procedure TPhotosessionSearch_Form.SunAngleMode_RadioButtonKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'PhotosessionsSearchForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'PhotosessionsSearchForm.htm');
 end;
 
 procedure TPhotosessionSearch_Form.Colongitude_LabeledNumericEditNumericEditKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'PhotosessionsSearchForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'PhotosessionsSearchForm.htm');
 end;
 
 procedure TPhotosessionSearch_Form.SolarLatitude_LabeledNumericEditNumericEditKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'PhotosessionsSearchForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'PhotosessionsSearchForm.htm');
 end;
 
 procedure TPhotosessionSearch_Form.ColongitudeTolerance_LabeledNumericEditNumericEditKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'PhotosessionsSearchForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'PhotosessionsSearchForm.htm');
 end;
 
 procedure TPhotosessionSearch_Form.Crater_Lat_LabeledNumericEditNumericEditKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'PhotosessionsSearchForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'PhotosessionsSearchForm.htm');
 end;
 
 procedure TPhotosessionSearch_Form.Crater_Lon_LabeledNumericEditNumericEditKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'PhotosessionsSearchForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'PhotosessionsSearchForm.htm');
 end;
 
 procedure TPhotosessionSearch_Form.SunAngle_LabeledNumericEditNumericEditKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'PhotosessionsSearchForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'PhotosessionsSearchForm.htm');
 end;
 
 procedure TPhotosessionSearch_Form.SunAzimuth_LabeledNumericEditNumericEditKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'PhotosessionsSearchForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'PhotosessionsSearchForm.htm');
 end;
 
 procedure TPhotosessionSearch_Form.SunElevationTolerance_LabeledNumericEditNumericEditKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'PhotosessionsSearchForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'PhotosessionsSearchForm.htm');
 end;
 
 procedure TPhotosessionSearch_Form.GeocentricObserver_CheckBoxKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'PhotosessionsSearchForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'PhotosessionsSearchForm.htm');
 end;
 
 procedure TPhotosessionSearch_Form.ObserverLongitude_LabeledNumericEditNumericEditKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'PhotosessionsSearchForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'PhotosessionsSearchForm.htm');
 end;
 
 procedure TPhotosessionSearch_Form.ObserverLatitude_LabeledNumericEditNumericEditKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'PhotosessionsSearchForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'PhotosessionsSearchForm.htm');
 end;
 
 procedure TPhotosessionSearch_Form.ObserverElevation_LabeledNumericEditNumericEditKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'PhotosessionsSearchForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'PhotosessionsSearchForm.htm');
 end;
 
 procedure TPhotosessionSearch_Form.Tabulate_ButtonKeyDown(Sender: TObject;
   var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'PhotosessionsSearchForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'PhotosessionsSearchForm.htm');
 end;
 
 procedure TPhotosessionSearch_Form.Memo1KeyDown(Sender: TObject;
   var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'PhotosessionsSearchForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'PhotosessionsSearchForm.htm');
 end;
 
 procedure TPhotosessionSearch_Form.Font_ButtonKeyDown(Sender: TObject;
   var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'PhotosessionsSearchForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'PhotosessionsSearchForm.htm');
 end;
 
 procedure TPhotosessionSearch_Form.ClearMemo_ButtonKeyDown(Sender: TObject;
   var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'PhotosessionsSearchForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'PhotosessionsSearchForm.htm');
 end;
 
 procedure TPhotosessionSearch_Form.ChangeFile_ButtonKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'PhotosessionsSearchForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'PhotosessionsSearchForm.htm');
 end;
 
 procedure TPhotosessionSearch_Form.Abort_ButtonKeyDown(Sender: TObject;
   var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'PhotosessionsSearchForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'PhotosessionsSearchForm.htm');
 end;
 
 procedure TPhotosessionSearch_Form.ObservatoryList_ComboBoxKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'PhotosessionsSearchForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'PhotosessionsSearchForm.htm');
 end;
 
 procedure TPhotosessionSearch_Form.AddLocation_ButtonKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'PhotosessionsSearchForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'PhotosessionsSearchForm.htm');
 end;
 
 end.

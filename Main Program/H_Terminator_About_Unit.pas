@@ -97,18 +97,18 @@ end;
 procedure TTerminatorAbout_Form.OK_ButtonKeyDown(Sender: TObject;
   var Key: Word; Shift: TShiftState);
 begin
-   Terminator_Form.DisplayF1Help(Key,Shift,'Contact_Support.htm');
+   LTVT_Form.DisplayF1Help(Key,Shift,'Contact_Support.htm');
 end;
 
 procedure TTerminatorAbout_Form.More_ButtonKeyDown(Sender: TObject;
   var Key: Word; Shift: TShiftState);
 begin
-   Terminator_Form.DisplayF1Help(Key,Shift,'What_is_LTVT.htm');
+   LTVT_Form.DisplayF1Help(Key,Shift,'What_is_LTVT.htm');
 end;
 
 procedure TTerminatorAbout_Form.More_ButtonClick(Sender: TObject);
 begin
-  Terminator_Form.DisplayF1Help(VK_F1,[],'What_is_LTVT.htm');
+  LTVT_Form.DisplayF1Help(VK_F1,[],'What_is_LTVT.htm');
 end;
 
 end.

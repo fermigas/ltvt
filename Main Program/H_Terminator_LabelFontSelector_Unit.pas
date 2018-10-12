@@ -159,7 +159,7 @@ begin
       NumericData := '164';
       USGS_Code := 'AA';
     end;
-  FontSample_Label.Caption := Terminator_Form.LabelString(TestInfo,
+  FontSample_Label.Caption := LTVT_Form.LabelString(TestInfo,
     IncludeName_CheckBox.Checked,FullCraterNames_CheckBox.Checked,
     IncludeSize_CheckBox.Checked,IncludeUnits_CheckBox.Checked,False);
 
@@ -169,7 +169,7 @@ begin
       NumericData := '17';
       USGS_Code := 'SF';
     end;
-  SatelliteFontSample_Label.Caption := Terminator_Form.LabelString(TestInfo,
+  SatelliteFontSample_Label.Caption := LTVT_Form.LabelString(TestInfo,
     IncludeName_CheckBox.Checked,FullCraterNames_CheckBox.Checked,
     IncludeSize_CheckBox.Checked,IncludeUnits_CheckBox.Checked,False);
 
@@ -233,7 +233,7 @@ end;
 
 procedure TLabelFontSelector_Form.Save_ButtonClick(Sender: TObject);
 begin
-  with Terminator_Form do
+  with LTVT_Form do
     begin
       ReadLabelOptionsFromForm;
       SaveDefaultLabelOptions;
@@ -242,7 +242,7 @@ end;
 
 procedure TLabelFontSelector_Form.Restore_ButtonClick(Sender: TObject);
 begin
-  with Terminator_Form do
+  with LTVT_Form do
     begin
       RestoreDefaultLabelOptions;
       WriteLabelOptionsToForm;
@@ -253,163 +253,163 @@ end;
 procedure TLabelFontSelector_Form.ChangeFont_ButtonKeyDown(Sender: TObject;
   var Key: Word; Shift: TShiftState);
 begin
-   Terminator_Form.DisplayF1Help(Key,Shift,'ModifyLabels.htm');
+   LTVT_Form.DisplayF1Help(Key,Shift,'ModifyLabels.htm');
 end;
 
 procedure TLabelFontSelector_Form.XOffset_LabeledNumericEditNumericEditKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-   Terminator_Form.DisplayF1Help(Key,Shift,'ModifyLabels.htm');
+   LTVT_Form.DisplayF1Help(Key,Shift,'ModifyLabels.htm');
 end;
 
 procedure TLabelFontSelector_Form.YOffset_LabeledNumericEditNumericEditKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-   Terminator_Form.DisplayF1Help(Key,Shift,'ModifyLabels.htm');
+   LTVT_Form.DisplayF1Help(Key,Shift,'ModifyLabels.htm');
 end;
 
 procedure TLabelFontSelector_Form.FullCraterNames_CheckBoxKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-   Terminator_Form.DisplayF1Help(Key,Shift,'ModifyLabels.htm');
+   LTVT_Form.DisplayF1Help(Key,Shift,'ModifyLabels.htm');
 end;
 
 procedure TLabelFontSelector_Form.IncludeSize_CheckBoxKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-   Terminator_Form.DisplayF1Help(Key,Shift,'ModifyLabels.htm');
+   LTVT_Form.DisplayF1Help(Key,Shift,'ModifyLabels.htm');
 end;
 
 procedure TLabelFontSelector_Form.SmallCrater_ColorBoxKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-   Terminator_Form.DisplayF1Help(Key,Shift,'ModifyLabels.htm');
+   LTVT_Form.DisplayF1Help(Key,Shift,'ModifyLabels.htm');
 end;
 
 procedure TLabelFontSelector_Form.MediumCraterDiam_NumericEditKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-   Terminator_Form.DisplayF1Help(Key,Shift,'ModifyLabels.htm');
+   LTVT_Form.DisplayF1Help(Key,Shift,'ModifyLabels.htm');
 end;
 
 procedure TLabelFontSelector_Form.MediumCrater_ColorBoxKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-   Terminator_Form.DisplayF1Help(Key,Shift,'ModifyLabels.htm');
+   LTVT_Form.DisplayF1Help(Key,Shift,'ModifyLabels.htm');
 end;
 
 procedure TLabelFontSelector_Form.LargeCraterDiam_NumericEditKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-   Terminator_Form.DisplayF1Help(Key,Shift,'ModifyLabels.htm');
+   LTVT_Form.DisplayF1Help(Key,Shift,'ModifyLabels.htm');
 end;
 
 procedure TLabelFontSelector_Form.LargeCrater_ColorBoxKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-   Terminator_Form.DisplayF1Help(Key,Shift,'ModifyLabels.htm');
+   LTVT_Form.DisplayF1Help(Key,Shift,'ModifyLabels.htm');
 end;
 
 procedure TLabelFontSelector_Form.NonCrater_ColorBoxKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-   Terminator_Form.DisplayF1Help(Key,Shift,'ModifyLabels.htm');
+   LTVT_Form.DisplayF1Help(Key,Shift,'ModifyLabels.htm');
 end;
 
 procedure TLabelFontSelector_Form.DotSize_LabeledNumericEditNumericEditKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-   Terminator_Form.DisplayF1Help(Key,Shift,'ModifyLabels.htm');
+   LTVT_Form.DisplayF1Help(Key,Shift,'ModifyLabels.htm');
 end;
 
 procedure TLabelFontSelector_Form.AnnotateSavedImages_CheckBoxKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-   Terminator_Form.DisplayF1Help(Key,Shift,'ModifyLabels.htm');
+   LTVT_Form.DisplayF1Help(Key,Shift,'ModifyLabels.htm');
 end;
 
 procedure TLabelFontSelector_Form.SavedImageUpperLabels_ColorBoxKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-   Terminator_Form.DisplayF1Help(Key,Shift,'ModifyLabels.htm');
+   LTVT_Form.DisplayF1Help(Key,Shift,'ModifyLabels.htm');
 end;
 
 procedure TLabelFontSelector_Form.SavedImageLowerLabels_ColorBoxKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-   Terminator_Form.DisplayF1Help(Key,Shift,'ModifyLabels.htm');
+   LTVT_Form.DisplayF1Help(Key,Shift,'ModifyLabels.htm');
 end;
 
 procedure TLabelFontSelector_Form.Save_ButtonKeyDown(Sender: TObject;
   var Key: Word; Shift: TShiftState);
 begin
-   Terminator_Form.DisplayF1Help(Key,Shift,'ModifyLabels.htm');
+   LTVT_Form.DisplayF1Help(Key,Shift,'ModifyLabels.htm');
 end;
 
 procedure TLabelFontSelector_Form.Restore_ButtonKeyDown(Sender: TObject;
   var Key: Word; Shift: TShiftState);
 begin
-   Terminator_Form.DisplayF1Help(Key,Shift,'ModifyLabels.htm');
+   LTVT_Form.DisplayF1Help(Key,Shift,'ModifyLabels.htm');
 end;
 
 procedure TLabelFontSelector_Form.OK_ButtonKeyDown(Sender: TObject;
   var Key: Word; Shift: TShiftState);
 begin
-   Terminator_Form.DisplayF1Help(Key,Shift,'ModifyLabels.htm');
+   LTVT_Form.DisplayF1Help(Key,Shift,'ModifyLabels.htm');
 end;
 
 procedure TLabelFontSelector_Form.Cancel_ButtonKeyDown(Sender: TObject;
   var Key: Word; Shift: TShiftState);
 begin
-   Terminator_Form.DisplayF1Help(Key,Shift,'ModifyLabels.htm');
+   LTVT_Form.DisplayF1Help(Key,Shift,'ModifyLabels.htm');
 end;
 
 procedure TLabelFontSelector_Form.IncludeName_CheckBoxKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-   Terminator_Form.DisplayF1Help(Key,Shift,'ModifyLabels.htm');
+   LTVT_Form.DisplayF1Help(Key,Shift,'ModifyLabels.htm');
 end;
 
 procedure TLabelFontSelector_Form.IncludeUnits_CheckBoxKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-   Terminator_Form.DisplayF1Help(Key,Shift,'ModifyLabels.htm');
+   LTVT_Form.DisplayF1Help(Key,Shift,'ModifyLabels.htm');
 end;
 
 procedure TLabelFontSelector_Form.DotCircle_ColorBoxKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-   Terminator_Form.DisplayF1Help(Key,Shift,'ModifyLabels.htm');
+   LTVT_Form.DisplayF1Help(Key,Shift,'ModifyLabels.htm');
 end;
 
 procedure TLabelFontSelector_Form.RefPt_ColorBoxKeyDown(Sender: TObject;
   var Key: Word; Shift: TShiftState);
 begin
-   Terminator_Form.DisplayF1Help(Key,Shift,'ModifyLabels.htm');
+   LTVT_Form.DisplayF1Help(Key,Shift,'ModifyLabels.htm');
 end;
 
 procedure TLabelFontSelector_Form.IncludeDiscontinuedNames_CheckBoxKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-   Terminator_Form.DisplayF1Help(Key,Shift,'ModifyLabels.htm');
+   LTVT_Form.DisplayF1Help(Key,Shift,'ModifyLabels.htm');
 end;
 
 procedure TLabelFontSelector_Form.TransparentDots_CheckBoxKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'ModifyLabels.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'ModifyLabels.htm');
 end;
 
 procedure TLabelFontSelector_Form.SnapShadowPoint_CheckBoxKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'ModifyLabels.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'ModifyLabels.htm');
 end;
 
 procedure TLabelFontSelector_Form.RadialDotOffset_CheckBoxKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'ModifyLabels.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'ModifyLabels.htm');
 end;
 
 end.

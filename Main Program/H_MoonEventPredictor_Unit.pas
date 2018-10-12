@@ -191,7 +191,7 @@ begin
   MEP_JPL_Filename := 'UNXP2000.405'; //overwritten by calling program
   MEP_JPL_Path := '';
 
-  if not Terminator_Form.LinuxCompatibilityMode then
+  if not LTVT_Form.LinuxCompatibilityMode then
     begin
       Date_DateTimePicker.MinDate := EncodeDateDay(1601,1);
       StartDate_DateTimePicker.MinDate := EncodeDateDay(1601,1);
@@ -238,9 +238,9 @@ begin
   ObsLatList.Clear;
   ObsLonList.Clear;
   ObsElevList.Clear;
-  if FileExists(Terminator_Form.ObservatoryListFilename) then
+  if FileExists(LTVT_Form.ObservatoryListFilename) then
     begin
-      AssignFile(ObsListFile,Terminator_Form.ObservatoryListFilename);
+      AssignFile(ObsListFile,LTVT_Form.ObservatoryListFilename);
       Reset(ObsListFile);
       while (not EOF(ObsListFile)) {and (Length(FeatureList)<100)} do
         begin
@@ -281,15 +281,15 @@ begin
         ObservatoryList_ComboBox.ItemIndex := i
       else
         begin
-          if FileExists(Terminator_Form.ObservatoryListFilename) then
+          if FileExists(LTVT_Form.ObservatoryListFilename) then
             begin
               ObservatoryList_ComboBox.ItemIndex := -1;
-              ObservatoryList_ComboBox.Text := Terminator_Form.ObservatoryComboBoxDefaultText;
+              ObservatoryList_ComboBox.Text := LTVT_Form.ObservatoryComboBoxDefaultText;
             end
           else
             begin
               ObservatoryList_ComboBox.ItemIndex := -1;
-              ObservatoryList_ComboBox.Text := Terminator_Form.ObservatoryNoFileText;
+              ObservatoryList_ComboBox.Text := LTVT_Form.ObservatoryNoFileText;
             end
         end;
     end;
@@ -337,9 +337,9 @@ begin
       NameToAdd := Trim(Name_Edit.Text);
     end;
 
-  AssignFile(ObsListFile,Terminator_Form.ObservatoryListFilename);
+  AssignFile(ObsListFile,LTVT_Form.ObservatoryListFilename);
 
-  if FileExists(Terminator_Form.ObservatoryListFilename) then
+  if FileExists(LTVT_Form.ObservatoryListFilename) then
     begin
       Append(ObsListFile);
     end
@@ -372,7 +372,7 @@ begin
 
   ObservatoryList_ComboBox.Items.Add(NameToAdd);
 
-//  ShowMessage('Location added to '+Terminator_Form.ObservatoryListFilename);
+//  ShowMessage('Location added to '+LTVT_Form.ObservatoryListFilename);
   RefreshSelection;
 end;
 
@@ -445,7 +445,7 @@ begin {CalculateCircumstances_ButtonClick}
 
   Memo1.Lines.Add('');
   Memo1.Lines.Add('Lunar lighting conditions calculated for:  '+
-    Terminator_Form.CorrectedDateTimeToStr(ModifiedJulianDateToDateTime(UT_MJD))+' UT');
+    LTVT_Form.CorrectedDateTimeToStr(ModifiedJulianDateToDateTime(UT_MJD))+' UT');
 
   Colongitude_LabeledNumericEdit.NumericEdit.Text := Format('%0.4f',[RadToDeg(SolarColongitude)]);
   SolarLatitude_LabeledNumericEdit.NumericEdit.Text := Format('%0.3f',[RadToDeg(SubSolarPoint.Latitude)]);
@@ -882,85 +882,85 @@ begin
             MonthOf(Date_DateTimePicker.DateTime),DayOf(Date_DateTimePicker.DateTime));
     end
   else
-    Terminator_Form.DisplayF1Help(Key,Shift,'MoonEventPredictorForm.htm');
+    LTVT_Form.DisplayF1Help(Key,Shift,'MoonEventPredictorForm.htm');
 end;
 
 procedure TMoonEventPredictor_Form.Time_DateTimePickerKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'MoonEventPredictorForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'MoonEventPredictorForm.htm');
 end;
 
 procedure TMoonEventPredictor_Form.CalculateCircumstances_ButtonKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'MoonEventPredictorForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'MoonEventPredictorForm.htm');
 end;
 
 procedure TMoonEventPredictor_Form.ColongitudeMode_RadioButtonKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'MoonEventPredictorForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'MoonEventPredictorForm.htm');
 end;
 
 procedure TMoonEventPredictor_Form.SunAngleMode_RadioButtonKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'MoonEventPredictorForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'MoonEventPredictorForm.htm');
 end;
 
 procedure TMoonEventPredictor_Form.GeocentricObserver_CheckBoxKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'MoonEventPredictorForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'MoonEventPredictorForm.htm');
 end;
 
 procedure TMoonEventPredictor_Form.Crater_Lon_LabeledNumericEditNumericEditKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'MoonEventPredictorForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'MoonEventPredictorForm.htm');
 end;
 
 procedure TMoonEventPredictor_Form.SunAngle_LabeledNumericEditNumericEditKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'MoonEventPredictorForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'MoonEventPredictorForm.htm');
 end;
 
 procedure TMoonEventPredictor_Form.SunAngleTimeStep_LabeledNumericEditNumericEditKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'MoonEventPredictorForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'MoonEventPredictorForm.htm');
 end;
 
 procedure TMoonEventPredictor_Form.Crater_Lat_LabeledNumericEditNumericEditKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'MoonEventPredictorForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'MoonEventPredictorForm.htm');
 end;
 
 procedure TMoonEventPredictor_Form.SunAzimuth_LabeledNumericEditNumericEditKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'MoonEventPredictorForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'MoonEventPredictorForm.htm');
 end;
 
 procedure TMoonEventPredictor_Form.AzTolerance_LabeledNumericEditNumericEditKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'MoonEventPredictorForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'MoonEventPredictorForm.htm');
 end;
 
 procedure TMoonEventPredictor_Form.Colongitude_LabeledNumericEditNumericEditKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'MoonEventPredictorForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'MoonEventPredictorForm.htm');
 end;
 
 procedure TMoonEventPredictor_Form.IncTolerance_LabeledNumericEditNumericEditKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'MoonEventPredictorForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'MoonEventPredictorForm.htm');
 end;
 
 procedure TMoonEventPredictor_Form.StartDate_DateTimePickerKeyDown(
@@ -975,7 +975,7 @@ begin
             MonthOf(StartDate_DateTimePicker.DateTime),DayOf(StartDate_DateTimePicker.DateTime));
     end
   else
-    Terminator_Form.DisplayF1Help(Key,Shift,'MoonEventPredictorForm.htm');
+    LTVT_Form.DisplayF1Help(Key,Shift,'MoonEventPredictorForm.htm');
 end;
 
 procedure TMoonEventPredictor_Form.EndDate_DateTimePickerKeyDown(
@@ -990,85 +990,85 @@ begin
             MonthOf(EndDate_DateTimePicker.DateTime),DayOf(EndDate_DateTimePicker.DateTime));
     end
   else
-    Terminator_Form.DisplayF1Help(Key,Shift,'MoonEventPredictorForm.htm');
+    LTVT_Form.DisplayF1Help(Key,Shift,'MoonEventPredictorForm.htm');
 end;
 
 procedure TMoonEventPredictor_Form.FilterOutput_CheckBoxKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'MoonEventPredictorForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'MoonEventPredictorForm.htm');
 end;
 
 procedure TMoonEventPredictor_Form.Tabulate_ButtonKeyDown(Sender: TObject;
   var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'MoonEventPredictorForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'MoonEventPredictorForm.htm');
 end;
 
 procedure TMoonEventPredictor_Form.Memo1KeyDown(Sender: TObject;
   var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'MoonEventPredictorForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'MoonEventPredictorForm.htm');
 end;
 
 procedure TMoonEventPredictor_Form.Font_ButtonKeyDown(Sender: TObject;
   var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'MoonEventPredictorForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'MoonEventPredictorForm.htm');
 end;
 
 procedure TMoonEventPredictor_Form.ClearMemo_ButtonKeyDown(Sender: TObject;
   var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'MoonEventPredictorForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'MoonEventPredictorForm.htm');
 end;
 
 procedure TMoonEventPredictor_Form.ObserverLongitude_LabeledNumericEditNumericEditKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'MoonEventPredictorForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'MoonEventPredictorForm.htm');
 end;
 
 procedure TMoonEventPredictor_Form.ObserverLatitude_LabeledNumericEditNumericEditKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'MoonEventPredictorForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'MoonEventPredictorForm.htm');
 end;
 
 procedure TMoonEventPredictor_Form.ObserverElevation_LabeledNumericEditNumericEditKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'MoonEventPredictorForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'MoonEventPredictorForm.htm');
 end;
 
 procedure TMoonEventPredictor_Form.SolarLatitude_LabeledNumericEditNumericEditKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'MoonEventPredictorForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'MoonEventPredictorForm.htm');
 end;
 
 procedure TMoonEventPredictor_Form.LibrationTabulator_ButtonKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'MoonEventPredictorForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'MoonEventPredictorForm.htm');
 end;
 
 procedure TMoonEventPredictor_Form.Abort_ButtonKeyDown(Sender: TObject;
   var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'MoonEventPredictorForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'MoonEventPredictorForm.htm');
 end;
 
 procedure TMoonEventPredictor_Form.ObservatoryList_ComboBoxKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'MoonEventPredictorForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'MoonEventPredictorForm.htm');
 end;
 
 procedure TMoonEventPredictor_Form.AddLocation_ButtonKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'MoonEventPredictorForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'MoonEventPredictorForm.htm');
 end;
 
 end.

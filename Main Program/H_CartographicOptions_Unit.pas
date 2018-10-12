@@ -105,7 +105,7 @@ end;
 
 procedure TCartographicOptions_Form.Save_ButtonClick(Sender: TObject);
 begin
-  with Terminator_Form do
+  with LTVT_Form do
     begin
       ReadCartographicOptionsFromForm;
       SaveCartographicOptions;
@@ -114,7 +114,7 @@ end;
 
 procedure TCartographicOptions_Form.Restore_ButtonClick(Sender: TObject);
 begin
-  with Terminator_Form do
+  with LTVT_Form do
     begin
       RestoreCartographicOptions;
       WriteCartographicOptionsToForm;
@@ -124,109 +124,109 @@ end;
 procedure TCartographicOptions_Form.UseCurrentUT_CheckBoxKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-   Terminator_Form.DisplayF1Help(Key,Shift,'DisplayOptionsForm.htm');
+   LTVT_Form.DisplayF1Help(Key,Shift,'DisplayOptionsForm.htm');
 end;
 
 procedure TCartographicOptions_Form.Cartographic_CheckBoxKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-   Terminator_Form.DisplayF1Help(Key,Shift,'DisplayOptionsForm.htm');
+   LTVT_Form.DisplayF1Help(Key,Shift,'DisplayOptionsForm.htm');
 end;
 
 procedure TCartographicOptions_Form.InvertLR_CheckBoxKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-   Terminator_Form.DisplayF1Help(Key,Shift,'DisplayOptionsForm.htm');
+   LTVT_Form.DisplayF1Help(Key,Shift,'DisplayOptionsForm.htm');
 end;
 
 procedure TCartographicOptions_Form.InvertUD_CheckBoxKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-   Terminator_Form.DisplayF1Help(Key,Shift,'DisplayOptionsForm.htm');
+   LTVT_Form.DisplayF1Help(Key,Shift,'DisplayOptionsForm.htm');
 end;
 
 procedure TCartographicOptions_Form.ShowDetails_CheckBoxKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-   Terminator_Form.DisplayF1Help(Key,Shift,'DisplayOptionsForm.htm');
+   LTVT_Form.DisplayF1Help(Key,Shift,'DisplayOptionsForm.htm');
 end;
 
 procedure TCartographicOptions_Form.RotationAngle_LabeledNumericEditNumericEditKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-   Terminator_Form.DisplayF1Help(Key,Shift,'DisplayOptionsForm.htm');
+   LTVT_Form.DisplayF1Help(Key,Shift,'DisplayOptionsForm.htm');
 end;
 
 procedure TCartographicOptions_Form.LibrationCircle_CheckBoxKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-   Terminator_Form.DisplayF1Help(Key,Shift,'DisplayOptionsForm.htm');
+   LTVT_Form.DisplayF1Help(Key,Shift,'DisplayOptionsForm.htm');
 end;
 
 procedure TCartographicOptions_Form.TerminatorLines_CheckBoxKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-   Terminator_Form.DisplayF1Help(Key,Shift,'DisplayOptionsForm.htm');
+   LTVT_Form.DisplayF1Help(Key,Shift,'DisplayOptionsForm.htm');
 end;
 
 procedure TCartographicOptions_Form.LibrationCircle_ColorBoxKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-   Terminator_Form.DisplayF1Help(Key,Shift,'DisplayOptionsForm.htm');
+   LTVT_Form.DisplayF1Help(Key,Shift,'DisplayOptionsForm.htm');
 end;
 
 procedure TCartographicOptions_Form.Sky_ColorBoxKeyDown(Sender: TObject;
   var Key: Word; Shift: TShiftState);
 begin
-   Terminator_Form.DisplayF1Help(Key,Shift,'DisplayOptionsForm.htm');
+   LTVT_Form.DisplayF1Help(Key,Shift,'DisplayOptionsForm.htm');
 end;
 
 procedure TCartographicOptions_Form.NoDataColor_ColorBoxKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-   Terminator_Form.DisplayF1Help(Key,Shift,'DisplayOptionsForm.htm');
+   LTVT_Form.DisplayF1Help(Key,Shift,'DisplayOptionsForm.htm');
 end;
 
 procedure TCartographicOptions_Form.DotModeSunlitColor_ColorBoxKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-   Terminator_Form.DisplayF1Help(Key,Shift,'DisplayOptionsForm.htm');
+   LTVT_Form.DisplayF1Help(Key,Shift,'DisplayOptionsForm.htm');
 end;
 
 procedure TCartographicOptions_Form.DotModeShadowedColor_ColorBoxKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-   Terminator_Form.DisplayF1Help(Key,Shift,'DisplayOptionsForm.htm');
+   LTVT_Form.DisplayF1Help(Key,Shift,'DisplayOptionsForm.htm');
 end;
 
 procedure TCartographicOptions_Form.Save_ButtonKeyDown(Sender: TObject;
   var Key: Word; Shift: TShiftState);
 begin
-   Terminator_Form.DisplayF1Help(Key,Shift,'DisplayOptionsForm.htm');
+   LTVT_Form.DisplayF1Help(Key,Shift,'DisplayOptionsForm.htm');
 end;
 
 procedure TCartographicOptions_Form.Restore_ButtonKeyDown(Sender: TObject;
   var Key: Word; Shift: TShiftState);
 begin
-   Terminator_Form.DisplayF1Help(Key,Shift,'DisplayOptionsForm.htm');
+   LTVT_Form.DisplayF1Help(Key,Shift,'DisplayOptionsForm.htm');
 end;
 
 procedure TCartographicOptions_Form.OK_ButtonKeyDown(Sender: TObject;
   var Key: Word; Shift: TShiftState);
 begin
-   Terminator_Form.DisplayF1Help(Key,Shift,'DisplayOptionsForm.htm');
+   LTVT_Form.DisplayF1Help(Key,Shift,'DisplayOptionsForm.htm');
 end;
 
 procedure TCartographicOptions_Form.Cancel_ButtonKeyDown(Sender: TObject;
   var Key: Word; Shift: TShiftState);
 begin
-   Terminator_Form.DisplayF1Help(Key,Shift,'DisplayOptionsForm.htm');
+   LTVT_Form.DisplayF1Help(Key,Shift,'DisplayOptionsForm.htm');
 end;
 
 procedure TCartographicOptions_Form.ShadowLineLength_LabeledNumericEditNumericEditKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-   Terminator_Form.DisplayF1Help(Key,Shift,'DisplayOptionsForm.htm');
+   LTVT_Form.DisplayF1Help(Key,Shift,'DisplayOptionsForm.htm');
 end;
 
 end.

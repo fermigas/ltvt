@@ -46,7 +46,7 @@ type
   TPolarCoordinates = record
       Longitude, {[rad]}
       Latitude,  {[rad]}
-      Radius     {[AU]}
+      Radius
         : extended;
     end;
 

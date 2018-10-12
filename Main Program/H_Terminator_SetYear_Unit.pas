@@ -58,19 +58,19 @@ end;
 procedure TTerminator_SetYear_Form.SetTo_ButtonKeyDown(Sender: TObject;
   var Key: Word; Shift: TShiftState);
 begin
-   Terminator_Form.DisplayF1Help(Key,Shift,'SetYearForm.htm');
+   LTVT_Form.DisplayF1Help(Key,Shift,'SetYearForm.htm');
 end;
 
 procedure TTerminator_SetYear_Form.Cancel_ButtonKeyDown(Sender: TObject;
   var Key: Word; Shift: TShiftState);
 begin
-   Terminator_Form.DisplayF1Help(Key,Shift,'SetYearForm.htm');
+   LTVT_Form.DisplayF1Help(Key,Shift,'SetYearForm.htm');
 end;
 
 procedure TTerminator_SetYear_Form.DesiredYear_LabeledNumericEditNumericEditKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-   Terminator_Form.DisplayF1Help(Key,Shift,'SetYearForm.htm');
+   LTVT_Form.DisplayF1Help(Key,Shift,'SetYearForm.htm');
 end;
 
 end.

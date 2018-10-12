@@ -315,7 +315,7 @@ begin
     begin
       Title := 'Select TAI Offsets file';
       if TempTAIFilename='' then
-        FileName := Terminator_Form.FullFilename('TAI_Offset_Data.txt')
+        FileName := LTVT_Form.FullFilename('TAI_Offset_Data.txt')
       else
         FileName := TempTAIFilename;
       Filter := 'Text files (*.txt)|*.txt|All files|*.*';
@@ -374,7 +374,7 @@ end;
 
 procedure TExternalFileSelection_Form.Save_ButtonClick(Sender: TObject);
 begin
-  with Terminator_Form do
+  with LTVT_Form do
     begin
       ReadFileOptionsFromForm;
       SaveFileOptions;
@@ -383,7 +383,7 @@ end;
 
 procedure TExternalFileSelection_Form.Restore_ButtonClick(Sender: TObject);
 begin
-  with Terminator_Form do
+  with LTVT_Form do
     begin
       RestoreFileOptions;
       WriteFileOptionsToForm;
@@ -394,139 +394,139 @@ end;
 procedure TExternalFileSelection_Form.GraphicalBrowser_CheckBoxKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'ChangingFilenames.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'ChangingFilenames.htm');
 end;
 
 procedure TExternalFileSelection_Form.Texture1Description_EditKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'ChangingFilenames.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'ChangingFilenames.htm');
 end;
 
 procedure TExternalFileSelection_Form.ChangeTexture1_ButtonKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'ChangingFilenames.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'ChangingFilenames.htm');
 end;
 
 procedure TExternalFileSelection_Form.Texture2Description_EditKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'ChangingFilenames.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'ChangingFilenames.htm');
 end;
 
 procedure TExternalFileSelection_Form.ChangeTexture2_ButtonKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'ChangingFilenames.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'ChangingFilenames.htm');
 end;
 
 procedure TExternalFileSelection_Form.Texture3Description_EditKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'ChangingFilenames.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'ChangingFilenames.htm');
 end;
 
 procedure TExternalFileSelection_Form.ChangeTexture3_ButtonKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'ChangingFilenames.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'ChangingFilenames.htm');
 end;
 
 procedure TExternalFileSelection_Form.ChangeDotFile_ButtonKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'ChangingFilenames.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'ChangingFilenames.htm');
 end;
 
 procedure TExternalFileSelection_Form.PhotoSessionsFile_ButtonKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'ChangingFilenames.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'ChangingFilenames.htm');
 end;
 
 procedure TExternalFileSelection_Form.CalibratedPhotos_ButtonKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'ChangingFilenames.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'ChangingFilenames.htm');
 end;
 
 procedure TExternalFileSelection_Form.ObservatoryList_ButtonKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'ChangingFilenames.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'ChangingFilenames.htm');
 end;
 
 procedure TExternalFileSelection_Form.ChangeEphemerisFile_ButtonKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'ChangingFilenames.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'ChangingFilenames.htm');
 end;
 
 procedure TExternalFileSelection_Form.ChangeTAIFile_ButtonKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'ChangingFilenames.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'ChangingFilenames.htm');
 end;
 
 procedure TExternalFileSelection_Form.Save_ButtonKeyDown(Sender: TObject;
   var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'ChangingFilenames.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'ChangingFilenames.htm');
 end;
 
 procedure TExternalFileSelection_Form.Restore_ButtonKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'ChangingFilenames.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'ChangingFilenames.htm');
 end;
 
 procedure TExternalFileSelection_Form.OK_ButtonKeyDown(Sender: TObject;
   var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'ChangingFilenames.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'ChangingFilenames.htm');
 end;
 
 procedure TExternalFileSelection_Form.Cancel_ButtonKeyDown(Sender: TObject;
   var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'ChangingFilenames.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'ChangingFilenames.htm');
 end;
 
 procedure TExternalFileSelection_Form.WineCompatibility_CheckBoxKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'ChangingFilenames.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'ChangingFilenames.htm');
 end;
 
 procedure TExternalFileSelection_Form.Tex3MinLon_LabeledNumericEditNumericEditKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'ChangingFilenames.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'ChangingFilenames.htm');
 end;
 
 procedure TExternalFileSelection_Form.Tex3MaxLon_LabeledNumericEditNumericEditKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'ChangingFilenames.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'ChangingFilenames.htm');
 end;
 
 procedure TExternalFileSelection_Form.Tex3MaxLat_LabeledNumericEditNumericEditKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'ChangingFilenames.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'ChangingFilenames.htm');
 end;
 
 procedure TExternalFileSelection_Form.Tex3MinLat_LabeledNumericEditNumericEditKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'ChangingFilenames.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'ChangingFilenames.htm');
 end;
 
 procedure TExternalFileSelection_Form.ChangeEarthTexture_ButtonKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'ChangingFilenames.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'ChangingFilenames.htm');
 end;
 
 

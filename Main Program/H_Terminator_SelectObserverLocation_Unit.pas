@@ -94,9 +94,9 @@ begin
   ObsLonList.Clear;
   ObsElevList.Clear;
 
-  if FileExists(Terminator_Form.ObservatoryListFilename) then
+  if FileExists(LTVT_Form.ObservatoryListFilename) then
     begin
-      AssignFile(ObsListFile,Terminator_Form.ObservatoryListFilename);
+      AssignFile(ObsListFile,LTVT_Form.ObservatoryListFilename);
       Reset(ObsListFile);
       while (not EOF(ObsListFile)) {and (Length(FeatureList)<100)} do
         begin
@@ -148,9 +148,9 @@ begin
       NameToAdd := Trim(Name_Edit.Text);
     end;
 
-  AssignFile(ObsListFile,Terminator_Form.ObservatoryListFilename);
+  AssignFile(ObsListFile,LTVT_Form.ObservatoryListFilename);
 
-  if FileExists(Terminator_Form.ObservatoryListFilename) then
+  if FileExists(LTVT_Form.ObservatoryListFilename) then
     begin
       Append(ObsListFile);
     end
@@ -183,7 +183,7 @@ begin
 
   ObservatoryList_ComboBox.Items.Add(NameToAdd);
 
-//  ShowMessage('Location added to '+Terminator_Form.ObservatoryListFilename);
+//  ShowMessage('Location added to '+LTVT_Form.ObservatoryListFilename);
   RefreshSelection;
 end;
 
@@ -204,15 +204,15 @@ begin
         ObservatoryList_ComboBox.ItemIndex := i
       else
         begin
-          if FileExists(Terminator_Form.ObservatoryListFilename) then
+          if FileExists(LTVT_Form.ObservatoryListFilename) then
             begin
               ObservatoryList_ComboBox.ItemIndex := -1;
-              ObservatoryList_ComboBox.Text := Terminator_Form.ObservatoryComboBoxDefaultText;
+              ObservatoryList_ComboBox.Text := LTVT_Form.ObservatoryComboBoxDefaultText;
             end
           else
             begin
               ObservatoryList_ComboBox.ItemIndex := -1;
-              ObservatoryList_ComboBox.Text := Terminator_Form.ObservatoryNoFileText;
+              ObservatoryList_ComboBox.Text := LTVT_Form.ObservatoryNoFileText;
             end
         end;
     end;
@@ -256,7 +256,7 @@ end;
 
 procedure TSetObserverLocation_Form.Save_ButtonClick(Sender: TObject);
 begin
-  with Terminator_Form do
+  with LTVT_Form do
     begin
       ReadLocationOptionsFromForm;
       SaveLocationOptions;
@@ -265,7 +265,7 @@ end;
 
 procedure TSetObserverLocation_Form.Restore_ButtonClick(Sender: TObject);
 begin
-  with Terminator_Form do
+  with LTVT_Form do
     begin
       RestoreLocationOptions;
       WriteLocationOptionsToForm;
@@ -275,7 +275,7 @@ end;
 
 procedure TSetObserverLocation_Form.ShowHelp(Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'SetLocationForm.htm');
+  LTVT_Form.DisplayF1Help(Key,Shift,'SetLocationForm.htm');
 end;
 
 end.
