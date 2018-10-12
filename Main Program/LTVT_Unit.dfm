@@ -79,7 +79,7 @@ object LTVT_Form: TLTVT_Form
       Caption = 'GeometryType_Label'
     end
     object SubObsPtHeading_Label: TLabel
-      Left = 23
+      Left = 15
       Top = 104
       Width = 90
       Height = 13
@@ -90,7 +90,7 @@ object LTVT_Form: TLTVT_Form
       Caption = 'Sub-observer Point'
     end
     object SubSolPtHeading_Label: TLabel
-      Left = 194
+      Left = 154
       Top = 104
       Width = 71
       Height = 13
@@ -148,9 +148,16 @@ object LTVT_Form: TLTVT_Form
       Height = 13
       Caption = 'Colong = '
     end
+    object DemOptions_Label: TLabel
+      Left = 7
+      Top = 184
+      Width = 34
+      Height = 13
+      Caption = 'DEM'#39's:'
+    end
     inline SubSol_Lon_LabeledNumericEdit: TLabeledNumericEdit
-      Left = 182
-      Top = 136
+      Left = 166
+      Top = 128
       Width = 123
       Height = 19
       Hint = 'Longitude of sub-solar point in decimal degrees (E=+  W=-)'
@@ -174,8 +181,8 @@ object LTVT_Form: TLTVT_Form
       end
     end
     inline SubSol_Lat_LabeledNumericEdit: TLabeledNumericEdit
-      Left = 182
-      Top = 168
+      Left = 166
+      Top = 155
       Width = 123
       Height = 19
       Hint = 
@@ -203,8 +210,8 @@ object LTVT_Form: TLTVT_Form
       end
     end
     inline SubObs_Lon_LabeledNumericEdit: TLabeledNumericEdit
-      Left = 22
-      Top = 136
+      Left = 14
+      Top = 128
       Width = 123
       Height = 19
       Hint = 'Longitude of sub-observer point in decimal degrees (E=+  W=-)'
@@ -228,8 +235,8 @@ object LTVT_Form: TLTVT_Form
       end
     end
     inline SubObs_Lat_LabeledNumericEdit: TLabeledNumericEdit
-      Left = 22
-      Top = 168
+      Left = 14
+      Top = 155
       Width = 123
       Height = 19
       Hint = 
@@ -256,15 +263,67 @@ object LTVT_Form: TLTVT_Form
         InputMax = '90'
       end
     end
-    object IlluminationMode_CheckBox: TCheckBox
-      Left = 168
-      Top = 104
-      Width = 17
+    object NormalSun_RadioButton: TRadioButton
+      Left = 144
+      Top = 182
+      Width = 49
       Height = 17
-      Hint = 'Check to specify constant sun angle over whole disk'
+      Hint = 
+        'Draw DEM simulations treating Sun as a point source at its cente' +
+        'r'
+      Caption = 'Norm'
+      Checked = True
+      TabOrder = 5
+      TabStop = True
+      OnClick = NormalSun_RadioButtonClick
+      OnKeyDown = NormalSun_RadioButtonKeyDown
+    end
+    object HighSun_RadioButton: TRadioButton
+      Left = 192
+      Top = 182
+      Width = 41
+      Height = 17
+      Hint = 
+        'Draw lighting in DEM simulations based on highest point on Sun'#39's' +
+        ' limb'
+      Caption = 'Hi'
+      TabOrder = 6
+      OnClick = HighSun_RadioButtonClick
+      OnKeyDown = NormalSun_RadioButtonKeyDown
+    end
+    object LowSun_RadioButton: TRadioButton
+      Left = 224
+      Top = 182
+      Width = 41
+      Height = 17
+      Hint = 
+        'Draw lighting in DEM simulations based on lowest point on Sun'#39's ' +
+        'limb'
+      Caption = 'Lo'
+      TabOrder = 7
+      OnClick = LowSun_RadioButtonClick
+      OnKeyDown = NormalSun_RadioButtonKeyDown
+    end
+    object ConstantSunAngle_RadioButton: TRadioButton
+      Left = 261
+      Top = 182
+      Width = 49
+      Height = 17
+      Hint = 'Draw DEM simulations with constant sun angle'
+      Caption = 'Const'
+      TabOrder = 8
+      OnClick = ConstantSunAngle_RadioButtonClick
+      OnKeyDown = NormalSun_RadioButtonKeyDown
+    end
+    object ThreeD_CheckBox: TCheckBox
+      Left = 48
+      Top = 182
+      Width = 89
+      Height = 17
+      Hint = 'In drawing from DEMs, display points at correct projected height'
+      Caption = 'Display in 3D'
       TabOrder = 4
-      OnClick = IlluminationMode_CheckBoxClick
-      OnKeyDown = FormKeyDown
+      OnKeyDown = ThreeD_CheckBoxKeyDown
     end
   end
   object MousePosition_GroupBox: TGroupBox
@@ -397,16 +456,6 @@ object LTVT_Form: TLTVT_Form
       Font.Style = []
       ParentFont = False
     end
-    object ThreeD_CheckBox: TCheckBox
-      Left = 120
-      Top = 54
-      Width = 113
-      Height = 17
-      Hint = 'In drawing from DEMs, display points at correct projected height'
-      Caption = 'Display DEM in 3D'
-      TabOrder = 19
-      OnKeyDown = ThreeD_CheckBoxKeyDown
-    end
     object DrawCircles_CheckBox: TCheckBox
       Left = 120
       Top = 17
@@ -414,19 +463,19 @@ object LTVT_Form: TLTVT_Form
       Height = 17
       Hint = 'Draw circles around dots, indicating feature size'
       Caption = 'Draw circles'
-      TabOrder = 15
+      TabOrder = 1
       OnKeyDown = DrawCircles_CheckBoxKeyDown
     end
     inline CraterThreshold_LabeledNumericEdit: TLabeledNumericEdit
       Left = 12
-      Top = 28
+      Top = 26
       Width = 95
       Height = 19
       Hint = 
         'Enter -1 to plot flagged features only; enter 0 or greater to pl' +
         'ot all features exceeding the specified size'
       AutoSize = True
-      TabOrder = 1
+      TabOrder = 0
       inherited Item_Label: TLabel
         Width = 40
         Caption = 'Min Size'
@@ -450,7 +499,7 @@ object LTVT_Form: TLTVT_Form
       Height = 16
       Min = 0
       Max = 100
-      TabOrder = 0
+      TabOrder = 19
       Visible = False
     end
     object DrawDots_Button: TButton
@@ -462,7 +511,7 @@ object LTVT_Form: TLTVT_Form
         'Draw fresh dot diagram based on current geometry; identify dots ' +
         'by pointing to them with mouse'
       Caption = 'Dots'
-      TabOrder = 2
+      TabOrder = 5
       OnClick = DrawDots_ButtonClick
       OnKeyDown = DrawDots_ButtonKeyDown
     end
@@ -475,7 +524,7 @@ object LTVT_Form: TLTVT_Form
         'Draw fresh surface relief simulation using current geometry and ' +
         'reference texture indicated by radio buttons below'
       Caption = 'Texture'
-      TabOrder = 3
+      TabOrder = 6
       OnClick = DrawTexture_ButtonClick
       OnKeyDown = DrawTexture_ButtonKeyDown
     end
@@ -488,7 +537,7 @@ object LTVT_Form: TLTVT_Form
         'Add dots to texture map;  identify dots by pointing to them with' +
         ' mouse'
       Caption = 'Overlay Dots'
-      TabOrder = 4
+      TabOrder = 8
       OnClick = OverlayDots_ButtonClick
       OnKeyDown = OverlayDots_ButtonKeyDown
     end
@@ -506,7 +555,7 @@ object LTVT_Form: TLTVT_Form
       Font.Name = 'MS Sans Serif'
       Font.Style = []
       ParentFont = False
-      TabOrder = 6
+      TabOrder = 10
       TabStop = True
       OnKeyDown = Texture1_RadioButtonKeyDown
     end
@@ -523,7 +572,7 @@ object LTVT_Form: TLTVT_Form
       Font.Name = 'MS Sans Serif'
       Font.Style = []
       ParentFont = False
-      TabOrder = 7
+      TabOrder = 11
       TabStop = True
       OnKeyDown = Texture2_RadioButtonKeyDown
     end
@@ -540,7 +589,7 @@ object LTVT_Form: TLTVT_Form
       Font.Name = 'MS Sans Serif'
       Font.Style = []
       ParentFont = False
-      TabOrder = 8
+      TabOrder = 12
       TabStop = True
       OnKeyDown = Texture3_RadioButtonKeyDown
     end
@@ -550,7 +599,7 @@ object LTVT_Form: TLTVT_Form
       Width = 73
       Height = 19
       AutoSize = True
-      TabOrder = 12
+      TabOrder = 16
       inherited Item_Label: TLabel
         Width = 30
         Caption = 'Zoom:'
@@ -581,7 +630,7 @@ object LTVT_Form: TLTVT_Form
         'Reset center to (0,0) , zoom to 1, rotation angle to 0, feature ' +
         'threshold to -1 and gamma to 1'
       Caption = 'Reset'
-      TabOrder = 13
+      TabOrder = 9
       OnClick = ResetZoom_ButtonClick
       OnKeyDown = ResetZoom_ButtonKeyDown
     end
@@ -592,7 +641,7 @@ object LTVT_Form: TLTVT_Form
       Height = 25
       Hint = 'Label all features currently represented by dots'
       Caption = 'Label'
-      TabOrder = 5
+      TabOrder = 4
       Visible = False
       OnClick = LabelDots_ButtonClick
       OnKeyDown = LabelDots_ButtonKeyDown
@@ -610,7 +659,7 @@ object LTVT_Form: TLTVT_Form
       Font.Name = 'MS Sans Serif'
       Font.Style = []
       ParentFont = False
-      TabOrder = 9
+      TabOrder = 13
       TabStop = True
       OnKeyDown = UserPhoto_RadioButtonKeyDown
     end
@@ -623,7 +672,7 @@ object LTVT_Form: TLTVT_Form
         'Modify contrast of image -- a high gamma correction brings out t' +
         'he terminator'
       AutoSize = True
-      TabOrder = 11
+      TabOrder = 15
       inherited Item_Label: TLabel
         Width = 39
         Caption = 'Gamma:'
@@ -654,7 +703,7 @@ object LTVT_Form: TLTVT_Form
       Font.Name = 'MS Sans Serif'
       Font.Style = []
       ParentFont = False
-      TabOrder = 10
+      TabOrder = 14
       TabStop = True
       OnKeyDown = LTO_RadioButtonKeyDown
     end
@@ -664,7 +713,7 @@ object LTVT_Form: TLTVT_Form
       Width = 59
       Height = 19
       AutoSize = True
-      TabOrder = 14
+      TabOrder = 18
       inherited Item_Label: TLabel
         Width = 22
         Caption = 'Grid:'
@@ -693,7 +742,7 @@ object LTVT_Form: TLTVT_Form
         'Enter additional rotation to be applied to Moon image after angl' +
         'e normally determined by program'
       AutoSize = True
-      TabOrder = 16
+      TabOrder = 17
       inherited Item_Label: TLabel
         Width = 20
         Caption = 'Rot:'
@@ -720,7 +769,7 @@ object LTVT_Form: TLTVT_Form
         'Place a plus mark at the center of image each time it is refresh' +
         'ed'
       Caption = 'Mark center'
-      TabOrder = 17
+      TabOrder = 2
       OnKeyDown = MarkCenter_CheckBoxKeyDown
     end
     object DrawDEM_Button: TButton
@@ -730,7 +779,7 @@ object LTVT_Form: TLTVT_Form
       Height = 25
       Hint = 'Create simulated image based on Digital Elevation Model'
       Caption = 'DEM'
-      TabOrder = 18
+      TabOrder = 7
       OnClick = DrawDEM_ButtonClick
       OnKeyDown = DrawDEM_ButtonKeyDown
     end
@@ -741,7 +790,7 @@ object LTVT_Form: TLTVT_Form
       Height = 20
       Hint = 'Halt current drawing'
       Caption = 'Abort'
-      TabOrder = 20
+      TabOrder = 3
       Visible = False
       OnClick = Abort_ButtonClick
     end

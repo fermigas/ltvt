@@ -88,7 +88,7 @@ var
   TwoByteArray : TTwoByteArray;
   FourByteArray : TFourByteArray;
   EightByteArray : TEightByteArray;
-  CharsRead, NumHeaderBytes, BytesPerDataItem, NumDataBytes, NumBytes,
+  CharsRead, NumHeaderBytes, BytesPerDataItem, NumDataBytes, ExpectedDataBytes, NumBytes,
   LatNum, LonNum, NumRead,
   MinHtLonNum, MinHtLatNum, MaxHtLonNum, MaxHtLatNum : Integer;
   DataValue, NoRawDataValue, MinRawDataValue, MaxRawDataValue : Single;
@@ -174,7 +174,7 @@ function ReadPDS_Header : Boolean;
         NameOfFileToRead := ChangeFileExt(DesiredFilename,'.LBL');
         if not FileExists(NameOfFileToRead) then
           begin
-            ShowMessage('Unable to find PDS label information');
+            ShowMessage('Unable to find PDS label file: '+NameOfFileToRead);
             Exit;
           end;
       end;
@@ -727,6 +727,9 @@ procedure FinishFileSelection;
     LTVT_Form.StatusLine_Label.Caption := '';
     LTVT_Form.StatusLine_Label.Repaint;
     LTVT_Form.Abort_Button.Hide;
+    LTVT_Form.ProgressBar1.Hide;
+    LTVT_Form.DrawCircles_CheckBox.Show;
+    LTVT_Form.MarkCenter_CheckBox.Show;
 
     if LTVT_Form.AbortKeyPressed then
       ClearStorage
@@ -789,9 +792,10 @@ begin {TDemData.SelectFile}
 
   NumBytes := FileSize(ByteFile);
   NumDataBytes := NumBytes - NumHeaderBytes;
-  if NumDataBytes<(BytesPerDataItem*NumLons*NumLats) then
+  ExpectedDataBytes := BytesPerDataItem*NumLons*NumLats;
+  if NumDataBytes<ExpectedDataBytes then
     begin
-      ShowMessage(Format('File size error: %d data bytes found vs. %d expected',[NumDataBytes,Round(NumLons*NumLats)]));
+      ShowMessage(Format('File size error: %d data bytes found vs. %d expected',[NumDataBytes,ExpectedDataBytes]));
       CloseFile(ByteFile);
       Exit;
     end;
@@ -863,7 +867,12 @@ begin {TDemData.SelectFile}
   LTVT_Form.StatusLine_Label.Caption := 'Reading DEM file                ';
   LTVT_Form.StatusLine_Label.Repaint;
   LTVT_Form.Abort_Button.Show;
+  LTVT_Form.DrawCircles_CheckBox.Hide;
+  LTVT_Form.MarkCenter_CheckBox.Hide;
   LTVT_Form.AbortKeyPressed := False;
+  LTVT_Form.ProgressBar1.Max := NumLats;
+  LTVT_Form.ProgressBar1.Position := 0;
+  LTVT_Form.ProgressBar1.Show;
   LTVT_Form.ProcessMessages;
 
   try
@@ -873,6 +882,7 @@ begin {TDemData.SelectFile}
           DEM_info.Add('Data format: 32-bit reals (LSB first)');
           for LatNum := 1 to NumLats do if not LTVT_Form.AbortKeyPressed then
             begin
+              LTVT_Form.ProgressBar1.Position := LatNum;
               Blockread(ByteFile,Stored_SingleDEM_data[LatNum-1,0],NumLons*BytesPerDataItem,NumRead);
               if RawDataToKmMultiplier<>1 then for LonNum := 1 to NumLons do
                 begin
@@ -887,6 +897,7 @@ begin {TDemData.SelectFile}
           SetLength(WordRow,NumLons);
           for LatNum := 1 to NumLats do if not LTVT_Form.AbortKeyPressed then
             begin
+              LTVT_Form.ProgressBar1.Position := LatNum;
               Blockread(ByteFile,WordRow[0],NumLons*BytesPerDataItem,NumRead);
               for LonNum := 1 to NumLons do
                 begin
@@ -902,6 +913,7 @@ begin {TDemData.SelectFile}
 //          SetLength(SmallIntRow,NumLons);
           for LatNum := 1 to NumLats do if not LTVT_Form.AbortKeyPressed then
             begin
+              LTVT_Form.ProgressBar1.Position := LatNum;
               Blockread(ByteFile,Stored_SmallIntDEM_data[LatNum-1,0],NumLons*BytesPerDataItem,NumRead);
               LTVT_Form.ProcessMessages;
             end;
@@ -913,6 +925,7 @@ begin {TDemData.SelectFile}
           SetLength(LongIntRow,NumLons);
           for LatNum := 1 to NumLats do if not LTVT_Form.AbortKeyPressed then
             begin
+              LTVT_Form.ProgressBar1.Position := LatNum;
               Blockread(ByteFile,LongIntRow[0],NumLons*BytesPerDataItem,NumRead);
               for LonNum := 1 to NumLons do
                 begin
@@ -928,6 +941,7 @@ begin {TDemData.SelectFile}
           SetLength(ReversedSmallIntRow,NumLons);
           for LatNum := 1 to NumLats do if not LTVT_Form.AbortKeyPressed then
             begin
+              LTVT_Form.ProgressBar1.Position := LatNum;
               Blockread(ByteFile,ReversedSmallIntRow[0],NumLons*BytesPerDataItem,NumRead);
               for LonNum := 1 to NumLons do
                 begin
@@ -945,6 +959,7 @@ begin {TDemData.SelectFile}
           SetLength(ReversedLongIntRow,NumLons);
           for LatNum := 1 to NumLats do if not LTVT_Form.AbortKeyPressed then
             begin
+              LTVT_Form.ProgressBar1.Position := LatNum;
               Blockread(ByteFile,ReversedLongIntRow[0],NumLons*BytesPerDataItem,NumRead);
               for LonNum := 1 to NumLons do
                 begin
@@ -964,6 +979,7 @@ begin {TDemData.SelectFile}
           SetLength(ReversedDoubleRow,NumLons);
           for LatNum := 1 to NumLats do if not LTVT_Form.AbortKeyPressed then
             begin
+              LTVT_Form.ProgressBar1.Position := LatNum;
               Blockread(ByteFile,ReversedDoubleRow[0],NumLons*BytesPerDataItem,NumRead);
               for LonNum := 1 to NumLons do
                 begin
@@ -987,6 +1003,7 @@ begin {TDemData.SelectFile}
           SetLength(ByteRow,NumLons);
           for LatNum := 1 to NumLats do if not LTVT_Form.AbortKeyPressed then
             begin
+              LTVT_Form.ProgressBar1.Position := LatNum;
               Blockread(ByteFile,ByteRow[0],NumLons*BytesPerDataItem,NumRead);
               for LonNum := 1 to NumLons do
                 begin
@@ -1029,11 +1046,13 @@ begin {TDemData.SelectFile}
 
       LTVT_Form.StatusLine_Label.Caption := 'Searching for maximum elevation...';
       LTVT_Form.StatusLine_Label.Repaint;
+      LTVT_Form.ProgressBar1.Position := 0;
 
       MinHtDeviationKm := 999999;
       MaxHtDeviationKm := -999999;
       for LatNum := 0 to (NumLats - 1) do if not LTVT_Form.AbortKeyPressed then
         begin
+          LTVT_Form.ProgressBar1.Position := LatNum;
           for LonNum := 0 to (NumLons - 1) do
             begin
               if SmallIntStorageFormat then

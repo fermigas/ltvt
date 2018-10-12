@@ -61,12 +61,10 @@ used to ComputeMeanEarthSystemOffsetMatrix used to AdjustToMeanEarthSystem}
 var
   CurrentTargetPlanet : Planet;
   CurrentPlanetName : String;
-  MoonRadius, Radius_a {equatorial}, Radius_b {polar} : Extended;
+  MoonRadius, Radius_a {equatorial}, Radius_b {polar} : Extended;  {[km]}
 
-  SelenographicCoordinateSystem : TCoordinateSystem;  {set by SetSelenographicSystem;
-    used by SelenographicCoordinates}
-  TerrestrialCoordinateSystem : TCoordinateSystem;  {set by SetTerrestrialSystem;
-    used by TerrestrialCoordinates}
+  SelenographicCoordinateSystem : TCoordinateSystem;  {set by SetSelenographicSystem; used by SelenographicCoordinates}
+  TerrestrialCoordinateSystem : TCoordinateSystem;  {set by SetTerrestrialSystem; used by TerrestrialCoordinates}
 
   MoonToSunAU : extended;  // from center of JPL_TargetBody to center of Sun at moment of observation -- set by SubSolarPointOnMoon
   ObserverToMoonAU : extended;  // from observer to center of JPL_TargetBody at moment of observation -- set by SubEarthPointOnMoon
