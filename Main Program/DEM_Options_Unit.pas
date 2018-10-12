@@ -25,6 +25,10 @@ type
     ChangeDEM_Button: TButton;
     DEMFilename_Label: TLabel;
     OpenDialog1: TOpenDialog;
+    Lambertian_RadioButton: TRadioButton;
+    LommelSeeliger_RadioButton: TRadioButton;
+    LunarLambert_RadioButton: TRadioButton;
+    PhotometricModel_GroupBox: TGroupBox;
     procedure OK_ButtonClick(Sender: TObject);
     procedure Cancel_ButtonClick(Sender: TObject);
     procedure Save_ButtonClick(Sender: TObject);
@@ -51,6 +55,12 @@ type
       Shift: TShiftState);
     procedure FormShow(Sender: TObject);
     procedure ChangeDEM_ButtonClick(Sender: TObject);
+    procedure Lambertian_RadioButtonKeyDown(Sender: TObject; var Key: Word;
+      Shift: TShiftState);
+    procedure LommelSeeliger_RadioButtonKeyDown(Sender: TObject;
+      var Key: Word; Shift: TShiftState);
+    procedure LunarLambert_RadioButtonKeyDown(Sender: TObject;
+      var Key: Word; Shift: TShiftState);
   private
     { Private declarations }
   public
@@ -185,6 +195,24 @@ end;
 
 procedure TDEM_Options_Form.ChangeDEM_ButtonKeyDown(Sender: TObject;
   var Key: Word; Shift: TShiftState);
+begin
+  LTVT_Form.DisplayF1Help(Key,Shift,'DemOptionsForm.htm');
+end;
+
+procedure TDEM_Options_Form.Lambertian_RadioButtonKeyDown(Sender: TObject;
+  var Key: Word; Shift: TShiftState);
+begin
+  LTVT_Form.DisplayF1Help(Key,Shift,'DemOptionsForm.htm');
+end;
+
+procedure TDEM_Options_Form.LommelSeeliger_RadioButtonKeyDown(
+  Sender: TObject; var Key: Word; Shift: TShiftState);
+begin
+  LTVT_Form.DisplayF1Help(Key,Shift,'DemOptionsForm.htm');
+end;
+
+procedure TDEM_Options_Form.LunarLambert_RadioButtonKeyDown(
+  Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
   LTVT_Form.DisplayF1Help(Key,Shift,'DemOptionsForm.htm');
 end;

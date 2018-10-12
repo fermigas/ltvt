@@ -46,7 +46,7 @@ object DEM_Options_Form: TDEM_Options_Form
     Height = 17
     Hint = 'Show how long it takes to load DEM and compute simulations'
     Caption = 'Display computation times'
-    TabOrder = 0
+    TabOrder = 8
     OnKeyDown = DisplayComputationTimes_CheckBoxKeyDown
   end
   object OK_Button: TButton
@@ -56,7 +56,7 @@ object DEM_Options_Form: TDEM_Options_Form
     Height = 25
     Hint = 'Close form and make changes'
     Caption = 'OK'
-    TabOrder = 6
+    TabOrder = 12
     OnClick = OK_ButtonClick
     OnKeyDown = OK_ButtonKeyDown
   end
@@ -67,7 +67,7 @@ object DEM_Options_Form: TDEM_Options_Form
     Height = 25
     Hint = 'Close form without making any changes'
     Caption = 'Cancel'
-    TabOrder = 7
+    TabOrder = 13
     OnClick = Cancel_ButtonClick
     OnKeyDown = Cancel_ButtonKeyDown
   end
@@ -80,7 +80,7 @@ object DEM_Options_Form: TDEM_Options_Form
       'Determine, at each pixel, if the Sun is blocked by a distant fea' +
       'ture'
     Caption = 'Compute cast shadows'
-    TabOrder = 1
+    TabOrder = 2
     OnKeyDown = ComputeCastShadows_CheckBoxKeyDown
   end
   object CastShadow_ColorBox: TColorBox
@@ -94,7 +94,7 @@ object DEM_Options_Form: TDEM_Options_Form
     Selected = clWhite
     Style = [cbStandardColors, cbExtendedColors, cbCustomColor, cbPrettyNames]
     ItemHeight = 16
-    TabOrder = 2
+    TabOrder = 3
     OnKeyDown = CastShadow_ColorBoxKeyDown
   end
   object Save_Button: TButton
@@ -104,7 +104,7 @@ object DEM_Options_Form: TDEM_Options_Form
     Height = 25
     Hint = 'Save these settings as the new defaults'
     Caption = 'Save as Default'
-    TabOrder = 4
+    TabOrder = 10
     OnClick = Save_ButtonClick
     OnKeyDown = Save_ButtonKeyDown
   end
@@ -115,7 +115,7 @@ object DEM_Options_Form: TDEM_Options_Form
     Height = 25
     Hint = 'Restore the last saved settings'
     Caption = 'Restore Defaults'
-    TabOrder = 5
+    TabOrder = 11
     OnClick = Restore_ButtonClick
     OnKeyDown = Restore_ButtonKeyDown
   end
@@ -126,7 +126,7 @@ object DEM_Options_Form: TDEM_Options_Form
     Height = 21
     Hint = 'Number of DEM grid steps over which local slope is evaluated'
     AutoSize = True
-    TabOrder = 3
+    TabOrder = 1
     inherited Item_Label: TLabel
       Width = 88
       Caption = 'Grid step multiplier:'
@@ -151,7 +151,7 @@ object DEM_Options_Form: TDEM_Options_Form
       'Texture 3 can be used for an albedo map; its intensities will be' +
       ' multiplied by that computed from the DEM'
     Caption = 'Multiply by last texture '
-    TabOrder = 8
+    TabOrder = 5
   end
   object RecalculateDEMonRecenter_CheckBox: TCheckBox
     Left = 16
@@ -162,7 +162,7 @@ object DEM_Options_Form: TDEM_Options_Form
       'If not rechecked, reverts to Texture mode when one clicks on the' +
       ' image to recenter it'
     Caption = 'Stay in DEM mode when image refreshed'
-    TabOrder = 9
+    TabOrder = 7
     OnKeyDown = RecalculateDEMonRecenter_CheckBoxKeyDown
   end
   object RigorousNormals_CheckBox: TCheckBox
@@ -174,18 +174,18 @@ object DEM_Options_Form: TDEM_Options_Form
       'Compute surface normal direction by rigorous vector method accur' +
       'ate at poles (takes slightly longer)'
     Caption = 'Rigorous normals'
-    TabOrder = 10
+    TabOrder = 6
   end
   object DrawTerminatorOnDEM_CheckBox: TCheckBox
-    Left = 512
-    Top = 160
+    Left = 464
+    Top = 192
     Width = 169
     Height = 17
     Hint = 
       'Check to include lines on DEM rendering; otherwise they are not ' +
       'drawn'
     Caption = 'Draw red-blue terminator lines'
-    TabOrder = 11
+    TabOrder = 9
   end
   object ChangeDEM_Button: TButton
     Left = 16
@@ -194,9 +194,56 @@ object DEM_Options_Form: TDEM_Options_Form
     Height = 25
     Hint = 'Change file used for digital heights/topography'
     Caption = 'DEM file'
-    TabOrder = 12
+    TabOrder = 0
     OnClick = ChangeDEM_ButtonClick
     OnKeyDown = ChangeDEM_ButtonKeyDown
+  end
+  object PhotometricModel_GroupBox: TGroupBox
+    Left = 464
+    Top = 88
+    Width = 153
+    Height = 81
+    Hint = 'Select way of determining brightness based on surface slope'
+    Caption = 'Photometric Model'
+    TabOrder = 4
+    object Lambertian_RadioButton: TRadioButton
+      Left = 16
+      Top = 18
+      Width = 113
+      Height = 17
+      Hint = 
+        'Brightness depends on angle at which Sun strikes surface; indepe' +
+        'ndent of tilt of surface relative to observer'
+      Caption = 'Lambertian'
+      Checked = True
+      TabOrder = 0
+      TabStop = True
+      OnKeyDown = Lambertian_RadioButtonKeyDown
+    end
+    object LommelSeeliger_RadioButton: TRadioButton
+      Left = 16
+      Top = 38
+      Width = 113
+      Height = 17
+      Hint = 
+        'Brightness depends on tilt of surface relative to Sun and observ' +
+        'er; variations vanish at Full Moon phase'
+      Caption = 'Lommel-Seeliger'
+      TabOrder = 1
+      OnKeyDown = LommelSeeliger_RadioButtonKeyDown
+    end
+    object LunarLambert_RadioButton: TRadioButton
+      Left = 16
+      Top = 56
+      Width = 113
+      Height = 17
+      Hint = 
+        'Combination of Lommel-Seeliger at Full Moon and Lambertian at mo' +
+        're distant phases'
+      Caption = 'Lunar-Lambert'
+      TabOrder = 2
+      OnKeyDown = LunarLambert_RadioButtonKeyDown
+    end
   end
   object OpenDialog1: TOpenDialog
     Left = 632

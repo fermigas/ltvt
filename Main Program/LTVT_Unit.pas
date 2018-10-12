@@ -330,6 +330,7 @@ type
 
 // variables set with DEM Options form
     DemIncludesCastShadows : Boolean;
+    DemPhotometricMode : (Lambertian, Lommel_Seeliger, Lunar_Lambert);
     DemCastShadowColor : TColor;
     MultiplyDemByTexture3 : Boolean;
     DisplayDemComputationTimes : Boolean;
@@ -395,7 +396,7 @@ type
     ShadowLineLength_pixels : Integer;
 
   {the following are set by CalculateGeometry}
-    SubObsvrVector, SubSolarVector : TVector; {in Selenographic coordinates, based on NumericInput boxes}
+    SubObsvrVector, SubSolarVector : TVector; {unit vectors in Selenographic coordinates, based on NumericInput boxes}
 //    CosTheta,                        {angle from projected center to sub-solar point}
     Solar_X_Projection : extended;   {projected x-coordinate of sub-solar point}
     XPrime_UnitVector, YPrime_UnitVector, ZPrime_UnitVector : TVector; {basis vectors for projected image
@@ -429,13 +430,14 @@ type
 
 // Set by clicking EstimateData button
     ImageDate, ImageTime : TDateTime;
-    ImageGeocentric : boolean;
-    ImageObsLon, ImageObsLat, ImageObsElev : extended;
+    ImageGeocentric : Boolean;
+    ImageObsLon, ImageObsLat, ImageObsElev : Extended;
 
 // Set by CalculateGeometry
-    ImageManual, ImageIncludesCastShadows : boolean;  // geometry was computed using manual settings
+    ImageManual, ImageIncludesCastShadows : Boolean;  // geometry was computed using manual settings
+    ImagePhotometricMode : String;
     ImageSubSolLon, ImageSubSolLat, ImageSubObsLon, ImageSubObsLat,
-    ImageCenterX, ImageCenterY, ImageZoom, ImageGamma : extended;
+    ImageCenterX, ImageCenterY, ImageZoom, ImageGamma : Extended;
 
 // Initially False, set to True if any file names have changed from their defaults.
     FileSettingsChanged : Boolean;
@@ -667,7 +669,7 @@ uses FileCtrl, H_Terminator_About_Unit, H_Terminator_Goto_Unit, H_Terminator_Set
 {$R *.dfm}
 
 const
-  ProgramVersion = '0.20.1';
+  ProgramVersion = '0.20.2';
 
 // note: the following constants specify (in degrees) that texture files span
 //   the full lunar globe.  They should not be changed.
@@ -1204,6 +1206,13 @@ begin {TLTVT_Form.CalculateGeometry}
 
   ImageIncludesCastShadows := DemIncludesCastShadows;
 
+  case DemPhotometricMode of
+    Lommel_Seeliger : ImagePhotometricMode := 'Lommel-Seeliger';
+    Lunar_Lambert : ImagePhotometricMode := 'Lunar-Lambert';
+    else
+      ImagePhotometricMode := 'Lambertian';
+    end;  
+
   Colong := 90 - SubSol_Lon_LabeledNumericEdit.NumericEdit.ExtendedValue;
   while Colong>360 do Colong := Colong - 360;
   while Colong<0   do Colong := Colong + 360;
@@ -1613,13 +1622,14 @@ end;  {TLTVT_Form.DrawTerminator}
 procedure TLTVT_Form.DrawTerminator;
 {this should be called only after a current CalculateGeometry}
 begin {TLTVT_Form.DrawTerminator}
-  if IncludeLibrationCircle then DrawCircle(0,0,90,LibrationCircleColor);
-
-  if IncludeTerminatorLines then
+  if ((IncludeTerminatorLines) and not(DrawingMode in [DEM_2D, DEM_3D])) or
+    (DrawTerminatorOnDem and (DrawingMode in [DEM_2D, DEM_3D])) then
     begin
       DrawCircle(RadToDeg(SubSolarPoint.Longitude),RadToDeg(SubSolarPoint.Latitude),RadToDeg(Pi/2-SunRad),clRed); // Evening terminator
       DrawCircle(RadToDeg(SubSolarPoint.Longitude),RadToDeg(SubSolarPoint.Latitude),RadToDeg(Pi/2+SunRad),clBlue); // Morning terminator
     end;
+
+  if IncludeLibrationCircle then DrawCircle(0,0,90,LibrationCircleColor);
 
   DrawGrid;
 
@@ -1769,6 +1779,11 @@ begin {TLTVT_Form.Overlay_ButtonClick}
 end;  {TLTVT_Form.Overlay_ButtonClick}
 
 procedure TLTVT_Form.DrawDEM_ButtonClick(Sender: TObject);
+// The Lunar-Lambert function is from McEwen: 1996LPI....27..841M
+  const  // polynomial in phase angle used to determine fractions of Lommel-Seeliger and Lambertian
+    A = -0.019;
+    B = 0.242E-3;
+    C = -1.46E-6;
 var
   i, j, RawTexture3XPixel, RawTexture3YPixel : integer;
   BackgroundPattern : TBitMap;
@@ -1781,7 +1796,8 @@ var
   XProj, YProj,
   MaxProjection, AngleStep, DotProd,
   MaxR, ProjectionSqrd,
-  Theta1, Theta2, RotationAngle, MaxRotationAngle : Extended;
+  Theta1, Theta2, RotationAngle, MaxRotationAngle,
+  PhaseAngleDeg, LunarLambert_L : Extended;
   PointCoords, TestCoords : TPolarCoordinates;
   Image3D, ShadowFound : Boolean;
 
@@ -1947,8 +1963,9 @@ function SurfaceFound : Boolean;
 
 procedure EvaluateBrigthness;
 // entered with PointCoords specifying lon, lat and radius of point to evaluate
+
   var
-    SinArg : Extended;
+    SinArg, PhotometricFunction, Denom : Extended;
   begin
    if not ComputeSurfaceNormal then
      BkgRow[i] := NoDataPixel
@@ -1956,7 +1973,25 @@ procedure EvaluateBrigthness;
      begin
 
        DotProd := DotProduct(SubSolarVector,SurfaceNormal);
-       if DotProd<=0 then
+       case DemPhotometricMode of
+         Lommel_Seeliger:
+           begin
+             Denom := DotProd + DotProduct(SubObsvrVector,SurfaceNormal);
+             if Denom=0 then Denom := 0.001; // substitute an arbitrary small number for a zero one
+             PhotometricFunction := DotProd/Denom;
+           end;
+         Lunar_Lambert:
+           begin
+             Denom := DotProd + DotProduct(SubObsvrVector,SurfaceNormal);
+             if Denom=0 then Denom := 0.001; // substitute an arbitrary small number for a zero one
+             PhotometricFunction := (LunarLambert_L*DotProd/Denom) + ((1 - LunarLambert_L)*DotProd);
+           end;
+         else // Lambertian
+           PhotometricFunction := DotProd;
+         end;
+       if PhotometricFunction>1 then PhotometricFunction := 1;
+
+       if PhotometricFunction<=0 then
          BkgRow[i] := BlackPixel
        else
          begin
@@ -1965,17 +2000,17 @@ procedure EvaluateBrigthness;
                LookUpPixelData(PointCoords.Longitude,PointCoords.Latitude,RawTexture3XPixel,RawTexture3YPixel,Texture3Pixel);
                with BkgRow[i] do
                  begin
-                   rgbtRed := Round(Texture3Pixel.rgbtRed*DotProd);
-                   rgbtGreen := Round(Texture3Pixel.rgbtGreen*DotProd);
-                   rgbtBlue := Round(Texture3Pixel.rgbtBlue*DotProd);
+                   rgbtRed := Round(Texture3Pixel.rgbtRed*PhotometricFunction);
+                   rgbtGreen := Round(Texture3Pixel.rgbtGreen*PhotometricFunction);
+                   rgbtBlue := Round(Texture3Pixel.rgbtBlue*PhotometricFunction);
                  end;
                GammaCorrectPixelValue(BkgRow[i],ImageGamma);
              end
            else
              begin
-               DotProd := Sqrt(DotProd);  // this is the default Gamma = 2 to correct linear intensities for display
-               if ImageGamma<>1 then DotProd := Power(DotProd,ImageGamma);
-               GunCount := Round(256*DotProd - 0.5);
+               PhotometricFunction := Sqrt(PhotometricFunction);  // this is the default Gamma = 2 to correct linear intensities for display
+               if ImageGamma<>1 then PhotometricFunction := Power(PhotometricFunction,ImageGamma);
+               GunCount := Round(256*PhotometricFunction - 0.5);
                if GunCount>255 then GunCount := 255;
 //                   if GunCount<0 then GunCount := 0;
                with BkgRow[i] do
@@ -2059,6 +2094,14 @@ begin  {TLTVT_Form.DrawDEM_ButtonClick}
       end;
 
   StartTime := Now;
+
+  DotProd := DotProduct(SubObsvrVector,SubSolarVector);
+  if DotProd>1 then DotProd := 1;
+  if DotProd<-1 then DotProd := -1;
+  PhaseAngleDeg := RadToDeg(ArcCos(DotProd));
+  LunarLambert_L := ((C*PhaseAngleDeg + B)*PhaseAngleDeg + A)*PhaseAngleDeg + 1;
+//  ShowMessage(Format('McEwen L = %0.3f',[LunarLambert_L]));
+  if LunarLambert_L<0 then LunarLambert_L := 0;  //McEwen polynomial probably not meant to apply beyond PhaseAngle ~90°?
 
   with DEM_data do
     begin
@@ -2170,7 +2213,7 @@ begin  {TLTVT_Form.DrawDEM_ButtonClick}
                if ConvertXYtoVector(XProj,YProj,MaxProjection,PointVector) then
                  begin
                    PointCoords := VectorToPolar(PointVector);
-                   EvaluateBrigthness
+                   EvaluateBrigthness;
                  end
                else
                  BkgRow[i] := SkyPixel;
@@ -2188,13 +2231,7 @@ begin  {TLTVT_Form.DrawDEM_ButtonClick}
 
   BackgroundPattern.Free;
 
-  if DrawTerminatorOnDEM then
-    DrawTerminator
-  else
-    begin
-      DrawGrid;
-      MarkCenter;
-    end;
+  DrawTerminator;
 
   Screen.Cursor := DefaultCursor;
   ProgressBar1.Hide;
@@ -4312,9 +4349,9 @@ begin
                 Font.Color := SavedImageLowerLabelsColor;
 
                 if ImageIncludesCastShadows then
-                  DEM_ShadowMode := 'with cast shadows'
+                  DEM_ShadowMode := ImagePhotometricMode+' with cast shadows'
                 else
-                  DEM_ShadowMode := 'without cast shadows';
+                  DEM_ShadowMode := ImagePhotometricMode+' without cast shadows';
 
                 if DemGridStepMultiplier<>1 then
                   DEM_ShadowMode := Format('%0.2f grid steps, ',[DemGridStepMultiplier]) + DEM_ShadowMode;
@@ -5064,6 +5101,11 @@ begin
   IniFile := TIniFile.Create(IniFileName);
   IniFile.WriteString('LTVT Defaults','DEM_File',BriefName(DEM_Filename));
   IniFile.WriteString('LTVT Defaults','DEM_includes_cast_shadows',BooleanToYesNo(DemIncludesCastShadows));
+  case DemPhotometricMode of
+    Lambertian : IniFile.WriteString('LTVT Defaults','DEM_Photometric_Mode','Lambertian');
+    Lommel_Seeliger : IniFile.WriteString('LTVT Defaults','DEM_Photometric_Mode','Lommel_Seeliger');
+    Lunar_Lambert : IniFile.WriteString('LTVT Defaults','DEM_Photometric_Mode','Lunar_Lambert');
+    end;
   IniFile.WriteString('LTVT Defaults','DEM_cast_shadow_color',Format('$%6.6x',[DemCastShadowColor]));
 //  IniFile.WriteString('LTVT Defaults','DEM_in_3D',BooleanToYesNo(DemIn3D));
   IniFile.WriteString('LTVT Defaults','DEM_multiplied_by_texture',BooleanToYesNo(MultiplyDemByTexture3));
@@ -5078,7 +5120,7 @@ end;
 procedure TLTVT_Form.RestoreDemOptions;
 var
   IniFile : TIniFile;
-  TempDEMName : String;
+  TempDEMName, PhotometricModeString : String;
 begin
   IniFile := TIniFile.Create(IniFileName);
 
@@ -5097,6 +5139,15 @@ begin
     DemCastShadowColor := clBlack;
   end;
 //  DemIn3D := YesNoToBoolean(IniFile.ReadString('LTVT Defaults','DEM_in_3D','no'));
+
+  PhotometricModeString := UpperCase(IniFile.ReadString('LTVT Defaults','DEM_Photometric_Mode','Lambertian'));
+  if PhotometricModeString=UpperCase('Lommel_Seeliger') then
+    DemPhotometricMode := Lommel_Seeliger
+  else if PhotometricModeString=UpperCase('Lunar_Lambert') then
+    DemPhotometricMode := Lunar_Lambert
+  else
+    DemPhotometricMode := Lambertian;
+
   MultiplyDemByTexture3 := YesNoToBoolean(IniFile.ReadString('LTVT Defaults','DEM_multiplied_by_texture','no'));
   DisplayDemComputationTimes := YesNoToBoolean(IniFile.ReadString('LTVT Defaults','Display_DEM_computation_times','no'));
   StayInDemModeOnRefresh := YesNoToBoolean(IniFile.ReadString('LTVT Defaults','Stay_in_DEM_mode_on_refresh','no'));
@@ -5115,6 +5166,14 @@ begin
       ComputeCastShadows_CheckBox.Checked := DemIncludesCastShadows;
       CastShadow_ColorBox.Selected := DemCastShadowColor;
 //      ThreeD_CheckBox.Checked := DemIn3D;
+
+      case DemPhotometricMode of
+        Lommel_Seeliger : LommelSeeliger_RadioButton.Checked := True;
+        Lunar_Lambert : LunarLambert_RadioButton.Checked := True;
+        else
+          Lambertian_RadioButton.Checked := True;
+        end;
+
       MultiplyByAlbedoCheckBox.Checked := MultiplyDemByTexture3;
       DisplayComputationTimes_CheckBox.Checked := DisplayDemComputationTimes;
       RecalculateDEMonRecenter_CheckBox.Checked := StayInDemModeOnRefresh;
@@ -5139,6 +5198,14 @@ begin
       DemIncludesCastShadows := ComputeCastShadows_CheckBox.Checked;
       DemCastShadowColor := CastShadow_ColorBox.Selected;
 //      DemIn3D := ThreeD_CheckBox.Checked;
+
+      if LommelSeeliger_RadioButton.Checked then
+        DemPhotometricMode := Lommel_Seeliger
+      else if LunarLambert_RadioButton.Checked then
+        DemPhotometricMode := Lunar_Lambert
+      else
+        DemPhotometricMode := Lambertian;
+
       MultiplyDemByTexture3 := MultiplyByAlbedoCheckBox.Checked;
       DisplayDemComputationTimes := DisplayComputationTimes_CheckBox.Checked;
       StayInDemModeOnRefresh := RecalculateDEMonRecenter_CheckBox.Checked;
