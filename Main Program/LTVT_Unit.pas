@@ -313,7 +313,7 @@ type
     SurfaceData : array of array of TSurfaceReadout;  // used for mouse readout when DrawingMode=DEM_3D
     SurfaceData_NoDataValue : Single;
 
-    EarthTextureFilename, DEM_Filename,
+    EarthTextureFilename, {DEM_Filename,}
     CraterFilename, JPL_Filename, JPL_FilePath, LoResFilename,
     HiResFilename, ClementineFilename, NormalPhotoSessionsFilename,
     CalibratedPhotosFilename, ObservatoryListFilename,
@@ -349,7 +349,6 @@ type
     MultipliedDemGammaBoost,
     MultipliedDemIntensitiesBoost : Extended;
     DisplayDemComputationTimes : Boolean;
-    ShowDemInfo : Boolean;
     StayInDemModeOnRefresh : Boolean;
     DrawTerminatorOnDem : Boolean;
     DemGridStepMultiplier : Extended;
@@ -599,6 +598,8 @@ type
 
     procedure RefreshGoToList;
 
+    function ChangeLTVT_TargetPlanet(const DesiredPlanet : Planet) : Boolean;
+
     procedure ClearImage;
     {clears Graph area and various labels}
 
@@ -709,7 +710,7 @@ uses FileCtrl, H_Terminator_About_Unit, H_Terminator_Goto_Unit, H_Terminator_Set
 {$R *.dfm}
 
 const
-  ProgramVersion = '0.21.1';
+  ProgramVersion = '0.21.2x';
 
 // note: the following constants specify (in degrees) that texture files span
 //   the full lunar globe.  They should not be changed.
@@ -2144,16 +2145,18 @@ begin  {TLTVT_Form.DrawDEM_ButtonClick}
         StatusLine_Label.Caption := 'Reading DEM';;
         Screen.Cursor := crHourGlass;
         Application.ProcessMessages;
-        if not SelectFile(DEM_Filename) then
+//        ShowMessage('Selecting '+Filename);
+        if not SelectFile(Filename) then
           begin
             StatusLine_Label.Caption := '';
+            Screen.Cursor := DefaultCursor;
             ThreeD_CheckBox.Show;
-            if (MessageDlg('LTVT was unable to open the Digital Elevation Model (DEM) file'+CR
+            if (MessageDlg('LTVT was unable to open the Digital Elevation Model (DEM) file:'+CR
+                +'"'+Filename+'"'+CR
                 +'   Do you want help with this topic?', mtWarning,[mbYes,mbNo],0)=mrYes) then
               begin
                 HtmlHelp(0,PChar(Application.HelpFile+'::/Help Topics/DemOptionsForm.htm'),HH_DISPLAY_TOPIC, 0);
               end;
-            Screen.Cursor := DefaultCursor;
             Exit;
           end;
         StatusLine_Label.Caption := '';
@@ -2174,7 +2177,7 @@ begin  {TLTVT_Form.DrawDEM_ButtonClick}
   with DEM_data do
     begin
       AngleStep := DemGridStepMultiplier*Abs(LatStepRad);
-      DemTextureFilename := InputFilename;
+      DemTextureFilename := Filename;
       MaxR := RefHeightKm + MaxHtDeviationKm;
     end;
 
@@ -2566,8 +2569,8 @@ begin {TLTVT_Form.DrawTexture_ButtonClick}
           FINALLY
             TempPicture.Free;
             StatusLine_Label.Caption := '';
-            ThreeD_CheckBox.Show;
             Application.ProcessMessages;
+            ThreeD_CheckBox.Show;
             Screen.Cursor := DefaultCursor;
           END;
         end;
@@ -3493,7 +3496,7 @@ begin
         ProgressBar1.Hide;
         DrawCircles_CheckBox.Show;
         MarkCenter_CheckBox.Show;
-        ThreeD_CheckBox.Show;
+//        ThreeD_CheckBox.Show;  // need to be careful to restore this in Image loading routine
         DrawingMap_Label.Caption := '';
         Application.ProcessMessages;
       end;
@@ -5362,7 +5365,7 @@ var
   IniFile : TIniFile;
 begin
   IniFile := TIniFile.Create(IniFileName);
-  IniFile.WriteString('LTVT Defaults','DEM_File',BriefName(DEM_Filename));
+  IniFile.WriteString('LTVT Defaults','DEM_File',BriefName(DEM_data.Filename));
   IniFile.WriteString('LTVT Defaults','DEM_includes_cast_shadows',BooleanToYesNo(DemIncludesCastShadows));
   case DemPhotometricMode of
     Lambertian : IniFile.WriteString('LTVT Defaults','DEM_Photometric_Mode','Lambertian');
@@ -5376,7 +5379,6 @@ begin
   IniFile.WriteFloat('LTVT Defaults','Multiplied_DEM_gamma_boost',MultipliedDemGammaBoost);
   IniFile.WriteFloat('LTVT Defaults','Multiplied_DEM_intensities_boost',MultipliedDemIntensitiesBoost);
   IniFile.WriteString('LTVT Defaults','Display_DEM_computation_times',BooleanToYesNo(DisplayDemComputationTimes));
-  IniFile.WriteString('LTVT Defaults','Show_DEM_info',BooleanToYesNo(ShowDEMinfo));
   IniFile.WriteString('LTVT Defaults','Stay_in_DEM_mode_on_refresh',BooleanToYesNo(StayInDemModeOnRefresh));
   IniFile.WriteString('LTVT Defaults','Draw_terminator_on_DEM',BooleanToYesNo(DrawTerminatorOnDem));
   IniFile.WriteFloat('LTVT Defaults','DEM_grid_step_multiplier',DemGridStepMultiplier);
@@ -5390,9 +5392,9 @@ var
 begin
   IniFile := TIniFile.Create(IniFileName);
 
-  TempDEMName := DEM_Filename;
-  DEM_Filename := FullFilename(IniFile.ReadString('LTVT Defaults','DEM_File','LALT_GGT_MAP.IMG'));
-  if TempDEMName<>DEM_Filename then with DEM_data do
+  TempDEMName := DEM_data.Filename;
+  DEM_data.Filename := FullFilename(IniFile.ReadString('LTVT Defaults','DEM_File','LALT_GGT_MAP.IMG'));
+  if TempDEMName<>DEM_data.Filename then with DEM_data do
     begin
       ClearStorage;
       FileOpen := False;
@@ -5423,7 +5425,6 @@ begin
   MultipliedDemGammaBoost := Abs(IniFile.ReadFloat('LTVT Defaults','Multiplied_DEM_gamma_boost',1));
   MultipliedDemIntensitiesBoost := Abs(IniFile.ReadFloat('LTVT Defaults','Multiplied_DEM_intensities_boost',1));
   DisplayDemComputationTimes := YesNoToBoolean(IniFile.ReadString('LTVT Defaults','Display_DEM_computation_times','no'));
-  ShowDemInfo := YesNoToBoolean(IniFile.ReadString('LTVT Defaults','Show_DEM_info','no'));
   StayInDemModeOnRefresh := YesNoToBoolean(IniFile.ReadString('LTVT Defaults','Stay_in_DEM_mode_on_refresh','no'));
   DrawTerminatorOnDem := YesNoToBoolean(IniFile.ReadString('LTVT Defaults','Draw_terminator_on_DEM','no'));
   DemGridStepMultiplier := IniFile.ReadFloat('LTVT Defaults','DEM_grid_step_multiplier',1);
@@ -5435,7 +5436,7 @@ procedure TLTVT_Form.WriteDemOptionsToForm;
 begin
   with DEM_Options_Form do
     begin
-      TempDEMFilename := DEM_Filename;
+      TempDEMFilename := DEM_data.Filename;
       ComputeCastShadows_CheckBox.Checked := DemIncludesCastShadows;
       CastShadow_ColorBox.Selected := DemCastShadowColor;
       LommelSeeligerNoDataColor_ColorBox.Selected := LommelSeeligerNoDataColor;
@@ -5452,7 +5453,6 @@ begin
       MultipliedDemGammaBoost_LabeledNumericEdit.NumericEdit.Text := Format('%0.2f',[MultipliedDemGammaBoost]);
       MultipliedDemIntensitiesBoost_LabeledNumericEdit.NumericEdit.Text := Format('%0.2f',[MultipliedDemIntensitiesBoost]);
       DisplayComputationTimes_CheckBox.Checked := DisplayDemComputationTimes;
-      ShowDemInfo_CheckBox.Checked := ShowDemInfo;
       RecalculateDEMonRecenter_CheckBox.Checked := StayInDemModeOnRefresh;
       DrawTerminatorOnDEM_CheckBox.Checked := DrawTerminatorOnDem;
       GridStepMultiplier_LabeledNumericEdit.NumericEdit.Text := Format('%0.2f',[DemGridStepMultiplier]);
@@ -5463,11 +5463,11 @@ procedure TLTVT_Form.ReadDemOptionsFromForm;
 begin
   with DEM_Options_Form do
     begin
-      if TempDEMFilename<>DEM_Filename then
+      if TempDEMFilename<>DEM_data.Filename then
         begin
           DEM_data.ClearStorage;
           DEM_data.FileOpen := False;
-          DEM_Filename := TempDEMFilename;
+          DEM_data.Filename := TempDEMFilename;
 //          FileSettingsChanged := True;  //  DEM file not saved/restored with others
         end;
 
@@ -5487,7 +5487,6 @@ begin
       MultipliedDemGammaBoost := Abs(MultipliedDemGammaBoost_LabeledNumericEdit.NumericEdit.ExtendedValue);
       MultipliedDemIntensitiesBoost := Abs(MultipliedDemIntensitiesBoost_LabeledNumericEdit.NumericEdit.ExtendedValue);
       DisplayDemComputationTimes := DisplayComputationTimes_CheckBox.Checked;
-      ShowDemInfo := ShowDemInfo_CheckBox.Checked;
       StayInDemModeOnRefresh := RecalculateDEMonRecenter_CheckBox.Checked;
       DrawTerminatorOnDem := DrawTerminatorOnDEM_CheckBox.Checked;
       DemGridStepMultiplier := GridStepMultiplier_LabeledNumericEdit.NumericEdit.ExtendedValue;
@@ -6436,12 +6435,10 @@ begin {TLTVT_Form.RefreshOptionsFromIniFile}
     PlanetFound := DesiredPlanetString=UpperCase(PlanetName[CandidatePlanet])
   until PlanetFound or (CandidatePlanet=High(Planet));
 
-  if PlanetFound then
-    ChangeTargetPlanet(CandidatePlanet)
-  else
+  if (not PlanetFound) or (PlanetFound and (not ChangeLTVT_TargetPlanet(CandidatePlanet))) then
     begin
       ShowMessage('Unable to set target planet to "'+DesiredPlanetString+'"; setting to "Moon"');
-      ChangeTargetPlanet(Moon);
+      ChangeLTVT_TargetPlanet(Moon);
     end;
 
 
@@ -7107,37 +7104,42 @@ begin {TLTVT_Form.EphemerisDataAvailable}
 
 end;   {TLTVT_Form.EphemerisDataAvailable}
 
-procedure TLTVT_Form.ChangeTargetPlanet_MainMenuItemClick(Sender: TObject);
+function TLTVT_Form.ChangeLTVT_TargetPlanet(const DesiredPlanet : Planet) : Boolean;
 var
   PossessiveS : String;
+begin
+  Result := ChangeTargetPlanet(DesiredPlanet);
+  if Result then
+    begin
+      MoonDiameter_Label.Hint :=
+        Format('Angular size of an idealized %0.1f km radius %s as seen from the observation site at the requested time ',[MoonRadius,CurrentPlanetName]);
+      MoonElev_Label.Hint := 'Altitude (above horizontal) and azimuth (CW from north) of '+CurrentPlanetName+' and Sun from observation site at requested time';
+      ShowEarth_MainMenuItem.Caption := 'Show &Earth viewed from '+CurrentPlanetName;
+      if CurrentPlanetName[Length(CurrentPlanetName)]='s' then
+        PossessiveS := ''
+      else
+        PossessiveS := 's';
+      DrawLinesToPoleAndSun_RightClickMenuItem.Caption := 'Draw lines towards sub-solar point  (red) and '+CurrentPlanetName+''''+PossessiveS+' north pole (blue)';
+      if CurrentTargetPlanet=Moon then
+        begin
+          Colongitude_Label.Hint := '90° - Selenographic longitude of Subsolar Point';
+          MousePosition_GroupBox.Hint := 'Information related to current mouse position; in top caption, "Map" is IAU format LTO zone number; "Rnn" is Rükl sheet number';
+        end
+      else
+        begin
+          Colongitude_Label.Hint := 'Longitude of Central Meridian';
+          MousePosition_GroupBox.Hint := 'Information related to current mouse position';
+        end;
+    end;
+end;
+
+procedure TLTVT_Form.ChangeTargetPlanet_MainMenuItemClick(Sender: TObject);
 begin
   with TargetSelection_Form do
     begin
       PlanetSelected := False;
       ShowModal;
-      if PlanetSelected then
-        begin
-          ChangeTargetPlanet(SelectedPlanet);
-          MoonDiameter_Label.Hint :=
-            Format('Angular size of an idealized %0.1f km radius %s as seen from the observation site at the requested time ',[MoonRadius,CurrentPlanetName]);
-          MoonElev_Label.Hint := 'Altitude (above horizontal) and azimuth (CW from north) of '+CurrentPlanetName+' and Sun from observation site at requested time';
-          ShowEarth_MainMenuItem.Caption := 'Show &Earth viewed from '+CurrentPlanetName;
-          if CurrentPlanetName[Length(CurrentPlanetName)]='s' then
-            PossessiveS := ''
-          else
-            PossessiveS := 's';
-          DrawLinesToPoleAndSun_RightClickMenuItem.Caption := 'Draw lines towards sub-solar point  (red) and '+CurrentPlanetName+''''+PossessiveS+' north pole (blue)';
-          if CurrentTargetPlanet=Moon then
-            begin
-              Colongitude_Label.Hint := '90° - Selenographic longitude of Subsolar Point';
-              MousePosition_GroupBox.Hint := 'Information related to current mouse position; in top caption, "Map" is IAU format LTO zone number; "Rnn" is Rükl sheet number';
-            end
-          else
-            begin
-              Colongitude_Label.Hint := 'Longitude of Central Meridian';
-              MousePosition_GroupBox.Hint := 'Information related to current mouse position';
-            end;
-        end;
+      if PlanetSelected then ChangeLTVT_TargetPlanet(SelectedPlanet);
     end;
 end;
 

@@ -1,8 +1,8 @@
 object LTVT_Form: TLTVT_Form
-  Left = -4
-  Top = -4
-  Width = 1032
-  Height = 748
+  Left = 11
+  Top = 0
+  Width = 994
+  Height = 744
   Caption = 'Lunar Terminator Visualization Tool'
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -27,8 +27,8 @@ object LTVT_Form: TLTVT_Form
     Caption = '------------------ Time of Observation -------------'
   end
   object Image1: TImage
-    Left = 12
-    Top = 52
+    Left = 0
+    Top = 50
     Width = 641
     Height = 641
     Align = alCustom

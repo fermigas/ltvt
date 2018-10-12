@@ -10,7 +10,6 @@ uses
   H_Terminator_SelectObserverLocation_Unit in 'H_Terminator_SelectObserverLocation_Unit.pas' {SetObserverLocation_Form},
   LibrationTabulator_Unit in 'LibrationTabulator_Unit.pas' {LibrationTabulator_Form},
   H_PhotosessionSearch_Unit in 'H_PhotosessionSearch_Unit.pas' {PhotosessionSearch_Form},
-  H_HTMLHelpViewer in 'H_HTMLHelpViewer.pas',
   H_Terminator_LabelFontSelector_Unit in 'H_Terminator_LabelFontSelector_Unit.pas' {LabelFontSelector_Form},
   H_ExternalFileSelection_Unit in 'H_ExternalFileSelection_Unit.pas' {ExternalFileSelection_Form},
   DEM_Options_Unit in 'DEM_Options_Unit.pas' {DEM_Options_Form},
@@ -21,12 +20,10 @@ uses
   CircleDrawing_Unit in 'CircleDrawing_Unit.pas' {CircleDrawing_Form},
   H_MoonEventPredictor_Unit in 'H_MoonEventPredictor_Unit.pas' {MoonEventPredictor_Form},
   H_CalibratedPhotoSelector_Unit in 'H_CalibratedPhotoSelector_Unit.pas' {CalibratedPhotoLoader_Form},
-  MapFns_Unit in 'MapFns_Unit.pas',
   ObserverLocationName_Unit in 'ObserverLocationName_Unit.pas' {ObserverLocationName_Form},
   H_CartographicOptions_Unit in 'H_CartographicOptions_Unit.pas' {CartographicOptions_Form},
   DEM_ContourDrawing_Unit in 'DEM_ContourDrawing_Unit.pas' {DEM_ContourDrawing_Form},
   TargetSelection_Unit in 'TargetSelection_Unit.pas' {TargetSelection_Form},
-  DEM_Data_Unit in 'DEM_Data_Unit.pas',
   ExportTexture_Unit in 'ExportTexture_Unit.pas' {ExportTexture_Form},
   CommentEntry_Unit in 'CommentEntry_Unit.pas' {CommentEntry_Form};
 

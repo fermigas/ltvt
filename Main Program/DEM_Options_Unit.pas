@@ -30,9 +30,9 @@ type
     PhotometricModel_GroupBox: TGroupBox;
     LommelSeeligerNoDataColor_ColorBox: TColorBox;
     Label1: TLabel;
-    ShowDemInfo_CheckBox: TCheckBox;
     MultipliedDemGammaBoost_LabeledNumericEdit: TLabeledNumericEdit;
     MultipliedDemIntensitiesBoost_LabeledNumericEdit: TLabeledNumericEdit;
+    DEM_Info_Button: TButton;
     procedure OK_ButtonClick(Sender: TObject);
     procedure Cancel_ButtonClick(Sender: TObject);
     procedure Save_ButtonClick(Sender: TObject);
@@ -42,6 +42,7 @@ type
     procedure FormKeyDown(Sender: TObject; var Key: Word;
       Shift: TShiftState);
     procedure MultiplyByAlbedoCheckBoxClick(Sender: TObject);
+    procedure DEM_Info_ButtonClick(Sender: TObject);
   private
     { Private declarations }
   public
@@ -60,7 +61,7 @@ implementation
 
 {$R *.dfm}
 
-uses LTVT_Unit;
+uses LTVT_Unit, DEM_Data_Unit, LTVT_PopupMemo;
 
 procedure TDEM_Options_Form.RefreshLabels;
 begin
@@ -90,6 +91,32 @@ begin
           DEMFilename_Label.Caption := MinimizeName(TempDEMFilename,DEMFilename_Label.Canvas,DEMFilename_Label.Width);
         end;
     end;
+end;
+
+procedure TDEM_Options_Form.DEM_Info_ButtonClick(Sender: TObject);
+begin
+  with LTVT_Form.DEM_data do
+    begin
+      if ((not FileOpen) and (mrYes=MessageDlg('No DEM file currently loaded; load specified DEM?',mtConfirmation,[mbYes, mbNo],0)))
+        or (FileOpen and (Filename<>TempDEMFilename) and
+          (mrYes=MessageDlg('Specified DEM file is not the current selection; load new DEM?',mtConfirmation,[mbYes, mbNo],0))) then
+            begin
+              DisplayTimings := DisplayComputationTimes_CheckBox.Checked;
+              LTVT_Form.ThreeD_CheckBox.Hide; // otherwise hides image loading messages printed behind
+              SelectFile(TempDEMFilename);
+              LTVT_Form.ThreeD_CheckBox.Show;
+            end;
+
+      if FileOpen then with LTVT_Form.PopupMemo do
+        begin
+          Caption := 'Information about current Digital Elevation Model';
+          WebLink_URL := '';
+          Memo.Clear;
+          Memo.Lines.AddStrings(DEM_info);
+          ShowModal;
+        end;
+    end;
+
 end;
 
 procedure TDEM_Options_Form.OK_ButtonClick(Sender: TObject);

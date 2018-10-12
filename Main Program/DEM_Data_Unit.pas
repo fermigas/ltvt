@@ -3,6 +3,8 @@ unit DEM_Data_Unit;
 
 interface
 
+uses Classes;
+
 type
   TDemData = class(TObject)
   private
@@ -12,7 +14,8 @@ type
     NumLons, NumLats : Integer;
   public
     FileOpen, DisplayTimings : Boolean;
-    InputFilename : String;
+    DEM_info : TStringList;
+    Filename : String;
     RefHeightKm,
     LonStepRad, LatStepRad,  {[rad]}
     FirstLonRad, FirstLatRad, // *center* of first sample in first line (upper left of image) in [rad]
@@ -31,20 +34,22 @@ type
 
 implementation
 
-uses MoonPosition {MoonRadius}, LTVT_Unit, Constnts, Math, Dialogs, Controls {mrOK}, SysUtils, Win_Ops,
-  PopupMemo;
+uses MoonPosition {MoonRadius}, LTVT_Unit, Constnts, Math, Dialogs, Controls {mrOK}, SysUtils, Win_Ops;
 
 constructor TDemData.Create;     { this goes after implementation }
 begin
   inherited;
 {start custom stuff}
   FileOpen := False;
-  InputFilename := '';
+  Filename := '';
   DisplayTimings := False;
+  ClearStorage;
+  DEM_info := TStringList.Create;
 end;
 
 destructor TDemData.Destroy;
 begin
+  DEM_info.Free;
   ClearStorage;
   inherited;
 end;
@@ -55,6 +60,10 @@ begin
 end;
 
 function TDemData.SelectFile(const DesiredFilename : String) : Boolean;
+type
+  TTwoByteArray = array[1..2] of Byte;
+  TFourByteArray = array[1..4] of Byte;
+  TEightByteArray = array[1..8] of Byte;
 const
   DummyDataValue = -999999;
 var
@@ -66,12 +75,12 @@ var
   ByteFile : file;  // untyped
   ByteRow : array of Byte; // unsigned 8-bit integers
   WordRow : array of Word; // unsigned 16-bit integers
-  ReversedSmallIntRow : array of array[1..2] of Byte;  // signed integers
-  ReversedLongIntRow : array of array[1..4] of Byte;   // signed integers
-  ReversedDoubleRow : array of array[1..8] of Byte;
-  TwoByteArray : array[1..2] of Byte;
-  FourByteArray : array[1..4] of Byte;
-  EightByteArray : array[1..8] of Byte;
+  ReversedSmallIntRow : array of TTwoByteArray;  // signed integers
+  ReversedLongIntRow : array of TFourByteArray;   // signed integers
+  ReversedDoubleRow : array of TEightByteArray;
+  TwoByteArray : TTwoByteArray;
+  FourByteArray : TFourByteArray;
+  EightByteArray : TEightByteArray;
   CharsRead, NumHeaderBytes, BytesPerDataItem, NumDataBytes, NumBytes,
   LatNum, LonNum, NumRead,
   MinHtLonNum, MinHtLatNum, MaxHtLonNum, MaxHtLatNum : Integer;
@@ -97,7 +106,7 @@ function ReadPDS_Header : Boolean;
       DataLine : String;
       EndFound : Boolean;
     begin {FindItem}
-//      ShowMessage('Looking for '+SearchString);
+//      ShowMessage('Looking for "'+SearchString+'" in "'+NameOfFileToRead+'"');
 
       Result := False;
       EndFound := False;
@@ -304,24 +313,28 @@ function ReadPDS_Header : Boolean;
         RefHeightKm := 1738;  // actually Wu 1984 datum which deviates around this mean?
         RawDataToKmMultiplier := 0.001;  // *.lab file says "1"
         NoRawDataValue := -32768;
+        DEM_info.Add(Format('Guessing reference ht = %0.3f km, scale factor = %0.3f and raw no data value = %0.3f',[RefHeightKm,RawDataToKmMultiplier,NoRawDataValue]));
       end
     else if ExtractFileName(DesiredFilename)='apo_near.img' then
       begin
         RefHeightKm := 1738;  // actually Wu 1984 datum which deviates around this mean?
         RawDataToKmMultiplier := 0.001;  // *.lab file says "1"
         NoRawDataValue := -32768;
+        DEM_info.Add(Format('Guessing reference ht = %0.3f km, scale factor = %0.3f and raw no data value = %0.3f',[RefHeightKm,RawDataToKmMultiplier,NoRawDataValue]));
       end
     else if ExtractFileName(DesiredFilename)='apo_lalt.img' then
       begin
         RefHeightKm := 1730;
         RawDataToKmMultiplier := 0.0627;
         NoRawDataValue := 0;
+        DEM_info.Add(Format('Guessing reference ht = %0.3f km, scale factor = %0.3f and raw no data value = %0.3f',[RefHeightKm,RawDataToKmMultiplier,NoRawDataValue]));
       end
     else if ExtractFileName(DesiredFilename)='comb_alt.img' then
       begin
         RefHeightKm := 1720;
         RawDataToKmMultiplier := 0.001;
         NoRawDataValue := -32768;
+        DEM_info.Add(Format('Guessing reference ht = %0.3f km, scale factor = %0.3f and raw no data value = %0.3f',[RefHeightKm,RawDataToKmMultiplier,NoRawDataValue]));
       end;
 
     Result := True;
@@ -615,9 +628,13 @@ function ReadBIL_Header : Boolean;
       begin
         RefHeightKm := 1738;  // actually Wu 1984 datum which deviates around this mean?
         NoRawDataValue := -32768;
+        DEM_info.Add(Format('Guessing reference ht = %0.3f km and raw no data value = %0.3f',[RefHeightKm,NoRawDataValue]));
       end
     else if (ExtractFileName(DesiredFilename)='hdrl_dem.bil') or (ExtractFileName(DesiredFilename)='litt_dem.bil') then
-      NoRawDataValue := 0;
+      begin
+        NoRawDataValue := 0;
+        DEM_info.Add(Format('Guessing raw no data value = %0.3f',[NoRawDataValue]));
+      end;
 
     Result := True;
   end;  {ReadBIL_Header}
@@ -625,8 +642,9 @@ function ReadBIL_Header : Boolean;
 begin {TDemData.SelectFile}
   Result := False;
   FileOpen := False;
-  InputFilename := '';
+//  Filename := '';  // DON'T DO THIS!
   ClearStorage;
+  DEM_info.Clear;
 
 // the following information if not supplied in the data file may or may not be correct
   Mission := Unknown;
@@ -642,6 +660,8 @@ begin {TDemData.SelectFile}
       ShowMessage('Unable to find '+DesiredFilename);
       Exit;
     end;
+
+  DEM_info.Add('File name: '+DesiredFilename);
 
   StartTime := Now;
 
@@ -660,14 +680,8 @@ begin {TDemData.SelectFile}
 
 //  ShowMessage('DEM Header decoded');
 
-  if LTVT_Form.ShowDemInfo then with LTVT_Form.PopupMemo do
-    begin
-      Caption := 'Details of DEM file';
-      ClearMemoArea;
-      Memo.Lines.Add('File name: '+DesiredFilename);
-      Memo.Lines.Add('');
-      if DisplayTimings then Memo.Lines.Add(Format('Time to read header : %0.3f sec',[(Now - StartTime)*OneDay]));
-    end;
+  DEM_info.Add('');
+  if DisplayTimings then DEM_info.Add(Format('Time to read header : %0.3f sec',[(Now - StartTime)*OneDay]));
 
   AssignFile(ByteFile,DesiredFilename);
   Reset(ByteFile,1);  // set record size to 1 byte
@@ -719,8 +733,11 @@ begin {TDemData.SelectFile}
       Exit;
     end;
 
-  if DisplayTimings and LTVT_Form.ShowDemInfo then
-    LTVT_Form.PopupMemo.Memo.Lines.Add(Format('Time to allocate %0.3f MB memory : %0.3f sec',[BytesNeeded/OneMB,(Now - StartTime)*OneDay]));
+  if DisplayTimings then
+    begin
+      DEM_info.Add(Format('Time to allocate %0.3f MB memory : %0.3f sec',[BytesNeeded/OneMB,(Now - StartTime)*OneDay]));
+      DEM_info.Add('');
+    end;
 
   StartTime := Now;
 
@@ -730,16 +747,20 @@ begin {TDemData.SelectFile}
   try
     case RawDataType of
       SingleData :
-        for LatNum := 1 to NumLats do
-          begin
-            Blockread(ByteFile,Stored_DEM_data[LatNum-1,0],NumLons*BytesPerDataItem,NumRead);
-            if RawDataToKmMultiplier<>1 then for LonNum := 1 to NumLons do
-              begin
-                Stored_DEM_data[LatNum-1,LonNum-1] := RawDataToKmMultiplier*Stored_DEM_data[LatNum-1,LonNum-1];  // convert to [km]
-              end;
-          end;
+        begin
+          DEM_info.Add('Data format: 32-bit reals (LSB first)');
+          for LatNum := 1 to NumLats do
+            begin
+              Blockread(ByteFile,Stored_DEM_data[LatNum-1,0],NumLons*BytesPerDataItem,NumRead);
+              if RawDataToKmMultiplier<>1 then for LonNum := 1 to NumLons do
+                begin
+                  Stored_DEM_data[LatNum-1,LonNum-1] := RawDataToKmMultiplier*Stored_DEM_data[LatNum-1,LonNum-1];  // convert to [km]
+                end;
+            end;
+        end;
       WordData :
         begin
+          DEM_info.Add('Data format: 16-bit unsigned integers (LSB first)');
           SetLength(WordRow,NumLons);
           for LatNum := 1 to NumLats do
             begin
@@ -753,6 +774,7 @@ begin {TDemData.SelectFile}
         end;
       ReversedSmallIntData :
         begin
+          DEM_info.Add('Data format: 16-bit signed integers (MSB first)');
           SetLength(ReversedSmallIntRow,NumLons);
           for LatNum := 1 to NumLats do
             begin
@@ -768,6 +790,7 @@ begin {TDemData.SelectFile}
         end;
       ReversedLongIntData :
         begin
+          DEM_info.Add('Data format: 32-bit signed integers (MSB first)');
           SetLength(ReversedLongIntRow,NumLons);
           for LatNum := 1 to NumLats do
             begin
@@ -785,6 +808,7 @@ begin {TDemData.SelectFile}
         end;
       ReversedDoubleData :
         begin
+          DEM_info.Add('Data format: 64-bit reals (MSB first)');
           SetLength(ReversedDoubleRow,NumLons);
           for LatNum := 1 to NumLats do
             begin
@@ -806,6 +830,7 @@ begin {TDemData.SelectFile}
         end;
       ByteData :
         begin
+          DEM_info.Add('Data format: 8-bit unsigned integers');
           SetLength(ByteRow,NumLons);
           for LatNum := 1 to NumLats do
             begin
@@ -828,11 +853,14 @@ begin {TDemData.SelectFile}
 
   CloseFile(ByteFile);
 
-  if DisplayTimings and LTVT_Form.ShowDemInfo then
-    LTVT_Form.PopupMemo.Memo.Lines.Add(Format('Time to read DEM : %0.3f sec',[(Now - StartTime)*OneDay]));
+  DEM_info.Add('Number of header bytes: '+IntToStr(NumHeaderBytes));
+  DEM_info.Add('');
+
+  if DisplayTimings then
+    DEM_info.Add(Format('Time to read DEM : %0.3f sec',[(Now - StartTime)*OneDay]));
 
   FileOpen := True;
-  InputFilename := DesiredFilename;
+  Filename := DesiredFilename;
   Result := True;
 
   ValidNoDataValue := NoRawDataValue<>DummyDataValue;
@@ -848,7 +876,7 @@ begin {TDemData.SelectFile}
     begin
       StartTime := Now;
 
-      LTVT_Form.StatusLine_Label.Caption := 'Searching for maximum elevation...';;
+      LTVT_Form.StatusLine_Label.Caption := 'Searching for maximum elevation...';
       LTVT_Form.StatusLine_Label.Repaint;
 
       MinHtDeviationKm := 999999;
@@ -886,8 +914,8 @@ begin {TDemData.SelectFile}
 
     // after this clean-up there are no missing data
 
-      if DisplayTimings and LTVT_Form.ShowDemInfo then
-        LTVT_Form.PopupMemo.Memo.Lines.Add(Format('Time to find maximum height deviation : %0.3f sec',[(Now - StartTime)*OneDay]));
+      if DisplayTimings then
+        DEM_info.Add(Format('Time to find maximum height deviation : %0.3f sec',[(Now - StartTime)*OneDay]));
 
     end
   else
@@ -896,35 +924,35 @@ begin {TDemData.SelectFile}
       MaxHtDeviationKm := RawDataToKmMultiplier*MaxRawDataValue;
     end;
 
-  if LTVT_Form.ShowDemInfo then with LTVT_Form.PopupMemo do
+  with DEM_info do
     begin
-      with Memo.Lines do
-        begin
-          if DisplayTimings then Add('');
-          Add(Format('Number of lines (latitudes) : %d in steps of %0.6f°',[NumLats,LatStepRad/OneDegree]));
-          Add(Format('Number of samples per line (longitudes) : %d in steps of %0.6f°',[NumLons,LonStepRad/OneDegree]));
-          Add('');
-          LeftLonDeg := LTVT_Form.PosNegDegrees((FirstLonRad-0.5*LonStepRad)/OneDegree,LTVT_Form.PlanetaryLongitudeConvention);
-          RightLonDeg := LeftLonDeg + (NumLons*LonStepRad)/OneDegree; // insures RightLonDeg numerically larger than LeftLonDeg
-          Add(Format('Longitude range (edge to edge) : %0.6f° left to %0.6f° right',[LeftLonDeg,RightLonDeg]));
-          Add(Format('Latitude range (edge to edge) : %0.6f° top to %0.6f° bottom',
-            [(FirstLatRad-0.5*LatStepRad)/OneDegree,(FirstLatRad+(NumLats - 0.5)*LatStepRad)/OneDegree]));
-          Add('');
-          Add(Format('Base height : %0.3f km',[RefHeightKm]));
-          Add(Format('Scale factor (raw height deviation data to kilometers) : %0.3f',[RawDataToKmMultiplier]));
-          Add(Format('Scaled no data value : %0.3f',[NoDataValue]));
-          Add('');
-          if MinHtLonNum>=0 then
-            Add(Format('Minimum height deviation: %0.3f km; found at Line %d, Sample %d',[MinHtDeviationKm,MinHtLatNum+1,MinHtLonNum+1]))
-          else
-            Add(Format('Minimum height deviation: %0.3f km (as listed in file header)',[MinHtDeviationKm]));
-          if MaxHtLonNum>=0 then
-            Add(Format('Maximum height deviation: %0.3f km; found at Line %d, Sample %d',[MaxHtDeviationKm,MaxHtLatNum+1,MaxHtLonNum+1]))
-          else
-            Add(Format('Maximum height deviation: %0.3f km (as listed in file header)',[MaxHtDeviationKm]));
-        end;
-      Show;
+      if DisplayTimings then Add('');
+      Add(Format('Number of lines (latitudes) : %d in steps of %0.6f°',[NumLats,LatStepRad/OneDegree]));
+      Add(Format('Number of samples per line (longitudes) : %d in steps of %0.6f°',[NumLons,LonStepRad/OneDegree]));
+      Add('');
+      LeftLonDeg := LTVT_Form.PosNegDegrees((FirstLonRad-0.5*LonStepRad)/OneDegree,LTVT_Form.PlanetaryLongitudeConvention);
+      RightLonDeg := LeftLonDeg + (NumLons*LonStepRad)/OneDegree; // insures RightLonDeg numerically larger than LeftLonDeg
+      Add(Format('Longitude range (edge to edge) : %0.6f° left to %0.6f° right',[LeftLonDeg,RightLonDeg]));
+      Add(Format('Latitude range (edge to edge) : %0.6f° top to %0.6f° bottom',
+        [(FirstLatRad-0.5*LatStepRad)/OneDegree,(FirstLatRad+(NumLats - 0.5)*LatStepRad)/OneDegree]));
+      Add('');
+      Add(Format('Base height : %0.3f km',[RefHeightKm]));
+      Add(Format('Scale factor (raw height deviation data to kilometers) : %0.3f',[RawDataToKmMultiplier]));
+      Add(Format('Scaled no data value : %0.3f',[NoDataValue]));
+      Add('');
+      if MinHtLonNum>=0 then
+        Add(Format('Minimum height deviation: %0.3f km; found at Line %d, Sample %d',[MinHtDeviationKm,MinHtLatNum+1,MinHtLonNum+1]))
+      else
+        Add(Format('Minimum height deviation: %0.3f km (as listed in file header)',[MinHtDeviationKm]));
+      if MaxHtLonNum>=0 then
+        Add(Format('Maximum height deviation: %0.3f km; found at Line %d, Sample %d',[MaxHtDeviationKm,MaxHtLatNum+1,MaxHtLonNum+1]))
+      else
+        Add(Format('Maximum height deviation: %0.3f km (as listed in file header)',[MaxHtDeviationKm]));
     end;
+
+  LTVT_Form.StatusLine_Label.Caption := '';
+  LTVT_Form.StatusLine_Label.Repaint;
+
 end;  {TDemData.SelectFile}
 
 function TDemData.ReadHeight(const LonRad, LatRad : Extended; var Height : Extended) : Boolean;

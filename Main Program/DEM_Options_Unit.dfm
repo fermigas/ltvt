@@ -1,8 +1,8 @@
 object DEM_Options_Form: TDEM_Options_Form
-  Left = 187
-  Top = 115
-  Width = 724
-  Height = 370
+  Left = 5
+  Top = 117
+  Width = 684
+  Height = 369
   ActiveControl = Cancel_Button
   Caption = 'DEM Options'
   Color = clBtnFace
@@ -27,14 +27,14 @@ object DEM_Options_Form: TDEM_Options_Form
   object Label4: TLabel
     Left = 176
     Top = 64
-    Width = 92
+    Width = 192
     Height = 13
-    Caption = 'for slope evaluation'
+    Caption = 'for slope and terrain blockage evaluation'
   end
   object DEMFilename_Label: TLabel
     Left = 100
     Top = 20
-    Width = 589
+    Width = 557
     Height = 13
     Hint = 'Choose a new file by clicking button at left'
     AutoSize = False
@@ -73,34 +73,34 @@ object DEM_Options_Form: TDEM_Options_Form
     end
   end
   object DisplayComputationTimes_CheckBox: TCheckBox
-    Left = 320
-    Top = 192
+    Left = 304
+    Top = 224
     Width = 153
     Height = 17
     Hint = 'Show how long it takes to load DEM and compute simulations'
     Caption = 'Display computation times'
-    TabOrder = 9
+    TabOrder = 11
     OnKeyDown = FormKeyDown
   end
   object OK_Button: TButton
-    Left = 304
+    Left = 520
     Top = 280
     Width = 49
     Height = 25
     Hint = 'Close form and make changes'
     Caption = 'OK'
-    TabOrder = 15
+    TabOrder = 14
     OnClick = OK_ButtonClick
     OnKeyDown = FormKeyDown
   end
   object Cancel_Button: TButton
-    Left = 368
+    Left = 584
     Top = 280
     Width = 65
     Height = 25
     Hint = 'Close form without making any changes'
     Caption = 'Cancel'
-    TabOrder = 16
+    TabOrder = 15
     OnClick = Cancel_ButtonClick
     OnKeyDown = FormKeyDown
   end
@@ -137,7 +137,7 @@ object DEM_Options_Form: TDEM_Options_Form
     Height = 25
     Hint = 'Save these settings as the new defaults'
     Caption = 'Save as Default'
-    TabOrder = 13
+    TabOrder = 12
     OnClick = Save_ButtonClick
     OnKeyDown = FormKeyDown
   end
@@ -148,7 +148,7 @@ object DEM_Options_Form: TDEM_Options_Form
     Height = 25
     Hint = 'Restore the last saved settings'
     Caption = 'Restore Defaults'
-    TabOrder = 14
+    TabOrder = 13
     OnClick = Restore_ButtonClick
     OnKeyDown = FormKeyDown
   end
@@ -200,7 +200,7 @@ object DEM_Options_Form: TDEM_Options_Form
       'If not rechecked, reverts to Texture mode when one clicks on the' +
       ' image to recenter it'
     Caption = 'Stay in DEM mode when image refreshed'
-    TabOrder = 11
+    TabOrder = 10
     OnKeyDown = FormKeyDown
   end
   object DrawTerminatorOnDEM_CheckBox: TCheckBox
@@ -212,7 +212,7 @@ object DEM_Options_Form: TDEM_Options_Form
       'Check to include lines on DEM rendering; otherwise they are not ' +
       'drawn'
     Caption = 'Draw red-blue terminator lines'
-    TabOrder = 8
+    TabOrder = 9
     OnKeyDown = FormKeyDown
   end
   object ChangeDEM_Button: TButton
@@ -284,19 +284,7 @@ object DEM_Options_Form: TDEM_Options_Form
     Selected = clWhite
     Style = [cbStandardColors, cbExtendedColors, cbCustomColor, cbPrettyNames]
     ItemHeight = 16
-    TabOrder = 10
-    OnKeyDown = FormKeyDown
-  end
-  object ShowDemInfo_CheckBox: TCheckBox
-    Left = 320
-    Top = 224
-    Width = 169
-    Height = 17
-    Hint = 
-      'On first loading, display pop-up box with detailed information a' +
-      'bout DEM'
-    Caption = 'Show DEM file info on opening'
-    TabOrder = 12
+    TabOrder = 8
     OnKeyDown = FormKeyDown
   end
   inline MultipliedDemIntensitiesBoost_LabeledNumericEdit: TLabeledNumericEdit
@@ -326,8 +314,18 @@ object DEM_Options_Form: TDEM_Options_Form
       OnKeyDown = FormKeyDown
     end
   end
+  object DEM_Info_Button: TButton
+    Left = 296
+    Top = 280
+    Width = 75
+    Height = 25
+    Hint = 'Display information about the currently loaded DEM'
+    Caption = 'DEM Info'
+    TabOrder = 16
+    OnClick = DEM_Info_ButtonClick
+    OnKeyDown = FormKeyDown
+  end
   object OpenDialog1: TOpenDialog
-    Left = 632
-    Top = 8
+    Left = 560
   end
 end

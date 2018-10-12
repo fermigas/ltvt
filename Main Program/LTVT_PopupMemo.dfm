@@ -2,7 +2,7 @@ object LTVT_PopupMemo_Form: TLTVT_PopupMemo_Form
   Left = 90
   Top = 104
   Width = 695
-  Height = 424
+  Height = 445
   Caption = 'LTVT_PopupMemo_Form'
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -19,7 +19,7 @@ object LTVT_PopupMemo_Form: TLTVT_PopupMemo_Form
   TextHeight = 13
   object Clear_Button: TButton
     Left = 488
-    Top = 344
+    Top = 368
     Width = 49
     Height = 25
     Hint = 'Clear memo area'
@@ -30,7 +30,7 @@ object LTVT_PopupMemo_Form: TLTVT_PopupMemo_Form
   end
   object Close_Button: TButton
     Left = 600
-    Top = 344
+    Top = 368
     Width = 51
     Height = 25
     Hint = 'Close this window'
@@ -44,7 +44,7 @@ object LTVT_PopupMemo_Form: TLTVT_PopupMemo_Form
     Left = 16
     Top = 16
     Width = 633
-    Height = 313
+    Height = 337
     Lines.Strings = (
       'Memo')
     ScrollBars = ssBoth
@@ -53,7 +53,7 @@ object LTVT_PopupMemo_Form: TLTVT_PopupMemo_Form
   end
   object WebLink_BitBtn: TBitBtn
     Left = 72
-    Top = 344
+    Top = 368
     Width = 75
     Height = 25
     Hint = 
@@ -66,7 +66,7 @@ object LTVT_PopupMemo_Form: TLTVT_PopupMemo_Form
   end
   object Copy_Button: TButton
     Left = 392
-    Top = 344
+    Top = 368
     Width = 57
     Height = 25
     Hint = 'Copy contents of memo area to clipboard'
