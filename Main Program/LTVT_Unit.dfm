@@ -880,6 +880,10 @@ object Terminator_Form: TTerminator_Form
       Caption = 'Identify nearest named feature'
       OnClick = IdentifyNearestFeature_RightClickMenuItemClick
     end
+    object LabelFeatureAndSatellites_RightClickMenuItem: TMenuItem
+      Caption = 'Label nearest feature and all features with same parent'
+      OnClick = LabelFeatureAndSatellites_RightClickMenuItemClick
+    end
     object LabelNearestDot_RightClickMenuItem: TMenuItem
       Caption = 'Label nearest dot'
       OnClick = LabelNearestDot_RightClickMenuItemClick

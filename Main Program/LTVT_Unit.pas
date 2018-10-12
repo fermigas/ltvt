@@ -825,13 +825,31 @@ v0.19
     9. In the About form, add link to LTVT Wiki web address and automatically
        update the copyright end date to the current year.
 
-                                                                        11/6/08 }
+  v0.19.4
+    1. Change Location Selector box to Auto-Dropdown mode to give it same look
+       and feel as the Feature Name Selector box in the GoTo menu.
+    2. Add warning box if one attempts to superimpose Rukl grid with Sub-Observer
+       point set to anything other than (0,0).
+    3. Internally change vector format in all units from MVectors to MPVectors.
+    4. In PhotoSelector, add button to copy image info to clipboard for purpose
+       of building image credits for map pages on the-Moon Wiki (this control is
+       not normally visible at run time).  Also correct coding so that geometry
+       readout on main form is not set to "Manual" if the "overwrite none" option
+       is selected for loading a photo.
+    5. Add a function to extract a feature's parent name based on USGS feature
+       type code, and to Right-Click menu add an option to identify and label
+       nearest feature plus all features sharing same parent.
+    6. To Cartographic Options form, add options to display Moon simulations in
+       equatorial and alt-az orientations. A warning is issued if the information
+       needed to do this does not seem to be current.
+
+                                                                        11/15/08 }
 
 interface
 
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  Dialogs, LabeledNumericEdit, ExtCtrls, StdCtrls, Math, MVectors, Win_Ops,
+  Dialogs, LabeledNumericEdit, ExtCtrls, StdCtrls, Math, MPVectors, Win_Ops,
   ComCtrls, DateUtils, JPEG, H_JPL_Ephemeris, MoonPosition, H_ClockError,
   MP_Defs, Constnts, ExtDlgs, JimsGraph, RGB_Library, IniFiles, Menus,
   H_HTMLHelpViewer, Buttons, PopupMemo;
@@ -950,6 +968,7 @@ type
     OpenAnLTOchart1: TMenuItem;
     DrawRuklGrid1: TMenuItem;
     Recordshadowmeasurement_RightClickMenuItem: TMenuItem;
+    LabelFeatureAndSatellites_RightClickMenuItem: TMenuItem;
     procedure DrawDots_ButtonClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure DrawTexture_ButtonClick(Sender: TObject);
@@ -1077,6 +1096,8 @@ type
     procedure Recordshadowmeasurement_RightClickMenuItemClick(
       Sender: TObject);
     procedure Image_PopupMenuPopup(Sender: TObject);
+    procedure LabelFeatureAndSatellites_RightClickMenuItemClick(
+      Sender: TObject);
   private
     { Private declarations }
   public
@@ -1104,7 +1125,8 @@ type
     LinuxCompatibilityMode : Boolean;
 
     StartWithCurrentUT : Boolean;
-    CartographicOrientation : boolean;
+    OrientationMode : (LineOfCusps, Cartographic, Equatorial, AltAz);
+//    CartographicOrientation : boolean;
     IncludeLibrationCircle : boolean;
     IncludeTerminatorLines : boolean;
     LibrationCircleColor : TColor;
@@ -1118,11 +1140,11 @@ type
 
 // set during MouseMove -- used to Record Shadow Measuremt
     CurrentMouseX, CurrentMouseY, CurrentElevationDifference_m : Extended;
-    ShadowTipVector : Vector;
+    ShadowTipVector : TVector;
 // set in FormCreate
     ShadowProfileFilename : String;
 // set on file initiation with Circle Drawing Tool
-    ShadowProfileCenterVector : Vector; // center of crater being profiled, normalized to unit length
+    ShadowProfileCenterVector : TVector; // center of crater being profiled, normalized to unit length
     SnapShadowPointsToPlanView : Boolean; // set from dot/label preferences form
 
     RefX, RefY, RefPtLon, RefPtLat, RefPtSunAngle, RefPtSunBearing : extended;
@@ -1166,10 +1188,10 @@ type
     ShadowLineLength_pixels : Integer;
 
   {the following are set by CalculateGeometry}
-    SubObsvrVector, SubSolarVector : Vector; {in Selenographic coordinates, based on NumericInput boxes}
+    SubObsvrVector, SubSolarVector : TVector; {in Selenographic coordinates, based on NumericInput boxes}
     CosTheta,                        {angle from projected center to sub-solar point}
     Solar_X_Projection : extended;   {projected x-coordinate of sub-solar point}
-    XPrime_UnitVector, YPrime_UnitVector, ZPrime_UnitVector : Vector; {basis vectors for projected image
+    XPrime_UnitVector, YPrime_UnitVector, ZPrime_UnitVector : TVector; {basis vectors for projected image
       where z' = towards observer;  y' = towards north terminator cusp;  x' = y' Cross z' = to right ("East")}
   {CalculateGeometry also sets range of JimsGraph1 per data specified in orthographic Center X, Center Y
     and Zoom numeric edits}
@@ -1180,12 +1202,15 @@ type
     SubSolarPoint : TPolarCoordinates; {set by CalculateGeometry}
     SinSSLat, CosSSLat : extended;
 
-    CraterInfo : array of TCraterInfo; {list of craters represented by dots in current overlay}
     PrimaryCraterList : array of TCrater; {list of primary craters in list used for current overlay}
+    CraterList,  {current feature list}
+    CraterInfo : array of TCraterInfo; {list of craters represented by dots in current overlay}
+
+    IdentifySatellites : Boolean;
 
  // following set when red line is drawn in shadow measuring mode on user photo
     RefPtVector,   // full vector at MoonRadius in Selenographic system
-    ShadowDirectionVector : Vector;  // unit (1 km) vector parallel or anti-parallel to solar rays, depending on mode
+    ShadowDirectionVector : TVector;  // unit (1 km) vector parallel or anti-parallel to solar rays, depending on mode
     RefPtUserX, RefPtUserY,   // position of start of red line in X-Y system of original photo
     ShadowDirectionUserDistance : Extended; // amount of travel in photo X-Y system for 1 unit of ShadowDirectionVector
 
@@ -1247,7 +1272,7 @@ type
     function LatitudeString(const LatitudeDegrees : extended; const DecimalPoints : integer): string;
     {returns value in range 90.nnn S to 90.nnn N}
 
-    function VectorToPolar(const InputVector : Vector): TPolarCoordinates;
+    function VectorToPolar(const InputVector : TVector): TPolarCoordinates;
    {InputVector is in selenographic system with y = north pole}
 
     function PositionInCraterInfo(const ScreenX, ScreenY : integer) : boolean;
@@ -1305,11 +1330,12 @@ type
     procedure ClearImage;
     {clears Graph area and various labels}
 
-    procedure PolarToVector(const Lat_radians, Lon_radians, Radius : extended;  var VectorResult : Vector);
+    procedure PolarToVector(const Lat_radians, Lon_radians, Radius : extended;  var VectorResult : TVector);
     {returns vector in selenographic system with y-axis = north, z-axis = origin of latitude and longitude}
 
-    procedure CalculateGeometry;
-    {uses Sub-observer and Sub-solar point input boxes to determine parameters cited above; also sets range of plot}
+    function CalculateGeometry : Boolean;
+    {uses Sub-observer and Sub-solar point input boxes to determine parameters cited above; also sets range of plot,
+     returns True iff successfully completed}
 
     procedure DrawCircle(const CenterLonDeg, CenterLatDeg, RadiusDeg : Extended; CircleColor : TColor);
     {draws a pixel-wide circle in the requested color and of the requested radius about the center point}
@@ -1321,7 +1347,7 @@ type
     procedure DrawTerminator;
     {draws segment of ellipse in current Pen color over current JimsGraph1}
 
-    function ConvertXYtoVector(const XProj, YProj : extended;  Var PointVector : Vector) : Boolean;
+    function ConvertXYtoVector(const XProj, YProj : extended;  Var PointVector : TVector) : Boolean;
     {converts from orthographic +/-1.0 system to (X,Y,Z) in selenographic system with radius = 1}
 
     function ConvertXYtoLonLat(const XProj, YProj : extended;  Var Point_Lon, Point_Lat : extended) : Boolean;
@@ -1373,6 +1399,9 @@ type
     function BriefName(const FullName : string) : string;
     {strip off path if it is the same as LTVT.exe}
 
+    function UpperCaseParentName(const FeatureName, FT_Code : String) : String;
+    {attempts to extract parent part of FeatureName based on USGS Feature Type code; returns FeatureName if unsuccessful}
+
     function LabelString(const FeatureToLabel : TCraterInfo;
       const IncludeName, IncludeParent, IncludeSize, IncludeUnits, ShowMore : Boolean) : String;
     {returns string used for adding labels to map}
@@ -1404,7 +1433,7 @@ uses FileCtrl, H_Terminator_About_Unit, H_Terminator_Goto_Unit, H_Terminator_Set
 {$R *.dfm}
 
 const
-  ProgramVersion = '0.19.3';
+  ProgramVersion = '0.19.4';
 
 // note: the following constants specify (in degrees) that texture files span
 //   the full lunar globe.  They should not be changed.
@@ -1424,23 +1453,23 @@ var
   SatelliteVector, // for satellite photos this is the position of the camera relative to the Moon's center in selenodetic system
 // for EarthBased photos, the following is a system pointing from the Sub-observer point to the Moon's center
 // for Satellite photos the Z-axis points from the camera position (SatelliteVector) to the principal ground point
-  UserPhoto_XPrime_Unit_Vector, UserPhoto_YPrime_Unit_Vector, UserPhoto_ZPrime_Unit_Vector : Vector;
+  UserPhoto_XPrime_Unit_Vector, UserPhoto_YPrime_Unit_Vector, UserPhoto_ZPrime_Unit_Vector : TVector;
   UserPhoto_StartXPix, UserPhoto_StartYPix, UserPhoto_InversionCode : Integer;
   UserPhoto_StartX, UserPhoto_StartY, UserPhoto_PixelsPerXYUnit,
   UserPhotoSinTheta, UserPhotoCosTheta : Extended;
 
-function TTerminator_Form.VectorToPolar(const InputVector : Vector): TPolarCoordinates;
+function TTerminator_Form.VectorToPolar(const InputVector : TVector): TPolarCoordinates;
 {InputVector is in selenographic system with y = north pole}
 begin
-  Result.Radius := Magnitude(InputVector);
-  Result.Latitude := ArcSin(InputVector.y/Result.Radius);
-  Result.Longitude := ArcTan2(InputVector.x,InputVector.z);
+  Result.Radius := VectorMagnitude(InputVector);
+  Result.Latitude := ArcSin(InputVector[y]/Result.Radius);
+  Result.Longitude := ArcTan2(InputVector[x],InputVector[z]);
 end;
 
 function TTerminator_Form.ConvertLonLatToUserPhotoXY(const Lon_radians, Lat_radians, Radius_km : extended; var UserX, UserY : extended) : Boolean;
 var
   CosTheta : Extended;
-  FeatureVector, LineOfSight : Vector;
+  FeatureVector, LineOfSight : TVector;
 begin {TTerminator_Form.ConvertLonLatToUserPhotoXY}
   if UserPhotoType=Satellite then
     begin
@@ -1448,15 +1477,15 @@ begin {TTerminator_Form.ConvertLonLatToUserPhotoXY}
 
       PolarToVector(Lat_radians, Lon_radians, Radius_km, FeatureVector);
 
-      Difference(FeatureVector,SatelliteVector,LineOfSight);
+      VectorDifference(FeatureVector,SatelliteVector,LineOfSight);
 
-      if Magnitude(LineOfSight)=0 then
+      if VectorMagnitude(LineOfSight)=0 then
         begin
 //          ShowMessage('Feature of interest is in film plane!');
           Exit
         end;
 
-      Normalize(LineOfSight);
+      NormalizeVector(LineOfSight);
 
       CosTheta := DotProduct(LineOfSight,UserPhoto_ZPrime_Unit_Vector);
       if CosTheta<=0 then
@@ -1496,7 +1525,7 @@ function TTerminator_Form.ConvertUserPhotoXYtoLonLat(const UserX, UserY, Radius_
 {inverse of preceding operation, determines longitude and latitude of point that would appear at specified
  position in image X-Y system if it originated on a sphere of radius MoonRadius}
 var
-  FeatureDirection, ScratchVector : Vector;
+  FeatureDirection, ScratchVector : TVector;
   MinusDotProd, Discrim, Distance : Extended;
   XYSqrd, RadiusFactorSqrd, XProj, YProj, ZProj, XX, YY, ZZ : Extended;
 
@@ -1508,21 +1537,21 @@ begin {TTerminator_Form.ConvertUserPhotoXYtoLonLat}
       FeatureDirection := UserPhoto_ZPrime_Unit_Vector;
 
       ScratchVector := UserPhoto_XPrime_Unit_Vector;
-      Multiply(UserX,ScratchVector);
-      MVectors.Sum(FeatureDirection, ScratchVector, FeatureDirection);
+      MultiplyVector(UserX,ScratchVector);
+      VectorSum(FeatureDirection, ScratchVector, FeatureDirection);
 
       ScratchVector := UserPhoto_YPrime_Unit_Vector;
-      Multiply(UserY,ScratchVector);
-      Multiply(-1,ScratchVector);  // reverse direction to match screen system
-      MVectors.Sum(FeatureDirection, ScratchVector, FeatureDirection);
+      MultiplyVector(UserY,ScratchVector);
+      MultiplyVector(-1,ScratchVector);  // reverse direction to match screen system
+      VectorSum(FeatureDirection, ScratchVector, FeatureDirection);
 
-      Normalize(FeatureDirection);  // unit vector from satellite in direction of object imaged
+      NormalizeVector(FeatureDirection);  // unit vector from satellite in direction of object imaged
 
     // determine intercept (if any) of Feature Direction with lunar sphere of radius MoonRadius
 
       MinusDotProd := -DotProduct(SatelliteVector,FeatureDirection);  // this should be positive if camera is pointed towards Moon
 
-      Discrim := Sqr(MinusDotProd) - (ModSqr(SatelliteVector) - Sqr(Radius_km));
+      Discrim := Sqr(MinusDotProd) - (VectorModSqr(SatelliteVector) - Sqr(Radius_km));
 
       if Discrim<0 then Exit;   // error condition: no intercept of line and sphere
 
@@ -1534,16 +1563,13 @@ begin {TTerminator_Form.ConvertUserPhotoXYtoLonLat}
 
       if Distance<0 then Exit;  // error condition: no way to get to lunar surface in camera direction.
 
-      Multiply(Distance,FeatureDirection);
-      MVectors.Sum(SatelliteVector,FeatureDirection,FeatureDirection);  // full vector from Moon's center to intercept point in selenographic system
+      MultiplyVector(Distance,FeatureDirection);
+      VectorSum(SatelliteVector,FeatureDirection,FeatureDirection);  // full vector from Moon's center to intercept point in selenographic system
 
-      Normalize(FeatureDirection);
+      NormalizeVector(FeatureDirection);
 
-      with FeatureDirection do
-        begin
-          Lat_radians := ArcSin(Y);
-          Lon_radians := ArcTan2(X,Z);
-        end;
+      Lat_radians := ArcSin(FeatureDirection[Y]);
+      Lon_radians := ArcTan2(FeatureDirection[X],FeatureDirection[Z]);
 
       Result := True;
     end
@@ -1558,9 +1584,9 @@ begin {TTerminator_Form.ConvertUserPhotoXYtoLonLat}
         begin
           ZProj := Sqrt(RadiusFactorSqrd - XYSqrd);  // this sets length to Radius_km/MoonRadius
 
-          XX := XProj*UserPhoto_XPrime_Unit_Vector.x + YProj*UserPhoto_YPrime_Unit_Vector.x + ZProj*UserPhoto_ZPrime_Unit_Vector.x;
-          YY := XProj*UserPhoto_XPrime_Unit_Vector.y + YProj*UserPhoto_YPrime_Unit_Vector.y + ZProj*UserPhoto_ZPrime_Unit_Vector.y;
-          ZZ := XProj*UserPhoto_XPrime_Unit_Vector.z + YProj*UserPhoto_YPrime_Unit_Vector.z + ZProj*UserPhoto_ZPrime_Unit_Vector.z;
+          XX := XProj*UserPhoto_XPrime_Unit_Vector[x] + YProj*UserPhoto_YPrime_Unit_Vector[x] + ZProj*UserPhoto_ZPrime_Unit_Vector[x];
+          YY := XProj*UserPhoto_XPrime_Unit_Vector[y] + YProj*UserPhoto_YPrime_Unit_Vector[y] + ZProj*UserPhoto_ZPrime_Unit_Vector[y];
+          ZZ := XProj*UserPhoto_XPrime_Unit_Vector[z] + YProj*UserPhoto_YPrime_Unit_Vector[z] + ZProj*UserPhoto_ZPrime_Unit_Vector[z];
 
           Lat_radians := ArcSin(YY);
           Lon_radians := ArcTan2(XX,ZZ);
@@ -1620,6 +1646,8 @@ var
   IniFile : TIniFile;
 
 begin {TTerminator_Form.FormCreate}
+  IdentifySatellites := False;
+
   DefaultCursor := Screen.Cursor;
 
   Application.HelpFile := ExtractFilePath(Application.ExeName) + 'LTVT_USERGUIDE.chm';
@@ -1772,25 +1800,31 @@ begin
   Result := Format(FormatString+' %0s',[Abs(DisplayLatitude),LatitudeTag]);
 end;
 
-procedure TTerminator_Form.PolarToVector(const Lat_radians, Lon_radians, Radius : extended;  var VectorResult : Vector);
+procedure TTerminator_Form.PolarToVector(const Lat_radians, Lon_radians, Radius : extended;  var VectorResult : TVector);
 {determines vector components of a point in polar form taking
   y-axis = polar direction
   z-axis = origin of Longitude (which is measured CCW about y-axis)
   x-axis = y cross z
  Lat, Lon are in radians }
   begin
-    VectorResult.x := Radius*Sin(Lon_radians)*Cos(Lat_radians);
-    VectorResult.y := Radius*Sin(Lat_radians);
-    VectorResult.z := Radius*Cos(Lon_radians)*Cos(Lat_radians);
+    VectorResult[x] := Radius*Sin(Lon_radians)*Cos(Lat_radians);
+    VectorResult[y] := Radius*Sin(Lat_radians);
+    VectorResult[z] := Radius*Cos(Lon_radians)*Cos(Lat_radians);
   end;
 
-procedure TTerminator_Form.CalculateGeometry;
+function TTerminator_Form.CalculateGeometry : Boolean;
 var
-  LeftRight_Factor, UpDown_Factor : integer;
+  LeftRight_Factor, UpDown_Factor : Integer;
   Lat1, Lon1, Lat2, Lon2, Colong, RotationAngle,
-  CenterX, CenterY, ZoomFactor : extended;
+  CenterX, CenterY, ZoomFactor : Extended;
+
+//  PolarAngle : Extended;
+
+  ZenithVector, CelestialPoleVector : TVector;
 
 begin {TTerminator_Form.CalculateGeometry}
+  Result := False;
+
   ImageManual := ManualMode;  // current geometry was computed using manual settings
 
   Colong := 90 - SubSol_Lon_LabeledNumericEdit.NumericEdit.ExtendedValue;
@@ -1825,41 +1859,106 @@ begin {TTerminator_Form.CalculateGeometry}
   PolarToVector(Lat2, Lon2, 1, SubSolarVector); {sub-solar point}
 
   ZPrime_UnitVector := SubObsvrVector;
-  Normalize(ZPrime_UnitVector);
+  NormalizeVector(ZPrime_UnitVector);
 
-  if CartographicOrientation then
-    begin
-      CrossProduct(Uy,ZPrime_UnitVector,XPrime_UnitVector);
-      if Magnitude(XPrime_UnitVector)=0 then XPrime_UnitVector := Ux;  //ZPrime_UnitVector parallel to Uy (looking from over north or south pole)
-      Normalize(XPrime_UnitVector);
-      CrossProduct(ZPrime_UnitVector,XPrime_UnitVector,YPrime_UnitVector);
-    end
-  else
-    begin
-      CrossProduct(ZPrime_UnitVector,SubSolarVector,YPrime_UnitVector);
+  case OrientationMode of
+    LineOfCusps :
+      begin
+        CrossProduct(ZPrime_UnitVector,SubSolarVector,YPrime_UnitVector);
 
-      {check if SubObsvrVector and SubSolarVector are parallel; if so, terminator is at limb so rotations relative
-        to it are undefined;  arbitrarily use old x-axis to define new y'-axis}
-      if Magnitude(YPrime_UnitVector)=0 then
-        begin
-          CrossProduct(ZPrime_UnitVector,Ux,YPrime_UnitVector);
-          if Magnitude(YPrime_UnitVector)=0 then YPrime_UnitVector := Uy; //ZPrime_UnitVector parallel to Ux (looking from east or west)
-        end;
+        {check if SubObsvrVector and SubSolarVector are parallel; if so, terminator is at limb so rotations relative
+          to it are undefined;  arbitrarily use old x-axis to define new y'-axis}
+        if VectorMagnitude(YPrime_UnitVector)=0 then
+          begin
+            CrossProduct(ZPrime_UnitVector,Ux,YPrime_UnitVector);
+            if VectorMagnitude(YPrime_UnitVector)=0 then YPrime_UnitVector := Uy; //ZPrime_UnitVector parallel to Ux (looking from east or west)
+          end;
 
-      Normalize(YPrime_UnitVector);
+        NormalizeVector(YPrime_UnitVector);
 
-      if YPrime_UnitVector.y<0 then Multiply(-1,YPrime_UnitVector);
+        if YPrime_UnitVector[y]<0 then MultiplyVector(-1,YPrime_UnitVector);
 
-      CrossProduct(YPrime_UnitVector,ZPrime_UnitVector,XPrime_UnitVector);
-      Normalize(XPrime_UnitVector);
-    end;
+        CrossProduct(YPrime_UnitVector,ZPrime_UnitVector,XPrime_UnitVector);
+        NormalizeVector(XPrime_UnitVector);
+      end;
 
-  ManualRotationDegrees := RotationAngle_LabeledNumericEdit.NumericEdit.ExtendedValue;  
+    Equatorial :
+      begin
+        if ManualMode then
+          begin
+            if MessageDlg('A map in Equatorial Orientation has been requested --'+CR+
+              'the Earth north polar direction on which it is based may not be current',mtWarning,mbOKCancel,0)=mrCancel then
+              Exit
+            else
+              begin
+                with SelenographicCoordinateSystem do if VectorModSqr(UnitZ)=0 then
+                  begin
+                    UnitX := Ux;
+                    UnitY := Uy;
+                    UnitZ := Uz;
+                  end;
+                if VectorModSqr(EarthAxisVector)=0 then EarthAxisVector := Uz;
+              end;
+          end;
+        with SelenographicCoordinates(EarthAxisVector) do PolarToVector(Latitude,Longitude,1,CelestialPoleVector);
+//        ShowMessage('Moon pole at : '+VectorString(SelenographicCoordinateSystem.UnitZ,3)+'  Earth pole in seleno system : '+VectorString(CelestialPoleVector,3)+'  ZPrime : '+VectorString(ZPrime_UnitVector,3));
+        CrossProduct(CelestialPoleVector,ZPrime_UnitVector,XPrime_UnitVector);
+        if VectorMagnitude(XPrime_UnitVector)=0 then XPrime_UnitVector := Ux;  //ZPrime_UnitVector parallel to zenith vector
+        NormalizeVector(XPrime_UnitVector);
+        CrossProduct(ZPrime_UnitVector,XPrime_UnitVector,YPrime_UnitVector);
+      end;
+
+    AltAz :
+      begin
+        if ManualMode then
+          begin
+            if MessageDlg('A map in Alt-Az Orientation has been requested --'+CR+
+              'the observer zenith direction on which it is based may not be current',mtWarning,mbOKCancel,0)=mrCancel then
+              Exit
+            else
+              begin
+                with SelenographicCoordinateSystem do if VectorModSqr(UnitZ)=0 then
+                  begin
+                    UnitX := Ux;
+                    UnitY := Uy;
+                    UnitZ := Uz;
+                  end;
+                if VectorModSqr(ObserverZenithVector)=0 then ObserverZenithVector := Uz;
+              end;
+          end;
+        with SelenographicCoordinates(ObserverZenithVector) do PolarToVector(Latitude,Longitude,1,ZenithVector);
+//        ShowMessage('Moon pole at : '+VectorString(SelenographicCoordinateSystem.UnitZ,3)+'  Zenith direction in seleno system : '+VectorString(ObserverVertical,3)+'  ZPrime : '+VectorString(ZPrime_UnitVector,3));
+        CrossProduct(ZenithVector,ZPrime_UnitVector,XPrime_UnitVector);
+        if VectorMagnitude(XPrime_UnitVector)=0 then XPrime_UnitVector := Ux;  //ZPrime_UnitVector parallel to zenith vector
+        NormalizeVector(XPrime_UnitVector);
+        CrossProduct(ZPrime_UnitVector,XPrime_UnitVector,YPrime_UnitVector);
+      end;
+
+    else {Cartographic}
+      begin
+        CrossProduct(Uy,ZPrime_UnitVector,XPrime_UnitVector);
+        if VectorMagnitude(XPrime_UnitVector)=0 then XPrime_UnitVector := Ux;  //ZPrime_UnitVector parallel to Uy (looking from over north or south pole)
+        NormalizeVector(XPrime_UnitVector);
+        CrossProduct(ZPrime_UnitVector,XPrime_UnitVector,YPrime_UnitVector);
+      end;
+
+    end; {case}
+
+  ManualRotationDegrees := RotationAngle_LabeledNumericEdit.NumericEdit.ExtendedValue;
 
   RotationAngle := DegToRad(ManualRotationDegrees);
 
-  Rotate(XPrime_UnitVector,RotationAngle,ZPrime_UnitVector);
-  Rotate(YPrime_UnitVector,RotationAngle,ZPrime_UnitVector);
+  RotateVector(XPrime_UnitVector,RotationAngle,ZPrime_UnitVector);
+  RotateVector(YPrime_UnitVector,RotationAngle,ZPrime_UnitVector);
+
+{
+if PolarAngle_CheckBox.Checked then
+  begin
+    PolarAngle := DotProduct(Uy,XPrime_UnitVector);
+    if PolarAngle<>0 then PolarAngle := PiByTwo - ArcTan2(DotProduct(Uy,YPrime_UnitVector), PolarAngle);
+    ShowMessage(Format('Polar angle = %0.3f',[RadToDeg(PolarAngle)]));
+  end;
+}
 
   Solar_X_Projection := DotProduct(SubSolarVector,XPrime_UnitVector);
 
@@ -1896,6 +1995,7 @@ begin {TTerminator_Form.CalculateGeometry}
   ComputeDistanceAndBearing(RefPtLon,RefPtLat,SubSolarPoint.Longitude,SubSolarPoint.Latitude,RefPtSunAngle,RefPtSunBearing);
   RefPtSunAngle := Pi/2 - RefPtSunAngle;
 
+  Result := True;
 end;  {TTerminator_Form.CalculateGeometry}
 
 procedure TTerminator_Form.ClearImage;
@@ -1912,15 +2012,15 @@ end;
 
 procedure TTerminator_Form.DrawCircle(const CenterLonDeg, CenterLatDeg, RadiusDeg : Extended; CircleColor : TColor);
 var
-  RotationAxis, PerpDirection, CirclePoint : Vector;
+  RotationAxis, PerpDirection, CirclePoint : TVector;
   OldMode : TPenMode;
   AngleStep, TotalAngle, TwoPi, X, Y, Z : extended;
 begin {TTerminator_Form.DrawCircle}
   PolarToVector(DegToRad(CenterLatDeg),DegToRad(CenterLonDeg),1,RotationAxis);
   CrossProduct(Ux,RotationAxis,PerpDirection);
-  if Magnitude(PerpDirection)=0 then CrossProduct(Uy,RotationAxis,PerpDirection);
+  if VectorMagnitude(PerpDirection)=0 then CrossProduct(Uy,RotationAxis,PerpDirection);
   CirclePoint := RotationAxis;
-  Rotate(CirclePoint,DegToRad(RadiusDeg),PerpDirection); // moves CirclePoint from RotationAxis (center) to point on cone of circle
+  RotateVector(CirclePoint,DegToRad(RadiusDeg),PerpDirection); // moves CirclePoint from RotationAxis (center) to point on cone of circle
   with JimsGraph1 do
     begin
       OldMode := Canvas.Pen.Mode;
@@ -1933,7 +2033,7 @@ begin {TTerminator_Form.DrawCircle}
       MoveToDataPoint(X,Y);
       while TotalAngle<TwoPi do
         begin
-          Rotate(CirclePoint,AngleStep,RotationAxis);
+          RotateVector(CirclePoint,AngleStep,RotationAxis);
           X := DotProduct(CirclePoint,XPrime_UnitVector);
           Y := DotProduct(CirclePoint,YPrime_UnitVector);
           Z := DotProduct(CirclePoint,ZPrime_UnitVector);
@@ -2077,7 +2177,7 @@ procedure TTerminator_Form.OverlayDots_ButtonClick(Sender: TObject);
 
     procedure PlotCrater;
       var
-        CraterVector : vector;
+        CraterVector : TVector;
         CraterColor : TColor;
         CraterCenterX, CraterCenterY, XOffset, YOffset, CraterIndex : Integer;
 
@@ -2283,15 +2383,15 @@ var
   BackgroundPattern : TBitMap;
   BkgRow  :  pRGBArray;
   SkyPixel, SunlightPixel, ShadowPixel : TRGBTriple;
-  PointVector : Vector;
+  PointVector : TVector;
 begin
+  if not CalculateGeometry then Exit;
+
   TextureFilename := 'none (Dots Mode)';
 
   Screen.Cursor := crHourGlass;
   DrawingMode := DotMode;
   ClearImage;
-
-  CalculateGeometry;
 
 //--- draw background pattern of light and shadow ---
 
@@ -2338,21 +2438,21 @@ begin
   Screen.Cursor := DefaultCursor;
 end;
 
-function TTerminator_Form.ConvertXYtoVector(const XProj, YProj : extended;  Var PointVector : Vector) : Boolean;
+function TTerminator_Form.ConvertXYtoVector(const XProj, YProj : extended;  Var PointVector : TVector) : Boolean;
 {converts from orthographic +/-1.0 system to (X,Y,Z) in selenographic system with radius = 1}
 var
-  XYSqrd, ZProj, X, Y, Z : extended;
+  XYSqrd, ZProj, XX, YY, ZZ : extended;
 begin
   XYSqrd := Sqr(XProj) + Sqr(YProj);
   if XYSqrd<1 then {point is inside circle, want to draw}
     begin
       ZProj := Sqrt(1 - XYSqrd);  // this sets length to 1
 
-      X := XProj*XPrime_UnitVector.x + YProj*YPrime_UnitVector.x + ZProj*ZPrime_UnitVector.x;
-      Y := XProj*XPrime_UnitVector.y + YProj*YPrime_UnitVector.y + ZProj*ZPrime_UnitVector.y;
-      Z := XProj*XPrime_UnitVector.z + YProj*YPrime_UnitVector.z + ZProj*ZPrime_UnitVector.z;
+      XX := XProj*XPrime_UnitVector[x] + YProj*YPrime_UnitVector[x] + ZProj*ZPrime_UnitVector[x];
+      YY := XProj*XPrime_UnitVector[y] + YProj*YPrime_UnitVector[y] + ZProj*ZPrime_UnitVector[y];
+      ZZ := XProj*XPrime_UnitVector[z] + YProj*YPrime_UnitVector[z] + ZProj*ZPrime_UnitVector[z];
 
-      AssignToVector(PointVector,X,Y,Z);
+      AssignToVector(PointVector,XX,YY,ZZ);
 
       Result := True;
     end
@@ -2365,12 +2465,12 @@ end;
 
 function TTerminator_Form.ConvertXYtoLonLat(const XProj, YProj : extended;  Var Point_Lon, Point_Lat : extended) : Boolean;
 var
-  Point_Vector : Vector;
+  Point_Vector : TVector;
 begin
-  if ConvertXYtoVector(XProj, YProj, Point_Vector) then with Point_Vector do
+  if ConvertXYtoVector(XProj, YProj, Point_Vector) then
     begin
-      Point_Lat := ArcSin(Y);
-      Point_Lon := ArcTan2(X,Z);
+      Point_Lat := ArcSin(Point_Vector[Y]);
+      Point_Lon := ArcTan2(Point_Vector[X],Point_Vector[Z]);
       Result := True;
     end
   else
@@ -2401,6 +2501,8 @@ var
   SkyPixel, NoDataPixel : TRGBTriple;
 
 begin {TTerminator_Form.DrawTexture_ButtonClick}
+  if not CalculateGeometry then Exit;
+
   DrawingMode := TextureMode;
 
   Gamma := Gamma_LabeledNumericEdit.NumericEdit.ExtendedValue;
@@ -2413,8 +2515,6 @@ begin {TTerminator_Form.DrawTexture_ButtonClick}
 
   SkyPixel := ColorToRGBTriple(SkyColor);
   NoDataPixel := ColorToRGBTriple(NoDataColor);
-
-  CalculateGeometry;
 
   if LoResUSGS_RadioButton.Checked and not LoRes_Texture_Loaded then
     begin
@@ -3013,7 +3113,7 @@ var
   MagV2, ACosArg : extended;
   i, MinI, RSqrd, MinRsqrd : integer;
   FeatureDescription : string;
-  V1, V2, S : Vector;
+  V1, V2, S : TVector;
 
   function RayHeight(const A, B :extended) : extended;
   {A = sun angle [rad] at source of light;  B = distance [rad] for source pt to target pt;
@@ -3036,7 +3136,7 @@ var
    This routine assumes the following global variables were set when the red shadow line was drawn:
 
     RefPtVector,   // full vector at MoonRadius in Selenographic
-    ShadowDirectionVector : Vector;  // unit (1 km) vector parallel or anti-parallel to solar rays, depending on mode
+    ShadowDirectionVector : TVector;  // unit (1 km) vector parallel or anti-parallel to solar rays, depending on mode
     RefPtUserX, RefPtUserY,   // position of start of red line in X-Y system of original photo
     ShadowDirectionUserDistance : Extended; // amount of travel in photo X-Y system for 1 unit of ShadowDirectionVector
 
@@ -3054,12 +3154,12 @@ var
 
       if ShadowDirectionUserDistance<>0 then
         begin
-          Multiply(MouseDistance/ShadowDirectionUserDistance,S);
-          Sum(V1,S,V2);  // move along Sun vector in three dimensions to point seen in projection at mouse point
-          MagV2 := Magnitude(V2);
+          MultiplyVector(MouseDistance/ShadowDirectionUserDistance,S);
+          VectorSum(V1,S,V2);  // move along Sun vector in three dimensions to point seen in projection at mouse point
+          MagV2 := VectorMagnitude(V2);
           ShadowTipVector := V2;  // this is the opposite end from the Ref Pt -- it may be the shadow tip or the shadow-casting point
 
-          ACosArg := DotProduct(V1,V2)/(Magnitude(V1)*MagV2);
+          ACosArg := DotProduct(V1,V2)/(VectorMagnitude(V1)*MagV2);
           if Abs(ACosArg)>1 then ACosArg := 1;  // avoid possible round off error
 
           CurrentElevationDifference_m := 1000*(MagV2 - MoonRadius);
@@ -3548,11 +3648,10 @@ begin
           end
         else
           begin
-            ;
             SubObs_Lon_LabeledNumericEdit.NumericEdit.Text := Format('%0.3f',[PosNegDegrees(RadToDeg(DesiredLon))]);
             SubObs_Lat_LabeledNumericEdit.NumericEdit.Text := Format('%0.3f',[RadToDeg(DesiredLat)]);
             SetManualGeometryLabels;
-            CalculateGeometry;
+            if not CalculateGeometry then Exit;
             ImageCenterX := 0;
             ImageCenterY := 0;
             RefreshImage;
@@ -3565,8 +3664,8 @@ end;
 procedure TTerminator_Form.GoToLonLat(const Long_Deg, Lat_Deg : extended);
  {attempts to set X-Y center to requested point, draw new texture map, and label point in aqua}
 var
-  CraterVector : vector;
-  X, Y : extended;
+  CraterVector : TVector;
+  X, Y : Extended;
   FarsideFeature : Boolean;
 begin
   with H_Terminator_Goto_Form do if GoToState=AerialView then
@@ -3577,7 +3676,7 @@ begin
 //      SubObs_Lat_LabeledNumericEdit.NumericEdit.Text := SetToLat_LabeledNumericEdit.NumericEdit.Text;
       SetManualGeometryLabels;
     end;
-  CalculateGeometry;
+  if not CalculateGeometry then Exit;
   PolarToVector(DegToRad(Lat_Deg),DegToRad(Long_Deg),1,CraterVector);
   FarsideFeature := DotProduct(CraterVector,SubObsvrVector)<0;
   X := DotProduct(CraterVector,XPrime_UnitVector);
@@ -3615,7 +3714,7 @@ procedure TTerminator_Form.DrawLinesToPoleAndSun_RightClickMenuItemClick(Sender:
 var
   MouseOrthoX, MouseOrthoY, MouseLat, MouseLon, PointLat, PointLon,
   PointX, PointY, PointZ, AngleStep, LineLengthSqrd : extended;
-  PointVector, RotationAxis : vector;
+  PointVector, RotationAxis : TVector;
 begin {TTerminator_Form.DrawlinestonorthandtowardsSun1Click}
   with JimsGraph1 do
     begin
@@ -3655,7 +3754,7 @@ begin {TTerminator_Form.DrawlinestonorthandtowardsSun1Click}
 
           while (LineLengthSqrd<4000) and (PointZ>=0) do
             begin
-              Rotate(PointVector,AngleStep,RotationAxis);
+              RotateVector(PointVector,AngleStep,RotationAxis);
               PointX := DotProduct(PointVector,XPrime_UnitVector);
               PointY := DotProduct(PointVector,YPrime_UnitVector);
               PointZ := DotProduct(PointVector,ZPrime_UnitVector); // >=0 iff point is on visible hemisphere
@@ -3672,13 +3771,15 @@ end;  {TTerminator_Form.DrawlinestonorthandtowardsSun1Click}
 procedure TTerminator_Form.IdentifyNearestFeature_RightClickMenuItemClick(Sender: TObject);
 var
   CraterFile : TextFile;
+  ParentName,
   DataLine, UserFlag, LatStr, LonStr : string;
   CraterX, CraterY, LastMouseX, LastMouseY, RSqrd, MinRsqrd, ClosestCraterX, ClosestCraterY,
   Diam : extended;
   CurrentCrater, ClosestCrater : TCrater;
-  CraterVector : Vector;
+  CraterVector : TVector;
   LineNum, CraterIndex, DiamErrorCode : integer;
   DotRadius, DotRadiusSqrd, XOffset, YOffset  : integer;
+  CraterColor : TColor;
 
   function DecimalValue(StringToConvert: string): extended;
     var
@@ -3695,7 +3796,7 @@ var
         end;
     end;
 
-begin {TTerminator_Form.Identifynearestcrater1Click}
+begin {TTerminator_Form.IdentifyNearestFeature_RightClickMenuItemClick}
   ClosestCraterX := 0;  // compiler is complaining these may not be initialized
   ClosestCraterY := 0;
 
@@ -3789,8 +3890,6 @@ begin {TTerminator_Form.Identifynearestcrater1Click}
         end;
     end;
 
-  CloseFile(CraterFile);
-
   with JimsGraph1 do
     begin
       if DotSize>=0 then
@@ -3811,7 +3910,13 @@ begin {TTerminator_Form.Identifynearestcrater1Click}
           RadToDeg(Diam/MoonRadius/2),CraterCircleColor);
     end;
 
-  ShowMessage(ClosestCrater.Name+' has been plotted');
+  if IdentifySatellites then
+    begin
+      ParentName := UpperCaseParentName(ClosestCrater.Name,ClosestCrater.USGS_Code);
+//      ShowMessage('Seeking satellites of '+ParentName);
+    end
+  else
+    ShowMessage(ClosestCrater.Name+' has been plotted');
 
   if not PositionInCraterInfo(JimsGraph1.XPix(ClosestCraterX), JimsGraph1.YPix(ClosestCraterY)) then
     begin
@@ -3828,9 +3933,121 @@ begin {TTerminator_Form.Identifynearestcrater1Click}
       CraterInfo[CraterIndex].Dot_Y := JimsGraph1.YPix(ClosestCraterY);
     end;
 
+  if IdentifySatellites then
+    begin
+      Reset(CraterFile);
+
+      LineNum := 1;
+
+      while not EOF(CraterFile) do with CurrentCrater do
+        begin
+          Readln(CraterFile,DataLine);
+          Inc(LineNum);
+          DataLine := Trim(DataLine);
+          if (DataLine<>'') and (Substring(DataLine,1,1)<>'*') then
+            begin
+              UserFlag := LeadingElement(DataLine,',');
+    //              ShowMessage('User flag = "'+UserFlag+'"');
+              Name := LeadingElement(DataLine,',');
+              if IncludeDiscontinuedNames or (Substring(Name,1,1)<>'[') then
+              begin
+                LatStr := LeadingElement(DataLine,',');
+                LonStr := LeadingElement(DataLine,',');
+                NumericData  := LeadingElement(DataLine,',');
+    //            USGS_Code := Substring(DataLine,1,2);  // read first two characters of remainder -- ignore possible comments at end of line
+                USGS_Code := LeadingElement(DataLine,',');
+//                ShowMessage('Evaluating: '+Name+'  Parent: '+UpperCaseParentName(Name,USGS_Code));
+                if UpperCaseParentName(Name,USGS_Code)=ParentName then
+                  begin
+                    if (USGS_Code='CN') or (USGS_Code='CN5')then
+                      begin
+                        AdditionalInfo1 := LeadingElement(DataLine,',');
+                        AdditionalInfo2 := LeadingElement(DataLine,',');
+                      end
+                    else
+                      begin
+                        AdditionalInfo1 := '';
+                        AdditionalInfo2 := '';
+                      end;
+                    Lat  := DegToRad(DecimalValue(LatStr));
+                    Lon  := DegToRad(DecimalValue(LonStr));
+                    PolarToVector(Lat,Lon,1,CraterVector);
+                    if DotProduct(CraterVector,SubObsvrVector)>=0 then with JimsGraph1 do
+                      begin {crater is on visible hemisphere, so check its projection to see if it is in viewable area}
+                        CraterX := DotProduct(CraterVector,XPrime_UnitVector);
+                        CraterY := DotProduct(CraterVector,YPrime_UnitVector);
+
+                        with JimsGraph1 do
+                          begin
+                            val(CurrentCrater.NumericData,Diam,DiamErrorCode);
+
+                            if (USGS_Code='AA') or (USGS_Code='SF') or (USGS_Code='CN')
+                             or (USGS_Code='CN5') or (USGS_Code='GD') or (USGS_Code='CD') then
+                              begin
+                                if DiamErrorCode=0 then
+                                  begin
+                                    if Diam>=LargeCraterDiam then
+                                      CraterColor := LargeCraterColor
+                                    else if Diam>=MediumCraterDiam then
+                                      CraterColor := MediumCraterColor
+                                    else
+                                      CraterColor := SmallCraterColor;
+                                  end
+                                else // unable to decode diameter
+                                  CraterColor := NonCraterColor;
+                              end
+                            else
+                              CraterColor := NonCraterColor;
+
+                            if DotSize>=0 then
+                              begin
+                                DotRadius := Round(DotSize/2.0 + 0.5);
+                                DotRadiusSqrd := Round(Sqr(DotSize/2.0));
+                                for XOffset := -DotRadius to DotRadius do
+                                  for YOffset := -DotRadius to DotRadius do
+                                    if (Sqr(XOffset)+Sqr(YOffset))<=DotRadiusSqrd then
+                                      Canvas.Pixels[XPix(CraterX)+XOffset, YPix(CraterY)+YOffset] := CraterColor;
+                              end;
+
+                            if DrawCircles_CheckBox.Checked and (DiamErrorCode=0) and (Diam>0) and (Diam<(MoonRadius*PiByTwo)) then
+                              DrawCircle(RadToDeg(CurrentCrater.Lon),RadToDeg(CurrentCrater.Lat),
+                                RadToDeg(Diam/MoonRadius/2),CraterCircleColor);
+                          end;
+
+                        if not PositionInCraterInfo(JimsGraph1.XPix(CraterX), JimsGraph1.YPix(CraterY)) then
+                          begin
+                            CraterIndex := Length(CraterInfo);
+                            SetLength(CraterInfo,CraterIndex+1);
+                            CraterInfo[CraterIndex].Name := CurrentCrater.Name;
+                            CraterInfo[CraterIndex].Lon := CurrentCrater.Lon;
+                            CraterInfo[CraterIndex].Lat := CurrentCrater.Lat;
+                            CraterInfo[CraterIndex].USGS_Code := CurrentCrater.USGS_Code;
+                            CraterInfo[CraterIndex].NumericData := CurrentCrater.NumericData;
+                            CraterInfo[CraterIndex].AdditionalInfo1 := CurrentCrater.AdditionalInfo1;
+                            CraterInfo[CraterIndex].AdditionalInfo2 := CurrentCrater.AdditionalInfo2;
+                            CraterInfo[CraterIndex].Dot_X := JimsGraph1.XPix(CraterX);
+                            CraterInfo[CraterIndex].Dot_Y := JimsGraph1.YPix(CraterY);
+                          end;
+                      end;
+                  end;
+              end;
+            end;
+        end;
+    end;
+
+  CloseFile(CraterFile);
+
   if Length(CraterInfo)>0 then LabelDots_Button.Show;
 
-end;  {TTerminator_Form.Identifynearestcrater1Click}
+end;  {TTerminator_Form.IdentifyNearestFeature_RightClickMenuItemClick}
+
+procedure TTerminator_Form.LabelFeatureAndSatellites_RightClickMenuItemClick(Sender: TObject);
+begin
+  IdentifySatellites := True;
+  IdentifyNearestFeature_RightClickMenuItemClick(Sender);
+  LabelDots_Button.Click;
+  IdentifySatellites := False;
+end;
 
 procedure TTerminator_Form.HideMouseMoveLabels;
 begin
@@ -3850,7 +4067,7 @@ procedure TTerminator_Form.SetRefPt_RightClickMenuItemClick(Sender: TObject);
     NewUserX, NewUserY,
     NewLon, NewLat,
     StepMag : Extended;
-    PointVector, RotationAxis, StepVector, NewVector : Vector;
+    PointVector, RotationAxis, StepVector, NewVector : TVector;
     NewPosition : TPolarCoordinates;
     MaxPixelLengthSqrd, StepNum, MaxSteps : Integer;
   begin
@@ -3874,7 +4091,7 @@ procedure TTerminator_Form.SetRefPt_RightClickMenuItemClick(Sender: TObject);
 {The following global variables need to be set when drawing the shadow line on a user-calibrated photo.
  They are used to generate the readout in the MouseMove routine.
     RefPtVector,   // full vector at MoonRadius in Selenographic
-    ShadowDirectionVector : Vector;  // unit (1 km) vector parallel or anti-parallel to solar rays, depending on mode
+    ShadowDirectionVector : TVector;  // unit (1 km) vector parallel or anti-parallel to solar rays, depending on mode
     RefPtUserX, RefPtUserY,   // position of start of red line in X-Y system of original photo
     ShadowDirectionUserDistance : Extended; // amount of travel in photo X-Y system for 1 unit of ShadowDirectionVector
 }
@@ -3888,10 +4105,10 @@ procedure TTerminator_Form.SetRefPt_RightClickMenuItemClick(Sender: TObject);
 //                ShowMessage('Start vector = '+VectorString(PointVector,3));
 
                 StepVector := SubSolarVector;  // unit vector corresponds to 1 km step in direction *opposite* to solar rays
-                if RefPtReadoutMode<>InverseShadowLengthRefPtMode then Multiply(-1,StepVector); // in same direction as solar rays
+                if RefPtReadoutMode<>InverseShadowLengthRefPtMode then MultiplyVector(-1,StepVector); // in same direction as solar rays
                 ShadowDirectionVector := StepVector;
 
-                Sum(PointVector,StepVector,NewVector);  // end point in selenographic system
+                VectorSum(PointVector,StepVector,NewVector);  // end point in selenographic system
 //                ShowMessage('End vector = '+VectorString(NewVector,3));
 
                 ShadowDirectionUserDistance := 0;   // default value if following fails
@@ -3923,7 +4140,7 @@ procedure TTerminator_Form.SetRefPt_RightClickMenuItemClick(Sender: TObject);
                 if StepMag>0 then
                   begin
                     StepMag := 1/(StepMag*PixelsPerXY_unit);  // scale to 1 pixel
-                    Multiply(StepMag,StepVector);
+                    MultiplyVector(StepMag,StepVector);
 
                     LineLengthSqrd := 0;
                     PointZ := 0; // need to set for later conditional test
@@ -3931,7 +4148,7 @@ procedure TTerminator_Form.SetRefPt_RightClickMenuItemClick(Sender: TObject);
 
                     while (LineLengthSqrd<MaxPixelLengthSqrd) and (PointZ>=0) and (StepNum<MaxSteps) do
                       begin
-                        Sum(PointVector,StepVector,PointVector);  // current end point in full selenographic system (including radius)
+                        VectorSum(PointVector,StepVector,PointVector);  // current end point in full selenographic system (including radius)
                         NewPosition := VectorToPolar(PointVector); // determine selenographic lon/lat
                         with NewPosition do
                           if not ConvertLonLatToUserPhotoXY(Longitude,Latitude,Radius,NewUserX,NewUserY) then  // end point in photo
@@ -3966,7 +4183,7 @@ procedure TTerminator_Form.SetRefPt_RightClickMenuItemClick(Sender: TObject);
               begin
                 PolarToVector(MouseLat,MouseLon,MoonRadius,RefPtVector);
                 PointVector := RefPtVector;
-                Normalize(PointVector);
+                NormalizeVector(PointVector);
                 CrossProduct(PointVector,SubSolarVector,RotationAxis);
                 if RefPtReadoutMode=InverseShadowLengthRefPtMode then
                   AngleStep := +0.01 // radians
@@ -3978,7 +4195,7 @@ procedure TTerminator_Form.SetRefPt_RightClickMenuItemClick(Sender: TObject);
 
                 while (LineLengthSqrd<MaxPixelLengthSqrd) and (PointZ>=0) do
                   begin
-                    Rotate(PointVector,AngleStep,RotationAxis);
+                    RotateVector(PointVector,AngleStep,RotationAxis);
                     PointX := DotProduct(PointVector,XPrime_UnitVector);
                     PointY := DotProduct(PointVector,YPrime_UnitVector);
                     PointZ := DotProduct(PointVector,ZPrime_UnitVector); // >=0 iff point is on visible hemisphere
@@ -4022,7 +4239,7 @@ end;   {TTerminator_Form.SetRefPt_RightClickMenuItemClick}
 procedure TTerminator_Form.NearestDotToReferencePoint_RightClickMenuItemClick(Sender: TObject);
 var
   ClosestDot : Integer;
-  CraterVector : Vector;
+  CraterVector : TVector;
 begin
   if FindClosestDot(ClosestDot) then with CraterInfo[ClosestDot] do
     begin
@@ -4042,7 +4259,7 @@ end;
 
 procedure TTerminator_Form.Recordshadowmeasurement_RightClickMenuItemClick(Sender: TObject);
 var
-  PlotVector : Vector;
+  PlotVector : TVector;
   AngleFromCenter, PlotX, PlotY : Extended;
   PlotXPix, PlotYPix : Integer;
   ShadowFile : TextFile;
@@ -4053,7 +4270,7 @@ begin
 
 // also mark projection of measurement point onto constant radius sphere
   PlotVector := ShadowTipVector;
-  if ModSqr(PlotVector)>0 then Normalize(PlotVector);
+  if VectorModSqr(PlotVector)>0 then NormalizeVector(PlotVector);
 
   if SnapShadowPointsToPlanView and UserPhoto_RadioButton.Checked then with JimsGraph1 do
     begin
@@ -4076,7 +4293,7 @@ begin
         PlotYPix-Corrected_LabelYPix_Offset,Format('%0.0f m',[CurrentElevationDifference_m]));
     end;
 
-  if FileExists(ShadowProfileFilename) and (Magnitude(ShadowProfileCenterVector)>0) then
+  if FileExists(ShadowProfileFilename) and (VectorMagnitude(ShadowProfileCenterVector)>0) then
     begin
       ShadowStart := VectorToPolar(RefPtVector);
       ShadowEnd   := VectorToPolar(ShadowTipVector);
@@ -4154,10 +4371,19 @@ begin
                 end;
 
               OutString := 'Vertical axis : ';
-              if CartographicOrientation then
-                OutString := OutString + 'central meridian'
-              else
-                OutString := OutString + 'line of cusps   ';
+              case OrientationMode of
+                Cartographic :
+                  OutString := OutString + 'central meridian';
+                LineOfCusps :
+                  OutString := OutString + 'line of cusps   ';
+                Equatorial :
+                  OutString := OutString + 'celestial north ';
+                AltAz :
+                  OutString := OutString + 'local zenith    ';
+                else
+                  OutString := OutString + 'unknown         ';
+                end; {case}
+
 
               if InvertLR and InvertUD then
                 OutString := OutString + '    Inverted left-right and up-down'
@@ -4460,30 +4686,65 @@ begin
        end;
 end;
 
+function TTerminator_Form.UpperCaseParentName(const FeatureName, FT_Code : String) : String;
+{attempts to extract uppercase version of parent part of FeatureName based on USGS Feature Type code; returns FeatureName if unsuccessful}
+var
+  TrialName, USGS_Code : String;
+  SpacePos : Integer;
+begin
+  Result := FeatureName;
+
+  TrialName := UpperCase(Trim(FeatureName));
+  USGS_Code := UpperCase(FT_Code);
+
+  if USGS_Code='LF' then
+    Exit // don't process landing site names
+  else if USGS_Code='AA' then
+    // do nothing : Trial Name = parent name
+  else if USGS_Code='SF' then
+    begin
+      SpacePos := Length(TrialName);
+      while (SpacePos>1) and (TrialName[SpacePos]<>' ') do Dec(SpacePos);
+      if TrialName[SpacePos]<>' ' then Exit;   // not a satellite feature name
+      TrialName := Trim(Substring(TrialName,1,SpacePos-1));
+    end
+  else // assume name is a one word descriptor followed by parent name plus possible Greek suffix
+    begin
+      SpacePos := Pos(' ',TrialName);
+      if SpacePos=0 then Exit;
+      TrialName := Substring(TrialName,SpacePos+1,MaxInt);
+
+      SpacePos := Pos('DELTA',TrialName);   // possible suffix for Mons
+      if SpacePos<>0 then TrialName := Trim(Substring(TrialName,1,SpacePos-1));
+
+      SpacePos := Pos('GAMMA',TrialName);
+      if SpacePos<>0 then TrialName := Trim(Substring(TrialName,1,SpacePos-1));
+
+      TrialName := Trim(TrialName);
+    end;
+
+  if TrialName<>'' then Result := TrialName;
+
+end;
+
 procedure TTerminator_Form.LabelDot(const DotInfo : TCraterInfo);
 var
   LabelXPix, LabelYPix, PrimaryIndex,
   FontHeight, FontWidth, RadialPixels : Integer;
-  FeatureVector, ParentVector, DirectionVector : Vector;
+  FeatureVector, ParentVector, DirectionVector : TVector;
   DiffSqrd, Diff, XMultiplier, YMultiplier : Extended;
 
 function ParentIndex(const FeatureName : String) : Integer;
 // returns index of feature with same primary name in PrimaryFeatureList array
   var
-    ParentName : String;
-    SpacePos, I : Integer;
+    ParentFeatureName : String;
+    I : Integer;
     NameFound : Boolean;
   begin {ParentIndex}
     Result := -999;
 
-    ParentName := Trim(FeatureName);
-    SpacePos := Length(ParentName);
-    while (SpacePos>1) and (ParentName[SpacePos]<>' ') do Dec(SpacePos);
-    if ParentName[SpacePos]<>' ' then Exit;   // not a satellite feature name
-
-    ParentName := UpperCase(Trim(Substring(ParentName,1,SpacePos-1)));
-
-    if ParentName='' then Exit;
+    ParentFeatureName := UpperCaseParentName(FeatureName,'SF');
+    if ParentFeatureName=FeatureName then Exit;
 
     NameFound := False;
 
@@ -4491,7 +4752,7 @@ function ParentIndex(const FeatureName : String) : Integer;
     while (I<(Length(PrimaryCraterList)-2)) and not NameFound do
       begin
         Inc(I);
-        NameFound := ParentName=UpperCase(PrimaryCraterList[I].Name);
+        NameFound := ParentFeatureName=UpperCase(PrimaryCraterList[I].Name);
       end;
 
     if NameFound then
@@ -4525,7 +4786,7 @@ begin {LabelDot}
 
               PolarToVector(Lat,Lon,1,FeatureVector);
               with PrimaryCraterList[PrimaryIndex] do PolarToVector(Lat,Lon,1,ParentVector);
-              Difference(ParentVector,FeatureVector,DirectionVector);   // Vector from Feature to Parent
+              VectorDifference(ParentVector,FeatureVector,DirectionVector);   // Vector from Feature to Parent
 
               XMultiplier := DotProduct(DirectionVector,XPrime_UnitVector);  // Project into X-Y screen plane
               YMultiplier := DotProduct(DirectionVector,YPrime_UnitVector);
@@ -4822,7 +5083,13 @@ var
 begin
   IniFile := TIniFile.Create(IniFileName);
   IniFile.WriteString('LTVT Defaults','Start_with_current_UT',BooleanToYesNo(StartWithCurrentUT));
-  IniFile.WriteString('LTVT Defaults','Cartographic_orientation',BooleanToYesNo(CartographicOrientation));
+//  IniFile.WriteString('LTVT Defaults','Cartographic_orientation',BooleanToYesNo(CartographicOrientation));
+  case OrientationMode of
+    LineOfCusps : IniFile.WriteString('LTVT Defaults','Cartographic_orientation','LineOfCusps');
+    Cartographic : IniFile.WriteString('LTVT Defaults','Cartographic_orientation','Cartographic');
+    Equatorial : IniFile.WriteString('LTVT Defaults','Cartographic_orientation','Equatorial');
+    AltAz : IniFile.WriteString('LTVT Defaults','Cartographic_orientation','AltAz');
+    end;
   IniFile.WriteString('LTVT Defaults','Invert_image_left-right',BooleanToYesNo(InvertLR));
   IniFile.WriteString('LTVT Defaults','Invert_image_up-down',BooleanToYesNo(InvertUD));
 //  IniFile.WriteString('LTVT Defaults','Manual_Rotation_Angle',Format('%0.3f',[ManualRotationDegrees]));
@@ -4847,10 +5114,22 @@ const
   tau_DefaultText = '66.1898';
 var
   IniFile : TIniFile;
+  OrientationString : String;
 begin
   IniFile := TIniFile.Create(IniFileName);
   StartWithCurrentUT := YesNoToBoolean(IniFile.ReadString('LTVT Defaults','Start_with_current_UT','no'));
-  CartographicOrientation := YesNoToBoolean(IniFile.ReadString('LTVT Defaults','Cartographic_orientation','yes'));
+
+  OrientationString := UpperCase(IniFile.ReadString('LTVT Defaults','Cartographic_orientation','Cartographic'));
+// support older mode where orientation was boolean: YES = Cartographic, NO = LineOfCusps
+  if (OrientationString='NO') or (OrientationString='LINEOFCUSPS') then
+    OrientationMode := LineOfCusps
+  else if OrientationString='EQUATORIAL' then
+    OrientationMode := Equatorial
+  else if OrientationString='ALTAZ' then
+    OrientationMode := AltAz
+  else
+    OrientationMode := Cartographic;
+
   InvertLR := YesNoToBoolean(IniFile.ReadString('LTVT Defaults','Invert_image_left-right','no'));
   InvertUD := YesNoToBoolean(IniFile.ReadString('LTVT Defaults','Invert_image_up-down','no'));
 {
@@ -4927,7 +5206,10 @@ begin
   with CartographicOptions_Form do
     begin
       UseCurrentUT_CheckBox.Checked := StartWithCurrentUT;
-      Cartographic_CheckBox.Checked := CartographicOrientation;
+      Cartographic_RadioButton.Checked := OrientationMode=Cartographic;
+      LineOfCusps_RadioButton.Checked := OrientationMode=LineOfCusps;
+      Equatorial_RadioButton.Checked := OrientationMode=Equatorial;
+      AltAz_RadioButton.Checked := OrientationMode=AltAz;
       InvertLR_CheckBox.Checked := InvertLR;
       InvertUD_CheckBox.Checked := InvertUD;
 //      BlackSky_CheckBox.Checked := BlackSky;
@@ -4954,7 +5236,16 @@ begin
   with CartographicOptions_Form do
     begin
       StartWithCurrentUT := UseCurrentUT_CheckBox.Checked;
-      CartographicOrientation := Cartographic_CheckBox.Checked;
+
+      if LineOfCusps_RadioButton.Checked then
+        OrientationMode := LineOfCusps
+      else if Equatorial_RadioButton.Checked then
+        OrientationMode := Equatorial
+      else if AltAz_RadioButton.Checked then
+        OrientationMode := AltAz
+      else
+        OrientationMode := Cartographic;
+
       InvertLR := InvertLR_CheckBox.Checked;
       InvertUD := InvertUD_CheckBox.Checked;
       SkyColor := Sky_ColorBox.Selected;
@@ -5708,7 +5999,7 @@ var
   PixelDistSqrd, XYDistSqrd,
   RotationAngle,
   SatelliteNLatDeg, SatelliteELonDeg, SatelliteElevKm : Extended;
-  GroundPointVector : Vector;
+  GroundPointVector : TVector;
 
   LoadSuccessful : Boolean;
 
@@ -5763,34 +6054,34 @@ begin  {TTerminator_Form.LoadCalibratedPhoto_MainMenuItemClick}
               Terminator_Form.PolarToVector(DegToRad(SubObsLatDeg),
                 DegToRad(SubObsLonDeg), MoonRadius, GroundPointVector);
 
-              Difference(GroundPointVector,SatelliteVector,UserPhoto_ZPrime_Unit_Vector);
+              VectorDifference(GroundPointVector,SatelliteVector,UserPhoto_ZPrime_Unit_Vector);
 
-              if Magnitude(UserPhoto_ZPrime_Unit_Vector)=0 then
+              if VectorMagnitude(UserPhoto_ZPrime_Unit_Vector)=0 then
                 begin
                   ShowMessage('Satellite and Ground Point must be at different positions!');
                   Exit
                 end;
 
-              Normalize(UserPhoto_ZPrime_Unit_Vector);
+              NormalizeVector(UserPhoto_ZPrime_Unit_Vector);
 
               CrossProduct(UserPhoto_ZPrime_Unit_Vector, Uy, UserPhoto_XPrime_Unit_Vector);
-              if Magnitude(UserPhoto_XPrime_Unit_Vector)=0 then
+              if VectorMagnitude(UserPhoto_XPrime_Unit_Vector)=0 then
                 begin
                   CrossProduct(UserPhoto_ZPrime_Unit_Vector, Ux, UserPhoto_XPrime_Unit_Vector);
                 end;
 
-              if Magnitude(UserPhoto_XPrime_Unit_Vector)=0 then
+              if VectorMagnitude(UserPhoto_XPrime_Unit_Vector)=0 then
                 begin // this should never happen
                   ShowMessage('Internal error: unable to establish camera axis');
                   Exit
                 end;
 
-              Normalize(UserPhoto_XPrime_Unit_Vector);
+              NormalizeVector(UserPhoto_XPrime_Unit_Vector);
 
               CrossProduct(UserPhoto_ZPrime_Unit_Vector, UserPhoto_XPrime_Unit_Vector, UserPhoto_YPrime_Unit_Vector);
 
-              SubObsLatDeg := RadToDeg(ArcSin(-UserPhoto_ZPrime_Unit_Vector.y));   // results in radians
-              SubObsLonDeg := RadToDeg(ArcTan2(-UserPhoto_ZPrime_Unit_Vector.x,-UserPhoto_ZPrime_Unit_Vector.z));
+              SubObsLatDeg := RadToDeg(ArcSin(-UserPhoto_ZPrime_Unit_Vector[y]));   // results in radians
+              SubObsLonDeg := RadToDeg(ArcTan2(-UserPhoto_ZPrime_Unit_Vector[x],-UserPhoto_ZPrime_Unit_Vector[z]));
 
               SubObsLat := Format('%0.3f',[SubObsLatDeg]);
               SubObsLon := Format('%0.3f',[PosNegDegrees(SubObsLonDeg)]);
@@ -5798,16 +6089,16 @@ begin  {TTerminator_Form.LoadCalibratedPhoto_MainMenuItemClick}
             end;
 
           PolarToVector(DegToRad(SubObsLatDeg),DegToRad(SubObsLonDeg),1,UserPhoto_SubObsVector);
-          Normalize(UserPhoto_SubObsVector);
+          NormalizeVector(UserPhoto_SubObsVector);
 
           if UserPhotoType=Earthbased then
             begin
               UserPhoto_ZPrime_Unit_Vector := UserPhoto_SubObsVector;
               CrossProduct(Uy,UserPhoto_ZPrime_Unit_Vector,UserPhoto_XPrime_Unit_Vector);
-              if Magnitude(UserPhoto_XPrime_Unit_Vector)=0 then UserPhoto_XPrime_Unit_Vector := Ux;  //UserPhoto_SubObsVector parallel to Uy (looking from over north or south pole)
-              Normalize(UserPhoto_XPrime_Unit_Vector);
+              if VectorMagnitude(UserPhoto_XPrime_Unit_Vector)=0 then UserPhoto_XPrime_Unit_Vector := Ux;  //UserPhoto_SubObsVector parallel to Uy (looking from over north or south pole)
+              NormalizeVector(UserPhoto_XPrime_Unit_Vector);
               CrossProduct(UserPhoto_SubObsVector,UserPhoto_XPrime_Unit_Vector,UserPhoto_YPrime_Unit_Vector);
-              Multiply(UserPhoto_InversionCode,UserPhoto_XPrime_Unit_Vector);
+              MultiplyVector(UserPhoto_InversionCode,UserPhoto_XPrime_Unit_Vector);
             end;
 
 
@@ -5868,14 +6159,14 @@ begin  {TTerminator_Form.LoadCalibratedPhoto_MainMenuItemClick}
           UserPhoto_RadioButton.Show;
           UserPhoto_RadioButton.Checked := True;
 
-          SetManualGeometryLabels; // will be overwritten if there is a call to EstimateData_Button.Click
+          if not OverwriteNone_RadioButton.Checked then SetManualGeometryLabels; // will be overwritten if there is a call to EstimateData_Button.Click
 
           if OverwriteAll_RadioButton.Checked then with SelectedPhotoData do
             begin
               Date_DateTimePicker.Date := PhotoDate;
               Time_DateTimePicker.Time := PhotoTime;
               GeocentricSubEarthMode := False;
-              CartographicOrientation := True;
+              OrientationMode := Cartographic;
               InvertLR := UserPhoto_InversionCode<0;
               InvertUD := False;
 //                  ManualRotationDegrees := Sign(UserPhoto_InversionCode)*RadToDeg(RotationAngle);
@@ -6235,6 +6526,12 @@ var
   X, Y : Extended;
   WantRuklSubgrid : Boolean;
 begin
+  if not ((SubObs_Lon_LabeledNumericEdit.NumericEdit.ExtendedValue=0)
+   and (SubObs_Lat_LabeledNumericEdit.NumericEdit.ExtendedValue=0))
+     and (MessageDlg('Rükl grid is valid only for zero libration views',mtWarning,mbOKCancel,0)=mrCancel) then
+       Exit;
+
+
   WantRuklSubgrid := not H_Terminator_Goto_Form.Center_RadioButton.Checked; // assume subgrid is wanted only after a GoTo to a quadrant
 
   with JimsGraph1 do

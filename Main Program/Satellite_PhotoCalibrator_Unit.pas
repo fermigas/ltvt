@@ -5,7 +5,7 @@ interface
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, ExtDlgs, StdCtrls, ExtCtrls, ComCtrls, LabeledNumericEdit, PopupMemo,
-  MVectors;
+  MPVectors;
 
 type
   TSatellitePhotoCalibrator_Form = class(TForm)
@@ -159,7 +159,7 @@ type
     Ref1XPix, Ref1YPix,
     Ref1X, Ref1Y,  // in system with Moon center at (0,0), NP vertical, and radius = 1
     PhotoPixelsPerXYUnit, PhotoNP_CW_AngleRad : Extended;
-    SatelliteVector : Vector;
+    SatelliteVector : TVector;
 
     function PixelToX(const Pixel, Width : Integer) : Extended;
     {expresses current position in image on scale of 0..1 based on center of current pixel}
@@ -201,7 +201,7 @@ uses
 
 var
   CalPhotoSubObsPoint, CalPhotoSubSolPoint : TPolarCoordinates;
-  CalPhoto_ZPrime_Unit_Vector, CalPhoto_XPrime_Unit_Vector, CalPhoto_YPrime_Unit_Vector : Vector;
+  CalPhoto_ZPrime_Unit_Vector, CalPhoto_XPrime_Unit_Vector, CalPhoto_YPrime_Unit_Vector : TVector;
 
 procedure TSatellitePhotoCalibrator_Form.FormCreate(Sender: TObject);
 begin
@@ -706,27 +706,27 @@ var
   {Ref1X, Ref1Y,} Ref2X, Ref2Y,
   Theta1, Theta2 : Extended;
 
-  GroundPointVector : Vector;
+  GroundPointVector : TVector;
 
   SavedGeocentricMode : Boolean;
 
 function ConvertCalPhotoLonLatToXY(const Lon, Lat : extended; var UserX, UserY : extended) : Boolean;
 var
   CosTheta : Extended;
-  FeatureVector, LineOfSight : Vector;
+  FeatureVector, LineOfSight : TVector;
 begin
   Result := False;
   Terminator_Form.PolarToVector(Lat,Lon,Terminator_Form.MoonRadius,FeatureVector);
 
-  Difference(FeatureVector,SatelliteVector,LineOfSight);
+  VectorDifference(FeatureVector,SatelliteVector,LineOfSight);
 
-  if Magnitude(LineOfSight)=0 then
+  if VectorMagnitude(LineOfSight)=0 then
     begin
 //          ShowMessage('Feature of interest is in film plane!');
       Exit
     end;
 
-  Normalize(LineOfSight);
+  NormalizeVector(LineOfSight);
 
   CosTheta := DotProduct(LineOfSight,CalPhoto_ZPrime_Unit_Vector);
   if CosTheta<=0 then
@@ -778,19 +778,19 @@ begin {UpdateGeometry}
     Terminator_Form.MoonRadius,
     GroundPointVector);
 
-  Difference(GroundPointVector,SatelliteVector,CalPhoto_ZPrime_Unit_Vector);
+  VectorDifference(GroundPointVector,SatelliteVector,CalPhoto_ZPrime_Unit_Vector);
 
-  if Magnitude(CalPhoto_ZPrime_Unit_Vector)=0 then
+  if VectorMagnitude(CalPhoto_ZPrime_Unit_Vector)=0 then
     begin
       ShowMessage('Satellite and Ground Point must be at different positions!');
       Exit
     end;
 
-  Normalize(CalPhoto_ZPrime_Unit_Vector);
+  NormalizeVector(CalPhoto_ZPrime_Unit_Vector);
 
   CrossProduct(Uy,CalPhoto_ZPrime_Unit_Vector,CalPhoto_XPrime_Unit_Vector);
-  if Magnitude(CalPhoto_XPrime_Unit_Vector)=0 then CalPhoto_XPrime_Unit_Vector := Ux;  //CalPhoto_ZPrime_Unit_Vector parallel to Uy (looking from over north or south pole)
-  Normalize(CalPhoto_XPrime_Unit_Vector);
+  if VectorMagnitude(CalPhoto_XPrime_Unit_Vector)=0 then CalPhoto_XPrime_Unit_Vector := Ux;  //CalPhoto_ZPrime_Unit_Vector parallel to Uy (looking from over north or south pole)
+  NormalizeVector(CalPhoto_XPrime_Unit_Vector);
   CrossProduct(CalPhoto_ZPrime_Unit_Vector,CalPhoto_XPrime_Unit_Vector,CalPhoto_YPrime_Unit_Vector);
 //  Multiply(InversionFactor,CalPhoto_XPrime_Unit_Vector);
 
@@ -873,7 +873,7 @@ end;
 
 function TSatellitePhotoCalibrator_Form.XYToLonLat(const XProj, YProj : Extended; var PtLon, PtLat : Extended): Boolean;  // valid after Update Geometry
 var
-  FeatureDirection, ScratchVector : Vector;
+  FeatureDirection, ScratchVector : TVector;
   MinusDotProd, Discrim, Distance : Extended;
 begin {TPhotoCalibrator_Form.XYToLonLat}
   Result := False;
@@ -881,21 +881,21 @@ begin {TPhotoCalibrator_Form.XYToLonLat}
   FeatureDirection := CalPhoto_ZPrime_Unit_Vector;
 
   ScratchVector := CalPhoto_XPrime_Unit_Vector;
-  Multiply(XProj,ScratchVector);
-  MVectors.Sum(FeatureDirection, ScratchVector, FeatureDirection);
+  MultiplyVector(XProj,ScratchVector);
+  VectorSum(FeatureDirection, ScratchVector, FeatureDirection);
 
   ScratchVector := CalPhoto_YPrime_Unit_Vector;
-  Multiply(YProj,ScratchVector);
-  Multiply(-1,ScratchVector);  // reverse direction to match screen system
-  MVectors.Sum(FeatureDirection, ScratchVector, FeatureDirection);
+  MultiplyVector(YProj,ScratchVector);
+  MultiplyVector(-1,ScratchVector);  // reverse direction to match screen system
+  VectorSum(FeatureDirection, ScratchVector, FeatureDirection);
 
-  Normalize(FeatureDirection);  // unit vector from satellite in direction of object imaged
+  NormalizeVector(FeatureDirection);  // unit vector from satellite in direction of object imaged
 
 // determine intercept (if any) of Feature Direction with lunar sphere of radius MoonRadius
 
   MinusDotProd := -DotProduct(SatelliteVector,FeatureDirection);  // this should be positive if camera is pointed towards Moon
 
-  Discrim := Sqr(MinusDotProd) - (ModSqr(SatelliteVector) - Sqr(Terminator_Form.MoonRadius));
+  Discrim := Sqr(MinusDotProd) - (VectorModSqr(SatelliteVector) - Sqr(Terminator_Form.MoonRadius));
 
   if Discrim<0 then Exit;   // error condition: no intercept of line and sphere
 
@@ -907,17 +907,14 @@ begin {TPhotoCalibrator_Form.XYToLonLat}
 
   if Distance<0 then Exit;  // error condition: no way to get to lunar surface in camera direction.
 
-  Multiply(Distance,FeatureDirection);
-  MVectors.Sum(SatelliteVector,FeatureDirection,FeatureDirection);  // full vector from Moon's center to intercept point in selenographic system
+  MultiplyVector(Distance,FeatureDirection);
+  VectorSum(SatelliteVector,FeatureDirection,FeatureDirection);  // full vector from Moon's center to intercept point in selenographic system
 
-  Normalize(FeatureDirection);
+  NormalizeVector(FeatureDirection);
 
-  with FeatureDirection do
-    begin
-      PtLat := ArcSin(Y);
-      PtLon := ArcTan2(X,Z);
-    end;
-      
+  PtLat := ArcSin(FeatureDirection[Y]);
+  PtLon := ArcTan2(FeatureDirection[X],FeatureDirection[Z]);
+
   Result := True;
 
 end;  {TPhotoCalibrator_Form.XYToLonLat}

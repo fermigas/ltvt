@@ -184,13 +184,13 @@ var
 implementation
 
 uses
-  FileCtrl, DateUtils, Math, LTVT_Unit, Win_Ops, MoonPosition, MVectors;
+  FileCtrl, DateUtils, Math, LTVT_Unit, Win_Ops, MoonPosition, MPVectors;
 
 {$R *.dfm}
 
 var
   CalPhotoSubObsPoint, CalPhotoSubSolPoint : TPolarCoordinates;
-  CalPhoto_ZPrime_Unit_Vector, CalPhoto_XPrime_Unit_Vector, CalPhoto_YPrime_Unit_Vector : Vector;
+  CalPhoto_ZPrime_Unit_Vector, CalPhoto_XPrime_Unit_Vector, CalPhoto_YPrime_Unit_Vector : TVector;
 
 procedure TPhotoCalibrator_Form.FormCreate(Sender: TObject);
 begin
@@ -489,7 +489,7 @@ var
 
 function ConvertCalPhotoLonLatToXY(const Lon, Lat : extended; var UserX, UserY : extended) : Boolean;
 var
-  FeatureVector : Vector;
+  FeatureVector : TVector;
 begin
   Terminator_Form.PolarToVector(Lat,Lon,1,FeatureVector);
   if DotProduct(FeatureVector,CalPhoto_ZPrime_Unit_Vector)>0 then
@@ -533,11 +533,11 @@ begin
   ResultsMemo.Memo.Lines.Add(Format('Sub-obs lon=%0.3f, lat=%0.3f',[RadToDeg(CalPhotoSubObsPoint.Longitude),RadToDeg(CalPhotoSubObsPoint.Latitude)]));
 
   Terminator_Form.PolarToVector(CalPhotoSubObsPoint.Latitude,CalPhotoSubObsPoint.Longitude,1,CalPhoto_ZPrime_Unit_Vector);
-  Normalize(CalPhoto_ZPrime_Unit_Vector);
+  NormalizeVector(CalPhoto_ZPrime_Unit_Vector);
 
   CrossProduct(Uy,CalPhoto_ZPrime_Unit_Vector,CalPhoto_XPrime_Unit_Vector);
-  if Magnitude(CalPhoto_XPrime_Unit_Vector)=0 then CalPhoto_XPrime_Unit_Vector := Ux;  //CalPhoto_ZPrime_Unit_Vector parallel to Uy (looking from over north or south pole)
-  Normalize(CalPhoto_XPrime_Unit_Vector);
+  if VectorMagnitude(CalPhoto_XPrime_Unit_Vector)=0 then CalPhoto_XPrime_Unit_Vector := Ux;  //CalPhoto_ZPrime_Unit_Vector parallel to Uy (looking from over north or south pole)
+  NormalizeVector(CalPhoto_XPrime_Unit_Vector);
   CrossProduct(CalPhoto_ZPrime_Unit_Vector,CalPhoto_XPrime_Unit_Vector,CalPhoto_YPrime_Unit_Vector);
 //  Multiply(InversionFactor,CalPhoto_XPrime_Unit_Vector);
 
@@ -620,7 +620,7 @@ end;
 
 function TPhotoCalibrator_Form.XYToLonLat(const XProj, YProj : Extended; var PtLon, PtLat : Extended): Boolean;  // valid after Update Geometry
 var
-  XYSqrd, ZProj, X, Y, Z : extended;
+  XYSqrd, ZProj, XX, YY, ZZ : extended;
 begin {TPhotoCalibrator_Form.XYToLonLat}
 
   XYSqrd := Sqr(XProj) + Sqr(YProj);
@@ -628,12 +628,12 @@ begin {TPhotoCalibrator_Form.XYToLonLat}
     begin
       ZProj := Sqrt(1 - XYSqrd);  // this sets length to 1
 
-      X := XProj*CalPhoto_XPrime_Unit_Vector.x + YProj*CalPhoto_YPrime_Unit_Vector.x + ZProj*CalPhoto_ZPrime_Unit_Vector.x;
-      Y := XProj*CalPhoto_XPrime_Unit_Vector.y + YProj*CalPhoto_YPrime_Unit_Vector.y + ZProj*CalPhoto_ZPrime_Unit_Vector.y;
-      Z := XProj*CalPhoto_XPrime_Unit_Vector.z + YProj*CalPhoto_YPrime_Unit_Vector.z + ZProj*CalPhoto_ZPrime_Unit_Vector.z;
+      XX := XProj*CalPhoto_XPrime_Unit_Vector[x] + YProj*CalPhoto_YPrime_Unit_Vector[x] + ZProj*CalPhoto_ZPrime_Unit_Vector[x];
+      YY := XProj*CalPhoto_XPrime_Unit_Vector[y] + YProj*CalPhoto_YPrime_Unit_Vector[y] + ZProj*CalPhoto_ZPrime_Unit_Vector[y];
+      ZZ := XProj*CalPhoto_XPrime_Unit_Vector[z] + YProj*CalPhoto_YPrime_Unit_Vector[z] + ZProj*CalPhoto_ZPrime_Unit_Vector[z];
 
-      PtLat := ArcSin(Y);
-      PtLon := ArcTan2(X,Z);
+      PtLat := ArcSin(YY);
+      PtLon := ArcTan2(XX,ZZ);
       Result := True;
     end
   else

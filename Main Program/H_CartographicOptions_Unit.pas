@@ -12,7 +12,6 @@ type
     InvertUD_CheckBox: TCheckBox;
     OK_Button: TButton;
     Cancel_Button: TButton;
-    Cartographic_CheckBox: TCheckBox;
     ShowDetails_CheckBox: TCheckBox;
     LibrationCircle_CheckBox: TCheckBox;
     LibrationCircle_ColorBox: TColorBox;
@@ -32,6 +31,11 @@ type
     Label6: TLabel;
     Label7: TLabel;
     ShadowLineLength_LabeledNumericEdit: TLabeledNumericEdit;
+    OrientationMode_GroupBox: TGroupBox;
+    Cartographic_RadioButton: TRadioButton;
+    LineOfCusps_RadioButton: TRadioButton;
+    AltAz_RadioButton: TRadioButton;
+    Equatorial_RadioButton: TRadioButton;
     procedure OK_ButtonClick(Sender: TObject);
     procedure Cancel_ButtonClick(Sender: TObject);
     procedure Save_ButtonClick(Sender: TObject);

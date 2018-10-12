@@ -62,7 +62,7 @@ implementation
 
 {$R *.dfm}
 
-uses LTVT_Unit, MVectors, Math;
+uses LTVT_Unit, MPVectors, Math;
 
 procedure TCircleDrawing_Form.FormShow(Sender: TObject);
 begin
@@ -80,7 +80,7 @@ end;
 procedure TCircleDrawing_Form.DrawCircle_ButtonClick(Sender: TObject);
 var
   LonDeg, LatDeg, RadiusDeg : Extended;
-  CenterVector : Vector;
+  CenterVector : TVector;
   CenterXPix, CenterYPix {, DotRadius, DotRadiusSqrd, XOffset, YOffset} : Integer;
 
 begin

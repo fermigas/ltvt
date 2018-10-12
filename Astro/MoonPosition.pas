@@ -72,6 +72,8 @@ var
   MoonToSunAU : extended;  // from center of Moon to center of Sun at moment of observation -- set by SubSolarPointOnMoon
   ObserverToMoonAU : extended;  // from observer to center of Moon at moment of observation -- set by SubEarthPointOnMoon
 
+  EarthAxisVector, ObserverZenithVector : TVector;  // set by CalculatePosition
+
 procedure ComputeMeanEarthSystemOffsetMatix;
 
 procedure ComputeDistanceAndBearing(const Lon1, Lat1, Lon2, Lat2 : extended; var AngleBetween, Bearing : extended);
@@ -253,6 +255,9 @@ procedure CalculatePosition;
     zdaz(UT1_JD,0{Pole_x},0{Pole_y}, -ObserverLongitude, ObserverLatitude, ObserverElevation,
           RA, Dec, 0{irefr}, zd, Azimuth, rar, decr);
 
+    ObserverZenithVector := ObserverVertical;
+    pnsw(TDT_JD,0,0,0,Uz,EarthAxisVector);      
+
     TopocentricAlt := 90 - zd;
 
     if SelectedPlanet=Star then
@@ -272,6 +277,7 @@ procedure CalculatePosition;
           begin
             UnitZ := pout;
             MultiplyVector(-1,UnitZ);
+            NormalizeVector(UnitZ);
             CrossProduct(pout,ObserverVertical,UnitX);
             NormalizeVector(UnitX);
             CrossProduct(UnitX,pout,UnitY);

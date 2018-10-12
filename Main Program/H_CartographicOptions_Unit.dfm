@@ -1,8 +1,8 @@
 object CartographicOptions_Form: TCartographicOptions_Form
   Left = 206
   Top = 113
-  Width = 482
-  Height = 364
+  Width = 488
+  Height = 400
   Caption = 'Cartographic Options'
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -16,56 +16,56 @@ object CartographicOptions_Form: TCartographicOptions_Form
   TextHeight = 13
   object Label1: TLabel
     Left = 8
-    Top = 152
+    Top = 168
     Width = 117
     Height = 13
     Caption = 'Grid/libration circle color:'
   end
   object Label2: TLabel
     Left = 160
-    Top = 152
+    Top = 168
     Width = 47
     Height = 13
     Caption = 'Sky color:'
   end
   object Label3: TLabel
     Left = 288
-    Top = 152
+    Top = 168
     Width = 145
     Height = 13
     Caption = 'Calibrated photo no data color:'
   end
   object Label4: TLabel
     Left = 24
-    Top = 232
+    Top = 248
     Width = 77
     Height = 13
     Caption = 'Sunlit side color:'
   end
   object Label5: TLabel
     Left = 144
-    Top = 232
+    Top = 248
     Width = 102
     Height = 13
     Caption = 'Shadowed side color:'
   end
   object Label6: TLabel
     Left = 40
-    Top = 216
+    Top = 232
     Width = 177
     Height = 13
     Caption = '------------------   Dots mode --------------------'
   end
   object Label7: TLabel
     Left = 304
-    Top = 224
+    Top = 240
     Width = 111
     Height = 13
     Caption = 'Shadow Measurements'
   end
   object InvertLR_CheckBox: TCheckBox
     Left = 16
-    Top = 80
+    Top = 104
     Width = 105
     Height = 17
     Hint = 'Invert image left-right'
@@ -75,7 +75,7 @@ object CartographicOptions_Form: TCartographicOptions_Form
   end
   object InvertUD_CheckBox: TCheckBox
     Left = 152
-    Top = 80
+    Top = 104
     Width = 113
     Height = 17
     Hint = 'Invert image up-down'
@@ -85,7 +85,7 @@ object CartographicOptions_Form: TCartographicOptions_Form
   end
   object OK_Button: TButton
     Left = 304
-    Top = 296
+    Top = 312
     Width = 49
     Height = 25
     Hint = 'Close form and make changes'
@@ -96,7 +96,7 @@ object CartographicOptions_Form: TCartographicOptions_Form
   end
   object Cancel_Button: TButton
     Left = 368
-    Top = 296
+    Top = 312
     Width = 65
     Height = 25
     Hint = 'Close form without making any changes'
@@ -105,21 +105,9 @@ object CartographicOptions_Form: TCartographicOptions_Form
     OnClick = Cancel_ButtonClick
     OnKeyDown = Cancel_ButtonKeyDown
   end
-  object Cartographic_CheckBox: TCheckBox
-    Left = 16
-    Top = 49
-    Width = 329
-    Height = 17
-    Hint = 
-      'Make central meridian of full moon image (rather than line of cu' +
-      'sps) vertical with north-south up-and-down'
-    Caption = 'Draw maps in lunar atlas orientation (central meridian vertical)'
-    TabOrder = 1
-    OnKeyDown = Cartographic_CheckBoxKeyDown
-  end
   object ShowDetails_CheckBox: TCheckBox
     Left = 280
-    Top = 80
+    Top = 104
     Width = 161
     Height = 17
     Hint = 'Show details of calculation of geometry from specified date/time'
@@ -130,7 +118,7 @@ object CartographicOptions_Form: TCartographicOptions_Form
   end
   object LibrationCircle_CheckBox: TCheckBox
     Left = 16
-    Top = 120
+    Top = 136
     Width = 129
     Height = 17
     Hint = 
@@ -142,7 +130,7 @@ object CartographicOptions_Form: TCartographicOptions_Form
   end
   object LibrationCircle_ColorBox: TColorBox
     Left = 32
-    Top = 176
+    Top = 192
     Width = 97
     Height = 22
     Hint = 
@@ -156,7 +144,7 @@ object CartographicOptions_Form: TCartographicOptions_Form
   end
   object Sky_ColorBox: TColorBox
     Left = 176
-    Top = 176
+    Top = 192
     Width = 97
     Height = 22
     Hint = 'Select the color to be used for drawing areas off the lunar disk'
@@ -168,7 +156,7 @@ object CartographicOptions_Form: TCartographicOptions_Form
   end
   object Save_Button: TButton
     Left = 8
-    Top = 297
+    Top = 313
     Width = 89
     Height = 25
     Hint = 'Save these settings as the new defaults'
@@ -179,7 +167,7 @@ object CartographicOptions_Form: TCartographicOptions_Form
   end
   object Restore_Button: TButton
     Left = 104
-    Top = 297
+    Top = 313
     Width = 89
     Height = 25
     Hint = 'Restore the last saved settings'
@@ -190,7 +178,7 @@ object CartographicOptions_Form: TCartographicOptions_Form
   end
   object TerminatorLines_CheckBox: TCheckBox
     Left = 176
-    Top = 120
+    Top = 136
     Width = 193
     Height = 17
     Hint = 
@@ -203,7 +191,7 @@ object CartographicOptions_Form: TCartographicOptions_Form
   end
   object NoDataColor_ColorBox: TColorBox
     Left = 312
-    Top = 176
+    Top = 192
     Width = 97
     Height = 22
     Hint = 
@@ -232,7 +220,7 @@ object CartographicOptions_Form: TCartographicOptions_Form
   end
   object DotModeSunlitColor_ColorBox: TColorBox
     Left = 16
-    Top = 256
+    Top = 272
     Width = 97
     Height = 22
     Hint = 
@@ -246,7 +234,7 @@ object CartographicOptions_Form: TCartographicOptions_Form
   end
   object DotModeShadowedColor_ColorBox: TColorBox
     Left = 152
-    Top = 256
+    Top = 272
     Width = 97
     Height = 22
     Hint = 
@@ -260,7 +248,7 @@ object CartographicOptions_Form: TCartographicOptions_Form
   end
   inline ShadowLineLength_LabeledNumericEdit: TLabeledNumericEdit
     Left = 288
-    Top = 248
+    Top = 264
     Width = 146
     Height = 21
     Hint = 
@@ -282,6 +270,62 @@ object CartographicOptions_Form: TCartographicOptions_Form
       Text = '100'
       OnKeyDown = ShadowLineLength_LabeledNumericEditNumericEditKeyDown
       InputType = tInteger
+    end
+  end
+  object OrientationMode_GroupBox: TGroupBox
+    Left = 16
+    Top = 48
+    Width = 409
+    Height = 41
+    Hint = 'Select desired mode for vertical axis of full Moon image'
+    Caption = 'Vertical Axis Orientation'
+    TabOrder = 1
+    object Cartographic_RadioButton: TRadioButton
+      Left = 16
+      Top = 16
+      Width = 89
+      Height = 17
+      Hint = 
+        'Moon drawn with central meridian of full image vertical (plus an' +
+        'y requested additional rotation)'
+      Caption = 'Cartographic'
+      Checked = True
+      TabOrder = 0
+      TabStop = True
+    end
+    object LineOfCusps_RadioButton: TRadioButton
+      Left = 112
+      Top = 16
+      Width = 97
+      Height = 17
+      Hint = 
+        'Moon drawn with average terminator of full image vertical (plus ' +
+        'any requested additional rotation)'
+      Caption = 'Line Of Cusps'
+      TabOrder = 1
+    end
+    object AltAz_RadioButton: TRadioButton
+      Left = 312
+      Top = 16
+      Width = 89
+      Height = 17
+      Hint = 
+        'Moon drawn in altitude-azimuth orientation (binocular view) with' +
+        ' line to observer'#39's zenith vertical (plus any requested addition' +
+        'al rotation)'
+      Caption = 'Local zenith'
+      TabOrder = 3
+    end
+    object Equatorial_RadioButton: TRadioButton
+      Left = 224
+      Top = 16
+      Width = 73
+      Height = 17
+      Hint = 
+        'Moon drawn with direction to celestial north pole (Earth'#39's rotat' +
+        'ion axis) vertical (plus any requested additional rotation)'
+      Caption = 'Equatorial'
+      TabOrder = 2
     end
   end
 end

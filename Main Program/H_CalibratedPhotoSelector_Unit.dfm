@@ -3,7 +3,7 @@ object CalibratedPhotoLoader_Form: TCalibratedPhotoLoader_Form
   Top = 9
   Width = 827
   Height = 727
-  Caption = 'Calibrated Photo Selector  v0.5'
+  Caption = 'Calibrated Photo Selector  v0.6'
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -153,7 +153,7 @@ object CalibratedPhotoLoader_Form: TCalibratedPhotoLoader_Form
     Font.Style = []
     ItemHeight = 12
     ParentFont = False
-    TabOrder = 6
+    TabOrder = 7
     OnClick = ListBox1Click
     OnKeyDown = ListBox1KeyDown
   end
@@ -164,7 +164,7 @@ object CalibratedPhotoLoader_Form: TCalibratedPhotoLoader_Form
     Height = 25
     Hint = 'Click to select highlighted photo and close form'
     Caption = 'Select'
-    TabOrder = 16
+    TabOrder = 17
     OnClick = SelectPhoto_ButtonClick
     OnKeyDown = SelectPhoto_ButtonKeyDown
   end
@@ -175,7 +175,7 @@ object CalibratedPhotoLoader_Form: TCalibratedPhotoLoader_Form
     Height = 25
     Hint = 'Close form without selecting a photo'
     Caption = 'Cancel'
-    TabOrder = 17
+    TabOrder = 18
     OnClick = Cancel_ButtonClick
     OnKeyDown = Cancel_ButtonKeyDown
   end
@@ -188,7 +188,7 @@ object CalibratedPhotoLoader_Form: TCalibratedPhotoLoader_Form
       'Horizontal position of point in image (in pixels measured left t' +
       'o right)'
     AutoSize = True
-    TabOrder = 9
+    TabOrder = 10
     inherited Item_Label: TLabel
       Width = 30
       Caption = 'XPix1:'
@@ -214,7 +214,7 @@ object CalibratedPhotoLoader_Form: TCalibratedPhotoLoader_Form
       'Vertical position of point in image (in pixels measured top to b' +
       'ottom)'
     AutoSize = True
-    TabOrder = 10
+    TabOrder = 11
     inherited Item_Label: TLabel
       Width = 30
       Caption = 'YPix1:'
@@ -238,7 +238,7 @@ object CalibratedPhotoLoader_Form: TCalibratedPhotoLoader_Form
     Height = 21
     Hint = 'Selenographic longitude in decimal degrees (E=+  W=-)'
     AutoSize = True
-    TabOrder = 7
+    TabOrder = 8
     inherited Item_Label: TLabel
       Width = 27
       Caption = 'Lon1:'
@@ -262,7 +262,7 @@ object CalibratedPhotoLoader_Form: TCalibratedPhotoLoader_Form
     Height = 21
     Hint = 'Selenographic latitude in decimal degrees (N=+  S=-)'
     AutoSize = True
-    TabOrder = 8
+    TabOrder = 9
     inherited Item_Label: TLabel
       Width = 24
       Caption = 'Lat1:'
@@ -290,7 +290,7 @@ object CalibratedPhotoLoader_Form: TCalibratedPhotoLoader_Form
       '+1 indicates a normal image; -1 indicates the disk file is a mir' +
       'ror image of the naked eye Moon'
     AutoSize = True
-    TabOrder = 15
+    TabOrder = 16
     inherited Item_Label: TLabel
       Width = 56
       Caption = 'Mirror code:'
@@ -316,7 +316,7 @@ object CalibratedPhotoLoader_Form: TCalibratedPhotoLoader_Form
       'Horizontal position of point in image (in pixels measured left t' +
       'o right)'
     AutoSize = True
-    TabOrder = 13
+    TabOrder = 14
     inherited Item_Label: TLabel
       Width = 30
       Caption = 'XPix2:'
@@ -342,7 +342,7 @@ object CalibratedPhotoLoader_Form: TCalibratedPhotoLoader_Form
       'Vertical position of point in image (in pixels measured top to b' +
       'ottom)'
     AutoSize = True
-    TabOrder = 14
+    TabOrder = 15
     inherited Item_Label: TLabel
       Width = 30
       Caption = 'YPix2:'
@@ -366,7 +366,7 @@ object CalibratedPhotoLoader_Form: TCalibratedPhotoLoader_Form
     Height = 21
     Hint = 'Selenographic longitude in decimal degrees (E=+  W=-)'
     AutoSize = True
-    TabOrder = 11
+    TabOrder = 12
     inherited Item_Label: TLabel
       Width = 27
       Caption = 'Lon2:'
@@ -390,7 +390,7 @@ object CalibratedPhotoLoader_Form: TCalibratedPhotoLoader_Form
     Height = 21
     Hint = 'Selenographic latitude in decimal degrees (N=+  S=-)'
     AutoSize = True
-    TabOrder = 12
+    TabOrder = 13
     inherited Item_Label: TLabel
       Width = 24
       Caption = 'Lat2:'
@@ -419,7 +419,7 @@ object CalibratedPhotoLoader_Form: TCalibratedPhotoLoader_Form
       'rrent view in the main window (note: sun angle readouts and shad' +
       'ow lengths will NOT be valid)'
     Caption = 'Load without altering main window parameters'
-    TabOrder = 18
+    TabOrder = 19
     OnKeyDown = OverwriteNone_RadioButtonKeyDown
   end
   object OverwriteGeometry_RadioButton: TRadioButton
@@ -432,7 +432,7 @@ object CalibratedPhotoLoader_Form: TCalibratedPhotoLoader_Form
       'f this image -- image will be seen from original viewpoint, but ' +
       'will probably be rotated and/or enlarged/compressed'
     Caption = 'Sun and observer angles'
-    TabOrder = 19
+    TabOrder = 21
     OnKeyDown = OverwriteGeometry_RadioButtonKeyDown
   end
   object OverwriteDateTime_RadioButton: TRadioButton
@@ -445,7 +445,7 @@ object CalibratedPhotoLoader_Form: TCalibratedPhotoLoader_Form
       'h those of this image and recomputes Sub-observer and Sub-solar ' +
       'points based on them'
     Caption = 'Date/Time/Location'
-    TabOrder = 20
+    TabOrder = 22
     OnKeyDown = OverwriteDateTime_RadioButtonKeyDown
   end
   object OverwriteAll_RadioButton: TRadioButton
@@ -458,7 +458,7 @@ object CalibratedPhotoLoader_Form: TCalibratedPhotoLoader_Form
       'phic display mode with zoom and optional rotation angle set to m' +
       'atch original image'
     Caption = 'Display at original scale and orientation'
-    TabOrder = 21
+    TabOrder = 23
     OnKeyDown = OverwriteAll_RadioButtonKeyDown
   end
   inline TargetLat_LabeledNumericEdit: TLabeledNumericEdit
@@ -544,7 +544,7 @@ object CalibratedPhotoLoader_Form: TCalibratedPhotoLoader_Form
       'and shadow length measurements will be correct'
     Caption = 'Sun angle'
     Checked = True
-    TabOrder = 22
+    TabOrder = 20
     TabStop = True
   end
   object ListLibrations_CheckBox: TCheckBox
@@ -556,7 +556,7 @@ object CalibratedPhotoLoader_Form: TCalibratedPhotoLoader_Form
       'List the longitude and latitude of the Sub-Observer point of eac' +
       'h photo in selection list'
     Caption = 'List Librations'
-    TabOrder = 23
+    TabOrder = 6
   end
   inline TargetLon_LabeledNumericEdit: TLabeledNumericEdit
     Left = 238
@@ -581,6 +581,17 @@ object CalibratedPhotoLoader_Form: TCalibratedPhotoLoader_Form
       Text = '0.000'
       OnKeyDown = TargetLon_LabeledNumericEditNumericEditKeyDown
     end
+  end
+  object CopyInfo_Button: TButton
+    Left = 552
+    Top = 504
+    Width = 59
+    Height = 25
+    Hint = 'Copy selected photo information to clipboard'
+    Caption = 'Copy Info'
+    TabOrder = 24
+    Visible = False
+    OnClick = CopyInfo_ButtonClick
   end
   object OpenDialog1: TOpenDialog
     Left = 184

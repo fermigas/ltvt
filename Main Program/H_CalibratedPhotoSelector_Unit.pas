@@ -71,6 +71,7 @@ type
     PhotoListHeaders_Label: TLabel;
     FeaturePos_Label: TLabel;
     Overlay_Image: TImage;
+    CopyInfo_Button: TButton;
     procedure Cancel_ButtonClick(Sender: TObject);
     procedure SelectPhoto_ButtonClick(Sender: TObject);
     procedure ListBox1Click(Sender: TObject);
@@ -120,6 +121,7 @@ type
     procedure ChangeFile_ButtonKeyDown(Sender: TObject; var Key: Word;
       Shift: TShiftState);
     procedure ChangeFile_ButtonClick(Sender: TObject);
+    procedure CopyInfo_ButtonClick(Sender: TObject);
   private
     { Private declarations }
   public
@@ -144,7 +146,8 @@ var
 
 implementation
 
-uses Constnts, LTVT_Unit, MoonPosition, Win_Ops, FileCtrl, Math, MVectors, IniFiles;
+uses Constnts, LTVT_Unit, MoonPosition, Win_Ops, FileCtrl, Math, MPVectors,
+  IniFiles, Clipbrd;
 
 {$R *.dfm}
 
@@ -298,7 +301,7 @@ var
   SatelliteVector, // for satellite photos this is the position of the camera relative to the Moon's center in selenodetic system
 // for EarthBased photos, the following is a system pointing from the Sub-observer point to the Moon's center
 // for Satellite photos the Z-axis points from the camera position (SatelliteVector) to the principal ground point
-  UserPhoto_XPrime_Unit_Vector, UserPhoto_YPrime_Unit_Vector, UserPhoto_ZPrime_Unit_Vector : Vector;
+  UserPhoto_XPrime_Unit_Vector, UserPhoto_YPrime_Unit_Vector, UserPhoto_ZPrime_Unit_Vector : TVector;
   UserPhoto_StartXPix, UserPhoto_StartYPix, UserPhoto_InversionCode,
   UserPhoto_Width, UserPhoto_Height : Integer;
   UserPhoto_StartX, UserPhoto_StartY, UserPhoto_PixelsPerXYUnit,
@@ -311,7 +314,7 @@ var
   PixelDistSqrd, XYDistSqrd,
   RotationAngle,
   SatelliteNLatDeg, SatelliteELonDeg, SatelliteElevKm : Extended;
-  GroundPointVector : Vector;
+  GroundPointVector : TVector;
   ReadSuccessful : Boolean;
 
   SunAlt, SunAz : Extended;
@@ -319,7 +322,7 @@ var
   function ConvertUserPhotoLonLatToXY(const Lon, Lat : extended; var UserX, UserY : extended) : Boolean;
   var
     CosTheta : Extended;
-    FeatureVector, LineOfSight : Vector;
+    FeatureVector, LineOfSight : TVector;
   begin
     if UserPhotoType=Satellite then
       begin
@@ -327,15 +330,15 @@ var
 
         Terminator_Form.PolarToVector(Lat, Lon, Terminator_Form.MoonRadius, FeatureVector);
 
-        Difference(FeatureVector,SatelliteVector,LineOfSight);
+        VectorDifference(FeatureVector,SatelliteVector,LineOfSight);
 
-        if Magnitude(LineOfSight)=0 then
+        if VectorMagnitude(LineOfSight)=0 then
           begin
   //          ShowMessage('Feature of interest is in film plane!');
             Exit
           end;
 
-        Normalize(LineOfSight);
+        NormalizeVector(LineOfSight);
 
         CosTheta := DotProduct(LineOfSight,UserPhoto_ZPrime_Unit_Vector);
         if CosTheta<=0 then
@@ -444,34 +447,34 @@ begin {TCalibratedPhotoLoader_Form.FeatureInPhoto}
       Terminator_Form.PolarToVector(DegToRad(SubObsLatDeg),
         DegToRad(SubObsLonDeg), Terminator_Form.MoonRadius, GroundPointVector);
 
-      Difference(GroundPointVector,SatelliteVector,UserPhoto_ZPrime_Unit_Vector);
+      VectorDifference(GroundPointVector,SatelliteVector,UserPhoto_ZPrime_Unit_Vector);
 
-      if Magnitude(UserPhoto_ZPrime_Unit_Vector)=0 then
+      if VectorMagnitude(UserPhoto_ZPrime_Unit_Vector)=0 then
         begin
 //          ShowMessage('Satellite and Ground Point must be at different positions!');
           Exit;
         end;
 
-      Normalize(UserPhoto_ZPrime_Unit_Vector);
+      NormalizeVector(UserPhoto_ZPrime_Unit_Vector);
 
       CrossProduct(UserPhoto_ZPrime_Unit_Vector, Uy, UserPhoto_XPrime_Unit_Vector);
-      if Magnitude(UserPhoto_XPrime_Unit_Vector)=0 then
+      if VectorMagnitude(UserPhoto_XPrime_Unit_Vector)=0 then
         begin
           CrossProduct(UserPhoto_ZPrime_Unit_Vector, Ux, UserPhoto_XPrime_Unit_Vector);
         end;
 
-      if Magnitude(UserPhoto_XPrime_Unit_Vector)=0 then
+      if VectorMagnitude(UserPhoto_XPrime_Unit_Vector)=0 then
         begin // this should never happen
 //          ShowMessage('Internal error: unable to establish camera axis');
           Exit
         end;
 
-      Normalize(UserPhoto_XPrime_Unit_Vector);
+      NormalizeVector(UserPhoto_XPrime_Unit_Vector);
 
       CrossProduct(UserPhoto_ZPrime_Unit_Vector, UserPhoto_XPrime_Unit_Vector, UserPhoto_YPrime_Unit_Vector);
 
-      SubObsLatDeg := RadToDeg(ArcSin(-UserPhoto_ZPrime_Unit_Vector.y));   // results in radians
-      SubObsLonDeg := RadToDeg(ArcTan2(-UserPhoto_ZPrime_Unit_Vector.x,-UserPhoto_ZPrime_Unit_Vector.z));
+      SubObsLatDeg := RadToDeg(ArcSin(-UserPhoto_ZPrime_Unit_Vector[y]));   // results in radians
+      SubObsLonDeg := RadToDeg(ArcTan2(-UserPhoto_ZPrime_Unit_Vector[x],-UserPhoto_ZPrime_Unit_Vector[z]));
 
     end;
 
@@ -482,15 +485,15 @@ begin {TCalibratedPhotoLoader_Form.FeatureInPhoto}
     end;
 
   Terminator_Form.PolarToVector(DegToRad(SubObsLatDeg),DegToRad(SubObsLonDeg),1,UserPhoto_SubObsVector);
-  Normalize(UserPhoto_SubObsVector);
+  NormalizeVector(UserPhoto_SubObsVector);
 
   if UserPhotoType=Earthbased then
     begin
       CrossProduct(Uy,UserPhoto_SubObsVector,UserPhoto_XPrime_Unit_Vector);
-      if Magnitude(UserPhoto_XPrime_Unit_Vector)=0 then UserPhoto_XPrime_Unit_Vector := Ux;  //UserPhoto_SubObsVector parallel to Uy (looking from over north or south pole)
-      Normalize(UserPhoto_XPrime_Unit_Vector);
+      if VectorMagnitude(UserPhoto_XPrime_Unit_Vector)=0 then UserPhoto_XPrime_Unit_Vector := Ux;  //UserPhoto_SubObsVector parallel to Uy (looking from over north or south pole)
+      NormalizeVector(UserPhoto_XPrime_Unit_Vector);
       CrossProduct(UserPhoto_SubObsVector,UserPhoto_XPrime_Unit_Vector,UserPhoto_YPrime_Unit_Vector);
-      Multiply(UserPhoto_InversionCode,UserPhoto_XPrime_Unit_Vector);
+      MultiplyVector(UserPhoto_InversionCode,UserPhoto_XPrime_Unit_Vector);
     end;
 
   Val(CurrentPhotoData.Ref1XPix,UserPhoto_StartXPix,ErrorCode);
@@ -998,6 +1001,28 @@ procedure TCalibratedPhotoLoader_Form.ChangeFile_ButtonKeyDown(
   Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
   Terminator_Form.DisplayF1Help(Key,Shift,'CalibratedPhotoSelection_Form.htm');
+end;
+
+procedure TCalibratedPhotoLoader_Form.CopyInfo_ButtonClick(
+  Sender: TObject);
+var
+  SavedShortDateFormat, SavedLongTimeFormat : String;
+begin
+  SavedShortDateFormat := ShortDateFormat;
+  SavedLongTimeFormat := LongTimeFormat;
+
+  ShortDateFormat := 'yyyy mmm dd';
+  LongTimeFormat := 'hh:nn';
+
+  with PhotoListData[SortedListIndex[ListBox1.ItemIndex]].PhotoCalData do
+    begin
+      Clipboard.AsText := Format('|| %s || || %s - %s UT ||',
+        [ExtractFileName(PhotoFilename), DateToStr(PhotoDate), TimeToStr(PhotoTime)]);
+    end;
+
+  ShortDateFormat := SavedShortDateFormat;
+  LongTimeFormat := SavedLongTimeFormat;
+
 end;
 
 end.

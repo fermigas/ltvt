@@ -124,7 +124,7 @@ var
 
 implementation
 
-uses LTVT_Unit, MVectors, Math, Win_Ops, JimsGraph;
+uses LTVT_Unit, MPVectors, Math, Win_Ops, JimsGraph;
 
 {$R *.dfm}
 
@@ -310,7 +310,7 @@ var
   RuklRow, RuklColOffset, RuklNum, LTORow, LTONum,
   LTOQuadNum, LTOSubQuadNum,
   SectionWidth, SectionHeight, LonSteps : Integer;
-  FeatureVector : Vector;
+  FeatureVector : TVector;
 
   RuklString, LTOString : String;
 
@@ -426,12 +426,12 @@ begin {TH_Terminator_Goto_Form.UpdateMapZone}
       DegLat := SetToLat_LabeledNumericEdit.NumericEdit.ExtendedValue;
 
       LTVT_Unit.Terminator_Form.PolarToVector(DegToRad(DegLat), DegToRad(DegLon), 1, FeatureVector);
-      if FeatureVector.z<0 then
+      if FeatureVector[Z]<0 then
         RuklString := ''
       else
         begin
-          RuklRow := Round(((1 - FeatureVector.y)*NumRuklRows + 1)/2);
-          RuklColOffset := Round(FeatureVector.x*NumRuklCols/2);
+          RuklRow := Round(((1 - FeatureVector[y])*NumRuklRows + 1)/2);
+          RuklColOffset := Round(FeatureVector[x]*NumRuklCols/2);
           if RuklRow<1 then
             RuklRow := 1
           else if RuklRow>NumRuklRows then
