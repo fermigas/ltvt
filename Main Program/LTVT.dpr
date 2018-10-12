@@ -21,7 +21,8 @@ uses
   CircleDrawing_Unit in 'CircleDrawing_Unit.pas' {CircleDrawing_Form},
   H_MoonEventPredictor_Unit in 'H_MoonEventPredictor_Unit.pas' {MoonEventPredictor_Form},
   H_CalibratedPhotoSelector_Unit in 'H_CalibratedPhotoSelector_Unit.pas' {CalibratedPhotoLoader_Form},
-  MapFns_Unit in 'MapFns_Unit.pas';
+  MapFns_Unit in 'MapFns_Unit.pas',
+  ObserverLocationName_Unit in 'ObserverLocationName_Unit.pas' {ObserverLocationName_Form};
 
 {$R *.res}
 
@@ -46,5 +47,6 @@ begin
   Application.CreateForm(TCircleDrawing_Form, CircleDrawing_Form);
   Application.CreateForm(TMoonEventPredictor_Form, MoonEventPredictor_Form);
   Application.CreateForm(TCalibratedPhotoLoader_Form, CalibratedPhotoLoader_Form);
+  Application.CreateForm(TObserverLocationName_Form, ObserverLocationName_Form);
   Application.Run;
 end.

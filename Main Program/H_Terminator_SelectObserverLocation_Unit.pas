@@ -30,35 +30,15 @@ type
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure ObservatoryList_ComboBoxSelect(Sender: TObject);
-    procedure Geocentric_RadioButtonKeyDown(Sender: TObject; var Key: Word;
-      Shift: TShiftState);
-    procedure UserSpecified_RadioButtonKeyDown(Sender: TObject;
-      var Key: Word; Shift: TShiftState);
-    procedure ObserverLongitude_LabeledNumericEditNumericEditKeyDown(
-      Sender: TObject; var Key: Word; Shift: TShiftState);
-    procedure ObserverLatitude_LabeledNumericEditNumericEditKeyDown(
-      Sender: TObject; var Key: Word; Shift: TShiftState);
-    procedure ObserverElevation_LabeledNumericEditNumericEditKeyDown(
-      Sender: TObject; var Key: Word; Shift: TShiftState);
-    procedure ObservatoryList_ComboBoxKeyDown(Sender: TObject;
-      var Key: Word; Shift: TShiftState);
-    procedure Save_ButtonKeyDown(Sender: TObject; var Key: Word;
-      Shift: TShiftState);
-    procedure Restore_ButtonKeyDown(Sender: TObject; var Key: Word;
-      Shift: TShiftState);
-    procedure OK_ButtonKeyDown(Sender: TObject; var Key: Word;
-      Shift: TShiftState);
-    procedure Cancel_ButtonKeyDown(Sender: TObject; var Key: Word;
-      Shift: TShiftState);
     procedure ObserverLongitude_LabeledNumericEditNumericEditChange(
       Sender: TObject);
     procedure ObserverLatitude_LabeledNumericEditNumericEditChange(
       Sender: TObject);
     procedure ObserverElevation_LabeledNumericEditNumericEditChange(
       Sender: TObject);
-    procedure AddLocation_ButtonKeyDown(Sender: TObject; var Key: Word;
-      Shift: TShiftState);
     procedure AddLocation_ButtonClick(Sender: TObject);
+    procedure ShowHelp(Sender: TObject; var Key: Word;
+      Shift: TShiftState);
   private
     { Private declarations }
   public
@@ -78,7 +58,7 @@ implementation
 {$R *.dfm}
 
 uses
-  Win_Ops, IniFiles, LTVT_Unit;
+  Win_Ops, IniFiles, LTVT_Unit, ObserverLocationName_Unit;
 
 var
   SelectingItem : Boolean;   // flag to avoid refreshing Combo-box selection during a new selection
@@ -113,6 +93,7 @@ begin
   ObsLatList.Clear;
   ObsLonList.Clear;
   ObsElevList.Clear;
+
   if FileExists(Terminator_Form.ObservatoryListFilename) then
     begin
       AssignFile(ObsListFile,Terminator_Form.ObservatoryListFilename);
@@ -123,14 +104,13 @@ begin
           DataLine := Trim(DataLine);
           if (DataLine<>'') and (Substring(DataLine,1,1)<>'*') then
             begin
-              ObsLonList.Add(LeadingElement(DataLine,','));
-              ObsLatList.Add(LeadingElement(DataLine,','));
-              ObsElevList.Add(LeadingElement(DataLine,','));
+              ObsLonList.Add(Trim(LeadingElement(DataLine,',')));
+              ObsLatList.Add(Trim(LeadingElement(DataLine,',')));
+              ObsElevList.Add(Trim(LeadingElement(DataLine,',')));
               ObsNameList.Add(Trim(DataLine));
             end;
         end;
       CloseFile(ObsListFile);
-
     end;
 
   ObservatoryList_ComboBox.Items.Clear;
@@ -158,12 +138,14 @@ end;
 procedure TSetObserverLocation_Form.AddLocation_ButtonClick(Sender: TObject);
 var
   ObsListFile : TextFile;
+  NameToAdd : String;
 begin
-  if (ObservatoryList_ComboBox.Text=Terminator_Form.ObservatoryNoFileText) or
-     (ObservatoryList_ComboBox.Text=Terminator_Form.ObservatoryComboBoxDefaultText) then
+  with ObserverLocationName_Form do
     begin
-      ShowMessage('Please enter a name for the site in the drop-down box');
-      Exit;
+      ShowModal;
+      if CancelAction then Exit;
+
+      NameToAdd := Trim(Name_Edit.Text);
     end;
 
   AssignFile(ObsListFile,Terminator_Form.ObservatoryListFilename);
@@ -175,30 +157,34 @@ begin
   else
     begin
       Rewrite(ObsListFile);
-      Writeln(ObsListFile,'* List of observatory locations for LTVT');
-      Writeln(ObsListFile,'*   Important:  use ''.'' (period) for decimal point');
-      Writeln(ObsListFile,'*   (blank lines and lines with ''*'' in first column are ignored)');
-      Writeln(ObsListFile,'*   The observatory name can include any characters, including commas');
+      Writeln(ObsListFile,'* List of observatory locations for use by LTVT');
+      Writeln(ObsListFile,'*   (blank lines and lines with ''*'' in the first column are ignored)');
+      Writeln(ObsListFile,'');
+      Writeln(ObsListFile,'*   The observatory name can include any characters -- including commas');
+      Writeln(ObsListFile,'*   Longitudes and latitudes must be in decimal degrees (NOT degrees-minutes-seconds)');
+      Writeln(ObsListFile,'*   Important: you must use ''.'' (period) for for the decimal point');
       Writeln(ObsListFile,'');
       Writeln(ObsListFile,'* List items in this format (using commas to separate items):');
-      Writeln(ObsListFile,'* ObservatoryEastLongitude, ObservatoryNorthLatitude, ObservatoryElevation_meters, ObservatoryName');
+      Writeln(ObsListFile,'* ObservatoryEastLongitude_degrees, ObservatoryNorthLatitude_degrees, ObservatoryElevation_meters, ObservatoryName');
       Writeln(ObsListFile,'');
     end;
 
   Writeln(ObsListFile,
-    ObserverLongitude_LabeledNumericEdit.NumericEdit.Text+', '+
-    ObserverLatitude_LabeledNumericEdit.NumericEdit.Text+', '+
-    ObserverElevation_LabeledNumericEdit.NumericEdit.Text+', '+
-    ObservatoryList_ComboBox.Text);
+    Trim(ObserverLongitude_LabeledNumericEdit.NumericEdit.Text)+', '+
+    Trim(ObserverLatitude_LabeledNumericEdit.NumericEdit.Text)+', '+
+    Trim(ObserverElevation_LabeledNumericEdit.NumericEdit.Text)+', '+
+    NameToAdd);
   CloseFile(ObsListFile);
 
-  ObsLonList.Add(ObserverLongitude_LabeledNumericEdit.NumericEdit.Text);
-  ObsLatList.Add(ObserverLatitude_LabeledNumericEdit.NumericEdit.Text);
-  ObsElevList.Add(ObserverElevation_LabeledNumericEdit.NumericEdit.Text);
-  ObsNameList.Add(Trim(ObservatoryList_ComboBox.Text));
-  ObservatoryList_ComboBox.Items.Add(Trim(ObservatoryList_ComboBox.Text));
+  ObsLonList.Add(Trim(ObserverLongitude_LabeledNumericEdit.NumericEdit.Text));
+  ObsLatList.Add(Trim(ObserverLatitude_LabeledNumericEdit.NumericEdit.Text));
+  ObsElevList.Add(Trim(ObserverElevation_LabeledNumericEdit.NumericEdit.Text));
+  ObsNameList.Add(NameToAdd);
 
-  ShowMessage('Location added to '+Terminator_Form.ObservatoryListFilename);
+  ObservatoryList_ComboBox.Items.Add(NameToAdd);
+
+//  ShowMessage('Location added to '+Terminator_Form.ObservatoryListFilename);
+  RefreshSelection;
 end;
 
 procedure TSetObserverLocation_Form.RefreshSelection;
@@ -209,9 +195,9 @@ begin
     begin
       i := 0;
       while (i<ObsNameList.Count) and
-        (    (ObserverLongitude_LabeledNumericEdit.NumericEdit.Text<>ObsLonList[i])
-          or (ObserverLatitude_LabeledNumericEdit.NumericEdit.Text<>ObsLatList[i])
-          or (ObserverElevation_LabeledNumericEdit.NumericEdit.Text<>ObsElevList[i])
+        (    (Trim(ObserverLongitude_LabeledNumericEdit.NumericEdit.Text)<>ObsLonList[i])
+          or (Trim(ObserverLatitude_LabeledNumericEdit.NumericEdit.Text)<>ObsLatList[i])
+          or (Trim(ObserverElevation_LabeledNumericEdit.NumericEdit.Text)<>ObsElevList[i])
         ) do Inc(i);
 
       if i<ObservatoryList_ComboBox.Items.Count then
@@ -287,68 +273,7 @@ begin
     end;
 end;
 
-procedure TSetObserverLocation_Form.Geocentric_RadioButtonKeyDown(
-  Sender: TObject; var Key: Word; Shift: TShiftState);
-begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'SetLocationForm.htm');
-end;
-
-procedure TSetObserverLocation_Form.UserSpecified_RadioButtonKeyDown(
-  Sender: TObject; var Key: Word; Shift: TShiftState);
-begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'SetLocationForm.htm');
-end;
-
-procedure TSetObserverLocation_Form.ObserverLongitude_LabeledNumericEditNumericEditKeyDown(
-  Sender: TObject; var Key: Word; Shift: TShiftState);
-begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'SetLocationForm.htm');
-end;
-
-procedure TSetObserverLocation_Form.ObserverLatitude_LabeledNumericEditNumericEditKeyDown(
-  Sender: TObject; var Key: Word; Shift: TShiftState);
-begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'SetLocationForm.htm');
-end;
-
-procedure TSetObserverLocation_Form.ObserverElevation_LabeledNumericEditNumericEditKeyDown(
-  Sender: TObject; var Key: Word; Shift: TShiftState);
-begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'SetLocationForm.htm');
-end;
-
-procedure TSetObserverLocation_Form.ObservatoryList_ComboBoxKeyDown(
-  Sender: TObject; var Key: Word; Shift: TShiftState);
-begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'SetLocationForm.htm');
-end;
-
-procedure TSetObserverLocation_Form.Save_ButtonKeyDown(Sender: TObject;
-  var Key: Word; Shift: TShiftState);
-begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'SetLocationForm.htm');
-end;
-
-procedure TSetObserverLocation_Form.Restore_ButtonKeyDown(Sender: TObject;
-  var Key: Word; Shift: TShiftState);
-begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'SetLocationForm.htm');
-end;
-
-procedure TSetObserverLocation_Form.OK_ButtonKeyDown(Sender: TObject;
-  var Key: Word; Shift: TShiftState);
-begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'SetLocationForm.htm');
-end;
-
-procedure TSetObserverLocation_Form.Cancel_ButtonKeyDown(Sender: TObject;
-  var Key: Word; Shift: TShiftState);
-begin
-  Terminator_Form.DisplayF1Help(Key,Shift,'SetLocationForm.htm');
-end;
-
-procedure TSetObserverLocation_Form.AddLocation_ButtonKeyDown(
-  Sender: TObject; var Key: Word; Shift: TShiftState);
+procedure TSetObserverLocation_Form.ShowHelp(Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
   Terminator_Form.DisplayF1Help(Key,Shift,'SetLocationForm.htm');
 end;

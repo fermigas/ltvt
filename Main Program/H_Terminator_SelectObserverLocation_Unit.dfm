@@ -14,6 +14,7 @@ object SetObserverLocation_Form: TSetObserverLocation_Form
   ShowHint = True
   OnCreate = FormCreate
   OnDestroy = FormDestroy
+  OnKeyDown = ShowHelp
   OnShow = FormShow
   PixelsPerInch = 96
   TextHeight = 13
@@ -30,7 +31,7 @@ object SetObserverLocation_Form: TSetObserverLocation_Form
     ShowHint = True
     TabOrder = 0
     OnClick = Geocentric_RadioButtonClick
-    OnKeyDown = Geocentric_RadioButtonKeyDown
+    OnKeyDown = ShowHelp
   end
   object ObserverLocation_Panel: TPanel
     Left = 16
@@ -62,7 +63,7 @@ object SetObserverLocation_Form: TSetObserverLocation_Form
         Width = 73
         Text = '0.000'
         OnChange = ObserverLongitude_LabeledNumericEditNumericEditChange
-        OnKeyDown = ObserverLongitude_LabeledNumericEditNumericEditKeyDown
+        OnKeyDown = ShowHelp
       end
     end
     inline ObserverLatitude_LabeledNumericEdit: TLabeledNumericEdit
@@ -87,7 +88,7 @@ object SetObserverLocation_Form: TSetObserverLocation_Form
         Width = 73
         Text = '0.000'
         OnChange = ObserverLatitude_LabeledNumericEditNumericEditChange
-        OnKeyDown = ObserverLatitude_LabeledNumericEditNumericEditKeyDown
+        OnKeyDown = ShowHelp
       end
     end
     inline ObserverElevation_LabeledNumericEdit: TLabeledNumericEdit
@@ -114,7 +115,7 @@ object SetObserverLocation_Form: TSetObserverLocation_Form
         Width = 57
         Text = '0.0'
         OnChange = ObserverElevation_LabeledNumericEditNumericEditChange
-        OnKeyDown = ObserverElevation_LabeledNumericEditNumericEditKeyDown
+        OnKeyDown = ShowHelp
       end
     end
     object ObservatoryList_ComboBox: TComboBox
@@ -128,7 +129,7 @@ object SetObserverLocation_Form: TSetObserverLocation_Form
       AutoDropDown = True
       ItemHeight = 13
       TabOrder = 0
-      OnKeyDown = ObservatoryList_ComboBoxKeyDown
+      OnKeyDown = ShowHelp
       OnSelect = ObservatoryList_ComboBoxSelect
     end
     object AddLocation_Button: TButton
@@ -140,7 +141,7 @@ object SetObserverLocation_Form: TSetObserverLocation_Form
       Caption = 'Add'
       TabOrder = 4
       OnClick = AddLocation_ButtonClick
-      OnKeyDown = AddLocation_ButtonKeyDown
+      OnKeyDown = ShowHelp
     end
   end
   object UserSpecified_RadioButton: TRadioButton
@@ -156,7 +157,7 @@ object SetObserverLocation_Form: TSetObserverLocation_Form
     TabOrder = 1
     TabStop = True
     OnClick = UserSpecified_RadioButtonClick
-    OnKeyDown = UserSpecified_RadioButtonKeyDown
+    OnKeyDown = ShowHelp
   end
   object OK_Button: TButton
     Left = 280
@@ -167,7 +168,7 @@ object SetObserverLocation_Form: TSetObserverLocation_Form
     Caption = 'OK'
     TabOrder = 5
     OnClick = OK_ButtonClick
-    OnKeyDown = OK_ButtonKeyDown
+    OnKeyDown = ShowHelp
   end
   object Cancel_Button: TButton
     Left = 360
@@ -178,7 +179,7 @@ object SetObserverLocation_Form: TSetObserverLocation_Form
     Caption = 'Cancel'
     TabOrder = 6
     OnClick = Cancel_ButtonClick
-    OnKeyDown = Cancel_ButtonKeyDown
+    OnKeyDown = ShowHelp
   end
   object Save_Button: TButton
     Left = 16
@@ -189,7 +190,7 @@ object SetObserverLocation_Form: TSetObserverLocation_Form
     Caption = 'Save as Default'
     TabOrder = 3
     OnClick = Save_ButtonClick
-    OnKeyDown = Save_ButtonKeyDown
+    OnKeyDown = ShowHelp
   end
   object Restore_Button: TButton
     Left = 112
@@ -200,6 +201,6 @@ object SetObserverLocation_Form: TSetObserverLocation_Form
     Caption = 'Restore Defaults'
     TabOrder = 4
     OnClick = Restore_ButtonClick
-    OnKeyDown = Restore_ButtonKeyDown
+    OnKeyDown = ShowHelp
   end
 end

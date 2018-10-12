@@ -610,6 +610,32 @@ function SubLunarPointOnEarth(const UTC_MJD: extended) : TPolarCoordinates;
     Result := TerrestrialCoordinates(RayDirection);
   end;  {SubLunarPointOnEarth}
 
+procedure SetEclipticCoordinateSystem(const TDT : Extended);
+// ecliptic system differs from equatorial system by rotation about vernal equinox (="obliquity")
+  var
+    PrecessedVector : TVector;
+    T, MeanObliquityArcSec : Extended;
+
+  begin {SetEclipticCoordinateSystem}
+    with EclipticCoordinateSystem do
+      begin
+        AssignToVector(UnitX,1,0,0);  // axes of ICRF = mean Earth system J2000
+        AssignToVector(UnitY,0,1,0);
+        preces(JD2000,UnitX,TDT,PrecessedVector);
+        UnitX := PrecessedVector;   // ecliptic shares precessed X-axis = vernal equinox
+        preces(JD2000,UnitY,TDT,PrecessedVector);
+        UnitY := PrecessedVector;
+        CrossProduct(UnitX,UnitY,UnitZ);   // celestial pole
+        NormalizeVector(UnitZ);   // should not be necessary
+      end;
+
+// compute obliquity in arcseconds per H_NOVAS etilt routine
+    T := (TDT - JD2000) / DaysPerCentury;
+    MeanObliquityArcSec := ((0.001813*T - 0.00059)*T - 46.8150)*T + 84381.4480;
+
+    RotateCoordinateSystem(EclipticCoordinateSystem,0,MeanObliquityArcSec*OneArcSecond,0);
+  end; {SetEclipticCoordinateSystem}
+
 function EclipticCoordinates(const ICRF_Vector: TVector) : TPolarCoordinates;
   var
     EclipticVector : TVector;
@@ -659,22 +685,18 @@ function LunarAge(const UTC_MJD: extended) : Extended;
 
     T0 := T1 - 29.5*CurrentDifference/TwoPi;  // approx. ephemeris time of most recent New Moon
 
+    SetEclipticCoordinateSystem(T0);
+
     FindZero(EclipticLonDifference,T0 - 1/24, T0 + 1/24, (1e-5)/24, T0); // exact ephemeris time of most recent New Moon
 
     Result := T1 - T0;
-    
+
   end;   {LunarAge}
 
 initialization
 
 ComputeMeanEarthSystemOffsetMatix;
 
-with EclipticCoordinateSystem do
-  begin
-    AssignToVector(UnitX,1,0,0);
-    AssignToVector(UnitY,0,1,0);
-    AssignToVector(UnitZ,0,0,1);
-  end;
-RotateCoordinateSystem(EclipticCoordinateSystem,0,23.43928081*OneDegree,0);
+SetEclipticCoordinateSystem(JD2000);
 
 END.

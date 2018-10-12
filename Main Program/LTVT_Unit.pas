@@ -971,10 +971,20 @@ v0.19
        and 359 deg were being suppressed because of the large absolute difference.
        Before testing, the difference between the actual and target values is now
        reduced to an angle in the range +/-180, with a maximum possible absolute
-       error of 180 deg. Also, make sure print color is returned to black after
-       using the gray font.
- 
-                                                                    24 Mar 2009}
+       error of 180 deg. With the new logic, filtering on "-90 deg" is the same
+       as filtering on "+270 deg", which it was not, formerly.  Also, make sure 
+       print color is returned to black after using the gray font.
+
+  v0.19.10.1
+    1. Modify action of "Add" button in Observer Location boxes. Version 0.19.10
+       attempted to copy the name from the drop-down box, but entering text similar
+       to existing text changed the data in the longitude/latitude boxes.  Now
+       clicking "Add" brings up a separate form for entering the new name.
+    2. Modify comparison with existing data of text entered in Observer Location
+       boxes to ignore leading and trailing blanks.
+    3. Internal change consolidating calls for F1 help as listed at end of unit.
+
+                                                                    25 Mar 2009}
 
 
 interface
@@ -1579,7 +1589,7 @@ uses FileCtrl, H_Terminator_About_Unit, H_Terminator_Goto_Unit, H_Terminator_Set
 {$R *.dfm}
 
 const
-  ProgramVersion = '0.19.10';
+  ProgramVersion = '0.19.10.1';
 
 // note: the following constants specify (in degrees) that texture files span
 //   the full lunar globe.  They should not be changed.
@@ -1804,8 +1814,8 @@ begin {TTerminator_Form.FormCreate}
   BasePath := ExtractFilePath(Application.ExeName);
 
   ProposedFilename := 'LTVT_Image.bmp';
-  ObservatoryComboBoxDefaultText := '-- to copy information from disk file, use drop-down list --';
-  ObservatoryNoFileText := 'To create a list on disk enter a name here and click Add';
+  ObservatoryComboBoxDefaultText := 'click ADD to assign a name to the current location';
+  ObservatoryNoFileText := 'click ADD to start a list on disk';
 
   IniFileName := BasePath+'LTVT.ini'; //Note: if full path is not specified, file is assumed in C:\WINDOWS
   IniFile := TIniFile.Create(IniFileName);

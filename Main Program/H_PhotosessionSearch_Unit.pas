@@ -169,7 +169,7 @@ var
 
 implementation
 
-uses NumericEdit, LTVT_Unit, H_Terminator_SetYear_Unit;
+uses NumericEdit, LTVT_Unit, H_Terminator_SetYear_Unit, ObserverLocationName_Unit;
 
 {$R *.dfm}
 
@@ -269,12 +269,14 @@ end;
 procedure TPhotosessionSearch_Form.AddLocation_ButtonClick(Sender: TObject);
 var
   ObsListFile : TextFile;
+  NameToAdd : String;
 begin
-  if (ObservatoryList_ComboBox.Text=Terminator_Form.ObservatoryNoFileText) or
-     (ObservatoryList_ComboBox.Text=Terminator_Form.ObservatoryComboBoxDefaultText) then
+  with ObserverLocationName_Form do
     begin
-      ShowMessage('Please enter a name for the site in the drop-down box');
-      Exit;
+      ShowModal;
+      if CancelAction then Exit;
+
+      NameToAdd := Trim(Name_Edit.Text);
     end;
 
   AssignFile(ObsListFile,Terminator_Form.ObservatoryListFilename);
@@ -286,30 +288,34 @@ begin
   else
     begin
       Rewrite(ObsListFile);
-      Writeln(ObsListFile,'* List of observatory locations for LTVT');
-      Writeln(ObsListFile,'*   Important:  use ''.'' (period) for decimal point');
-      Writeln(ObsListFile,'*   (blank lines and lines with ''*'' in first column are ignored)');
-      Writeln(ObsListFile,'*   The observatory name can include any characters, including commas');
+      Writeln(ObsListFile,'* List of observatory locations for use by LTVT');
+      Writeln(ObsListFile,'*   (blank lines and lines with ''*'' in the first column are ignored)');
+      Writeln(ObsListFile,'');
+      Writeln(ObsListFile,'*   The observatory name can include any characters -- including commas');
+      Writeln(ObsListFile,'*   Longitudes and latitudes must be in decimal degrees (NOT degrees-minutes-seconds)');
+      Writeln(ObsListFile,'*   Important: you must use ''.'' (period) for for the decimal point');
       Writeln(ObsListFile,'');
       Writeln(ObsListFile,'* List items in this format (using commas to separate items):');
-      Writeln(ObsListFile,'* ObservatoryEastLongitude, ObservatoryNorthLatitude, ObservatoryElevation_meters, ObservatoryName');
+      Writeln(ObsListFile,'* ObservatoryEastLongitude_degrees, ObservatoryNorthLatitude_degrees, ObservatoryElevation_meters, ObservatoryName');
       Writeln(ObsListFile,'');
     end;
 
   Writeln(ObsListFile,
-    ObserverLongitude_LabeledNumericEdit.NumericEdit.Text+', '+
-    ObserverLatitude_LabeledNumericEdit.NumericEdit.Text+', '+
-    ObserverElevation_LabeledNumericEdit.NumericEdit.Text+', '+
-    ObservatoryList_ComboBox.Text);
+    Trim(ObserverLongitude_LabeledNumericEdit.NumericEdit.Text)+', '+
+    Trim(ObserverLatitude_LabeledNumericEdit.NumericEdit.Text)+', '+
+    Trim(ObserverElevation_LabeledNumericEdit.NumericEdit.Text)+', '+
+    NameToAdd);
   CloseFile(ObsListFile);
 
-  ObsLonList.Add(ObserverLongitude_LabeledNumericEdit.NumericEdit.Text);
-  ObsLatList.Add(ObserverLatitude_LabeledNumericEdit.NumericEdit.Text);
-  ObsElevList.Add(ObserverElevation_LabeledNumericEdit.NumericEdit.Text);
-  ObsNameList.Add(Trim(ObservatoryList_ComboBox.Text));
-  ObservatoryList_ComboBox.Items.Add(Trim(ObservatoryList_ComboBox.Text));
+  ObsLonList.Add(Trim(ObserverLongitude_LabeledNumericEdit.NumericEdit.Text));
+  ObsLatList.Add(Trim(ObserverLatitude_LabeledNumericEdit.NumericEdit.Text));
+  ObsElevList.Add(Trim(ObserverElevation_LabeledNumericEdit.NumericEdit.Text));
+  ObsNameList.Add(NameToAdd);
 
-  ShowMessage('Location added to '+Terminator_Form.ObservatoryListFilename);
+  ObservatoryList_ComboBox.Items.Add(NameToAdd);
+
+//  ShowMessage('Location added to '+Terminator_Form.ObservatoryListFilename);
+  RefreshSelection;
 end;
 
 function TPhotosessionSearch_Form.EW_Tag(const Longitude : extended): string;
