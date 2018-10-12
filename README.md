@@ -6,13 +6,15 @@ Welcome to a fork of the LTVT code base.  LTVT lost their home when wikispaces s
 
 This isn't the official site, but the original author Jim Mosher was kind enough to provide permission and a huge archive of files (through John Moore on [Cloudy Nights](https://www.cloudynights.com/topic/623894-long-term-status-of-lunar-terminator-visualization-tool/#entry8879915)). 
 
-If you want to get the program or code the [LTVT Program Downloads](LTVT%20Download) page has you covered.  
+If you want to get the program or code the [LTVT Program Downloads](https://github.com/fermigas/ltvt/wiki/LTVT%20Download) page has you covered.  
 
-Many resources that can enrich your use of the the program [Downloads](Downloads) can be found here.  
+Many resources that can enrich your use of the the program [Downloads](https://github.com/fermigas/ltvt/wiki/Downloads) can be found here.  
 
-If you want to learn how to use LTVT, you can hardly do better than [LTVT-function-details](LTVT-function-details).
+If you want to learn how to use LTVT, you can hardly do better than [LTVT-function-details](https://github.com/fermigas/ltvt/wiki/LTVT-function-details).
 
 You can find the source code for older versions by choosing its branch above or by following links from the  [Source Code Archive](https://github.com/fermigas/ltvt/wiki/Download%20Archive#source-code) which contains zipped files of older source code versions.  
+
+This site is a work in progress.  We can't promise help, but we'll try to supply as much as we can to help you help yourself.  Fork to your heart's content.  Pull requests from anyone other than those involved originally with the project won't be accepted until we've got a better idea of how we're going to move forward.     
 
 Here's the text of the original [Readme.txt](https://github.com/fermigas/ltvt/blob/master/ReadMe.txt) file:  
 
